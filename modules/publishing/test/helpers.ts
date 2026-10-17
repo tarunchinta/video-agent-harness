@@ -123,7 +123,6 @@ export function demoBrandKit(overrides: Record<string, unknown> = {}): BrandKit 
       ...overrides,
     }),
     proofInventory: { items: [] },
-    competitors: { creators: [] },
     sources: { sources: [] },
     docs: { voice: "# Voice\nWarm, practical, no hype." },
   };

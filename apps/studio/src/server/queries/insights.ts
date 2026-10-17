@@ -1,6 +1,6 @@
 import "server-only";
 import {
-  bestSlots, competitorBenchmarks, funnelReport, learnSettings, loadFeatureStats, overview, postDetail, postFacts, weeklyReport,
+  bestSlots, funnelReport, learnSettings, loadFeatureStats, overview, postDetail, postFacts, weeklyReport,
   type AnalyticsCtx, type AttributionMetric, type PostFact, type SlotMetric, type StoredFeatureStat,
 } from "@attentionos/module-learn/analytics";
 import { workspace } from "@/server/workspace";
@@ -144,13 +144,6 @@ export async function getSlots(metric: SlotMetric, platform: string | null) {
   return bestSlots(insightsCtx(), { metric, days: 120, platform });
 }
 
-/** Not used yet: no Studio page calls this. Kept for a later release. */
-export async function getCompetitors(days: InsightRange) {
-  const ctx = insightsCtx();
-  const { posts } = await postFacts(ctx);
-  return competitorBenchmarks(ctx, posts, { days: Math.max(days, 30), outlierDays: Math.max(days, 30) });
-}
-
 export async function getFunnel(days: InsightRange) {
   const ctx = insightsCtx();
   const { posts } = await postFacts(ctx);
@@ -242,7 +235,7 @@ export async function costWatch(): Promise<CostWatch> {
   const get = (cat: string, k: "today" | "month") => Number(rows.find((r) => r.category === cat)?.[k] ?? 0) / 1e6;
   const lines: CostLine[] = [
     { category: "llm", label: "AI writing and editing", period: "day", spent: get("llm", "today"), budget: b.dailyUsd },
-    { category: "scraping", label: "Competitor research", period: "month", spent: get("scraping", "month"), budget: b.scrapingMonthlyUsd },
+    { category: "scraping", label: "Reading public posts", period: "month", spent: get("scraping", "month"), budget: b.scrapingMonthlyUsd },
     { category: "images", label: "Generated images", period: "day", spent: get("images", "today"), budget: b.imagesDailyUsd },
     { category: "publishing", label: "Publishing", period: "month", spent: get("publishing", "month"), budget: null },
   ];

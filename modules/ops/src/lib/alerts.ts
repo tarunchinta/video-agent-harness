@@ -1,6 +1,6 @@
 /**
  * Alert dedupe. Each alert has a stable key ("account-expired:instagram", "run-failed:research.
- * competitor-scan"). `alert_log` remembers when each key was last sent; repeats inside the window are counted,
+ * trend-radar"). `alert_log` remembers when each key was last sent; repeats inside the window are counted,
  * not sent, and the next alert after the window says how many were held back.
  */
 

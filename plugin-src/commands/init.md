@@ -33,8 +33,7 @@ Ask these in order. Skip anything the owner already answered.
 3. **Offer.** What they sell, who it's for, the price range if they're happy to share, and how people buy (book a call, apply, buy online, visit). Which results are they allowed to claim publicly?
 4. **Audience.** Who is the ideal client? Ask for the words those people actually use: questions they ask on calls, objections, what they say right before they buy. Real phrases beat descriptions.
 5. **Their own posts.** Ask for **10 to 20** of their own posts or videos: pasted captions or transcripts, links, or video files saved in `media/raw/`. Explain why: "I'll learn how you actually talk, so scripts sound like you and not like a robot." If they share video files and the `attentionos` tools can transcribe them, use them; otherwise ask for pasted text. Only use the owner's own content for the voice profile, never anyone else's.
-6. **Competitors and inspiration.** Three to ten creators in their space they watch or compete with, per platform, and which ones they'd like to learn from. These go in `brand/competitors.yaml` with a tier (`core`, `adjacent`, `aspirational` or `remake`).
-7. **Proof.** Case studies, client wins, before and after stories, common questions and objections, and processes they're proud of. Record only what they confirm.
+6. **Proof.** Case studies, client wins, before and after stories, common questions and objections, and processes they're proud of. Record only what they confirm.
 
 ## Draft the Brand Kit
 
@@ -46,11 +45,10 @@ From the answers, draft each file (schemas live in the engine's `packages/core/s
 - `brand/offers.md`: each offer, who it's for, what's included, and which results may be claimed.
 - `brand/pillars.md`: content lanes in the YAML front matter (`lanes: [{id, name, weeklyQuota, funnelStage, description}]`), starting from the preset and adjusted to this business, plus the angle bank and story structures in the body.
 - `brand/proof-inventory.yaml`: confirmed items only; every number has a source.
-- `brand/competitors.yaml`: the creators from step 6.
 
 ## Approval
 
-Show a short summary: one paragraph on the voice, the lanes with weekly quotas, the offers, how many proof items, how many competitors. Then ask: "Shall I save this as your first Brand Kit?" Offer to show any full file first.
+Show a short summary: one paragraph on the voice, the lanes with weekly quotas, the offers, how many proof items. Then ask: "Shall I save this as your first Brand Kit?" Offer to show any full file first.
 
 Only after a clear yes, write the files. Then:
 

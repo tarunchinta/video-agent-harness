@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Research (Analyst): own-account sync, competitor outliers, trend radar and teardowns.",
+  "description": "Research (Analyst): own-account sync, trend radar and teardowns.",
   "license": "MIT",
   "exports": {
     ".": "./src/index.ts",

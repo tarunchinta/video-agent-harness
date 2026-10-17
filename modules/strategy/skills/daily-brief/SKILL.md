@@ -7,7 +7,7 @@ description: Run and draft the "Film today" brief (or the weekly batch-day editi
 
 The planner already decided **what** to film, in code: lanes by weekly quota, funnel stages that are behind, topic and proof cooldowns, rejected concepts, template rotation and the weights from learn. Your job is to make each piece easy to film in one take. You don't write scripts; the Copywriter does that next.
 
-The slate is **remix first**: about 70% of it (`strategy.remixShare`) remakes posts that already proved themselves, competitor outliers and the owner's own breakouts, ranked by views, times their creator's normal, freshness, fit with the owner's niche, and whether a checked blueprint is ready. Each remix item carries `brief.remixOf` (`line`: "Based on @handle's reel, 1.2M views, 14x their normal") and a proof item for the owner's numbers. The rest is what the lanes require: the offer piece, fresh news, and talking heads when there aren't enough proven posts.
+The slate is **remix first**: about 70% of it (`strategy.remixShare`) remakes the owner's own breakouts, ranked by views, times their normal, fit with the owner's niche, and whether a checked blueprint is ready. Each remix item carries `brief.remixOf` (`line`: "Based on your own reel, 48K views, 3.2x your normal") and a proof item for the owner's numbers. The rest is what the lanes require: the offer piece, fresh news, and talking heads when there aren't enough breakouts.
 
 ## Steps
 

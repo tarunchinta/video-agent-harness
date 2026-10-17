@@ -35,7 +35,6 @@ const META: Record<string, { title: string; description: string; group: BrandGro
   [BRAND_FILES.pillars]: { title: "Pillars", description: "Lanes, angles, story structures and rejected ideas.", group: "making" },
   [BRAND_FILES.proofInventory]: { title: "Proof inventory", description: "Case studies, wins and stats. The only source of numbers.", group: "making" },
   [BRAND_FILES.houseStyle]: { title: "House style", description: "Editing taste every edit inherits.", group: "making" },
-  [BRAND_FILES.competitors]: { title: "Competitors", description: "Creators the research scan follows, by platform and tier.", group: "watching" },
   [BRAND_FILES.sources]: { title: "Trend sources", description: "News and trend feeds for your niche.", group: "watching" },
   [BRAND_FILES.lessons]: { title: "Lessons", description: "Dated rules from your corrections. Agents add these.", group: "learning" },
 };

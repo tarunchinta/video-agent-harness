@@ -62,8 +62,8 @@ Zernio is free for your first two accounts, has richer webhooks for the learning
 **Why does Instagram feed posting default to "assist"?**
 Trending audio can't be added through any API. In assist mode you get the finished file and caption at the right time and post it yourself in about 30 seconds. Autopost is one setting away.
 
-**Is scraping competitors allowed?**
-Reading public posts through a third-party service may conflict with a platform's terms. AttentionOS shows a notice and asks you to acknowledge it once, only reads accounts you list, never logs in as you and never automates a browser. You can use the official Instagram Graph API instead.
+**Is reading public posts allowed?**
+Reading public posts through a third-party service may conflict with a platform's terms. AttentionOS shows a notice and asks you to acknowledge it once, only reads your own accounts and posts you paste in for a teardown, never logs in as you and never automates a browser. You can use the official Instagram Graph API instead.
 
 **Can I use Discord instead of Telegram?**
 Yes. See [Discord](providers/discord.md).

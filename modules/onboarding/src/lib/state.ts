@@ -6,8 +6,8 @@ import { z } from "zod";
  * `{ step, completed, data }`. Resumable at any step; most steps can be skipped ("I'll do this later" keeps the
  * defaults) and revisited. Setup is finished once `data.finishedAt` is set (the go-live step, done or skipped).
  *
- * The flow: welcome → you (website + handles) → keys (Apify, Zernio) → competitors → start (the agents scrape,
- * transcribe and draft) → review (approve the drafts) → go live. `interview` is an optional extra step ("Add proof
+ * The flow: welcome → you (website + handles) → keys (Apify, Zernio, the scraping notice) → start (the agents
+ * scrape, transcribe and draft) → review (approve the drafts) → go live. `interview` is an optional extra step ("Add proof
  * and stories") reached from Review or the Brand Kit; it is not part of the main rail.
  *
  * Pure transitions live here so they can be unit tested; `updateState` applies one under a row lock so Studio
@@ -19,7 +19,7 @@ import { z } from "zod";
 export const STATE_KEY = "onboarding:state";
 
 /** The main steps, in order (the step rail and the progress line). */
-export const STEP_IDS = ["welcome", "you", "keys", "competitors", "start", "review", "go-live"] as const;
+export const STEP_IDS = ["welcome", "you", "keys", "start", "review", "go-live"] as const;
 /** Optional steps outside the rail. */
 export const EXTRA_STEP_IDS = ["interview"] as const;
 export const ALL_STEP_IDS = [...STEP_IDS, ...EXTRA_STEP_IDS] as const;
@@ -30,7 +30,6 @@ export const STEP_TITLES: Record<StepId, string> = {
   welcome: "Welcome",
   you: "You",
   keys: "Keys",
-  competitors: "Competitors",
   start: "Start",
   review: "Review",
   "go-live": "Go live",
@@ -41,11 +40,13 @@ export function isStepId(value: unknown): value is StepId {
   return typeof value === "string" && (ALL_STEP_IDS as readonly string[]).includes(value);
 }
 
-/** Step ids of the first wizard (9 steps), mapped onto the new flow so a half-finished setup resumes sensibly. */
+/** Step ids of earlier wizards, mapped onto the current flow so a half-finished setup resumes sensibly. */
 export const LEGACY_STEPS: Record<string, StepId> = {
   business: "you",
   content: "you",
-  strategy: "competitors",
+  strategy: "keys",
+  // The competitors step was removed with competitor tracking; its scraping notice moved to Keys.
+  competitors: "keys",
   formats: "review",
   connect: "keys",
   team: "go-live",
@@ -120,18 +121,6 @@ export const voiceDraftSchema = z.object({
 });
 export type VoiceDraft = z.output<typeof voiceDraftSchema>;
 
-export const competitorSuggestionSchema = z.object({
-  handle: z.string().min(2).max(80),
-  platform: z.enum(PLATFORMS),
-  tier: z.enum(["core", "adjacent", "aspirational", "remake"]).default("core"),
-  why: z.string().max(300).default(""),
-});
-export const sourceSuggestionSchema = z.object({
-  kind: z.enum(["rss", "google_news", "hn", "reddit", "github"]),
-  target: z.string().min(2).max(300),
-  why: z.string().max(300).default(""),
-});
-
 export const postSchema = z.object({
   id: z.string().min(1).max(64),
   platform: z.enum(PLATFORMS).optional(),
@@ -164,17 +153,6 @@ export type InterviewMessage = z.output<typeof chatMessageSchema>;
 // ───────────────────────────── The state row ─────────────────────────────
 
 const runRef = z.string().max(64).optional();
-
-export const MAX_COMPETITORS_PER_PLATFORM = 10;
-export const MAX_COMPETITORS = 60;
-
-export const competitorEntrySchema = z.object({
-  handle: z.string().min(2).max(80),
-  platform: z.enum(PLATFORMS),
-  tier: z.enum(["core", "adjacent", "aspirational", "remake"]).default("core"),
-  notes: z.string().max(300).optional(),
-});
-export type CompetitorEntry = z.output<typeof competitorEntrySchema>;
 
 export const connectedAccountSchema = z.object({
   platform: z.enum(PLATFORMS),
@@ -220,17 +198,6 @@ export const onboardingDataSchema = z
         savedAt: z.string().optional(),
       })
       .prefault({}),
-    strategy: z
-      .object({
-        suggestRunId: runRef,
-        suggestions: z
-          .object({ competitors: z.array(competitorSuggestionSchema).max(20).default([]), sources: z.array(sourceSuggestionSchema).max(12).default([]) })
-          .optional(),
-        /** Competitor handles from the competitors step; written to brand/competitors.yaml when the owner starts. */
-        competitors: z.array(competitorEntrySchema).max(MAX_COMPETITORS).default([]),
-        savedAt: z.string().optional(),
-      })
-      .prefault({}),
     formats: z.object({ selected: z.array(z.string().max(48)).max(12).default([]), savedAt: z.string().optional() }).prefault({}),
     connect: z
       .object({
@@ -246,7 +213,7 @@ export const onboardingDataSchema = z
         kickoff: z.string().max(40).optional(),
         at: z.string().optional(),
         runIds: z.array(z.string()).max(12).default([]),
-        /** Plain notes from the queueing step (e.g. "Competitor scan waits for your Apify token"). */
+        /** Plain notes from the queueing step (e.g. "Reading public posts waits for the scraping notice"). */
         notes: z.array(z.string().max(300)).max(12).default([]),
       })
       .prefault({}),

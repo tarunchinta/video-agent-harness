@@ -85,7 +85,7 @@ export function coreTools(info: CoreToolsInfo): ToolDefinition[] {
   const brandKit = defineTool({
     name: "core_brand_kit",
     description:
-      "Read one Brand Kit file (voice, icp, offers, pillars, proof-inventory, house-style, competitors, sources, lessons, brand, or knowledge/<name>). Call with no file to list the files. Always read the relevant file instead of guessing the brand's voice, offers or numbers.",
+      "Read one Brand Kit file (voice, icp, offers, pillars, proof-inventory, house-style, sources, lessons, brand, or knowledge/<name>). Call with no file to list the files. Always read the relevant file instead of guessing the brand's voice, offers or numbers.",
     input: z.object({ file: z.string().max(120).optional().describe("File name, e.g. 'voice' or 'proof-inventory.yaml'. Omit to list files.") }),
     annotations: { readOnly: true, idempotent: true },
     handler: async ({ ws }, { file }) => {

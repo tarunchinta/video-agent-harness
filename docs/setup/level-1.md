@@ -8,7 +8,7 @@ By the end of this guide you will have:
 - AttentionOS **signed in to Claude**, so your agents work on your own Claude plan;
 - a **Brand Kit** your team drafted for you: your business, offers and ideal customer from your website, and your voice from your own videos;
 - your **own posts imported** with their numbers, so every future post is measured against your normal;
-- **competitor outliers**: posts in your niche that did far better than that creator's usual;
+- **teardowns of your best posts**, so your team can do what worked again;
 - today's **"Film today" brief** and your first **scripts**, ready to film.
 
 You never paste in your posts. You install the Docker stack once, then click through setup in Studio.
@@ -22,7 +22,7 @@ You never paste in your posts. You install the Docker stack once, then click thr
 | A Mac or Linux computer with about 8 GB of memory and 10 GB free disk (Windows: [WSL 2](https://learn.microsoft.com/windows/wsl/install) with Docker Desktop), **or** a small Ubuntu server | AttentionOS runs here | — (a server is about $10–20 a month) |
 | A [Claude Pro or Max](https://claude.com/pricing) plan | Your agents run on it | Your Claude plan |
 | Your website address and your social handles | Your team reads them to learn your business and your voice | — |
-| An [Apify](https://apify.com) account (recommended) | Reads public posts: yours (to learn your voice and your numbers) and your competitors' | Free credit each month, then about $0–29 a month |
+| An [Apify](https://apify.com) account (recommended) | Reads your public posts (to learn your voice and your numbers) | Free credit each month, then about $0–29 a month |
 | A [Zernio](https://zernio.com) account (optional now, needed in [Level 3](level-3.md)) | Brings in your real analytics; later it publishes your posts | First 2 accounts free |
 
 You also need Docker ([OrbStack](https://orbstack.dev) or Docker Desktop on a Mac, Docker Engine on Linux) and to be comfortable in a terminal. No Node.js or hosted database: everything else runs in containers.
@@ -64,15 +64,14 @@ Your team learns your voice from the **transcripts of your own videos**. Transcr
 
 ## Step 5. Follow setup in Studio (about 15 minutes of your time)
 
-Setup is seven short steps. You can leave and come back: Studio remembers where you were. Full detail: [Onboarding](../modules/onboarding.md).
+Setup is six short steps. You can leave and come back: Studio remembers where you were. Full detail: [Onboarding](../modules/onboarding.md).
 
 1. **Welcome.** Meet your team, and three checks say whether everything they need is running (the database, Claude, the worker). If one isn't, it shows the exact command to fix it. You can keep going; steps that need AI wait until it's fixed.
 2. **You.** Your website and the handles you post from (at least one). The Analyst starts reading your website as soon as you continue.
-3. **Keys.** Paste your **Apify** token and, if you have one, your **Zernio** key. Each card shows where to find the key and checks it when you save. For Zernio, Studio lists the accounts it can see and matches them to your handles ("Connected as @yourname", or "Not connected yet" with what to do). Both are optional and you can add them later in **Settings**.
-4. **Competitors.** Three to ten creators per platform who make the kind of posts you want to make. Type or paste handles, or press **Suggest some** and the Analyst searches for creators in your niche. If you use Apify, read the short notice about reading public posts and tick **I understand, read public posts for me**.
-5. **Start.** Press **Start** and watch your team work. They pull your posts, transcribe your best 15 videos and the top competitor outliers, scan your competitors for posts that beat their usual, finish reading your website and index everything so every agent can search it. Each line updates live. It takes a few minutes; you can continue while it runs.
-6. **Review.** Your drafts, side by side: **Your business** (what you do, your offers, your ideal customer, drafted from your website), **Your voice** (drafted from your own transcripts and captions), and your **Content lanes** (how many posts a week of each kind). Fix anything that's off, then press **Approve all**. Approved cards become your Brand Kit, which every agent reads before it writes.
-7. **Go live.** Choose what waits for your OK (**Review everything** is the right start), whether **Autopilot** runs work on a schedule, and optionally connect **Telegram** for your phone. Press **Go live** and Studio opens **Agents**, where you can watch your team start.
+3. **Keys.** Paste your **Apify** token and, if you have one, your **Zernio** key. Each card shows where to find the key and checks it when you save. For Zernio, Studio lists the accounts it can see and matches them to your handles ("Connected as @yourname", or "Not connected yet" with what to do). Both are optional and you can add them later in **Settings**. If you use Apify, read the short notice about reading public posts and tick **I understand, read my public posts for me**.
+4. **Start.** Press **Start** and watch your team work. They pull your posts, transcribe your best 15 videos, finish reading your website and index everything so every agent can search it. Each line updates live. It takes a few minutes; you can continue while it runs.
+5. **Review.** Your drafts, side by side: **Your business** (what you do, your offers, your ideal customer, drafted from your website), **Your voice** (drafted from your own transcripts and captions), and your **Content lanes** (how many posts a week of each kind). Fix anything that's off, then press **Approve all**. Approved cards become your Brand Kit, which every agent reads before it writes.
+6. **Go live.** Choose what waits for your OK (**Review everything** is the right start), whether **Autopilot** runs work on a schedule, and optionally connect **Telegram** for your phone. Press **Go live** and Studio opens **Agents**, where you can watch your team start.
 
 > **Optional: add proof and stories.** From Review, **Add proof and stories** opens a ten-minute interview with the Chief of Staff (or go to `/setup?step=interview`). It asks for results you can prove, client stories and the objections you hear. Numbers are only kept when you say where they come from, and they go into your proof inventory, the only place agents take numbers from.
 
@@ -97,7 +96,7 @@ The Copywriter writes each script in your voice, records where the hook came fro
 ### What success looks like
 
 - **Brand Kit** in Studio shows files you recognize as you.
-- **Analytics → Competitors** shows your competitors' outliers.
+- **Analytics** shows your own posts against your normal.
 - **Scripts** shows a script you would actually say on camera.
 
 From here, your week is: film, upload, review, approve. See [Your daily workflow](../daily-workflow.md). Tell the Chief of Staff a correction, like "never call it cheap", with the chat button in the bottom-right corner, and it becomes a dated rule in `brand/lessons.md`, so the same mistake doesn't come back.
@@ -115,8 +114,6 @@ From here, your week is: film, upload, review, approve. See [Your daily workflow
 **Start says "Couldn't bring in your posts"** · Check your Apify token on the Keys step (press **Check**). Private accounts can't be read. Without Apify, Zernio brings in captions and numbers but no video files, so your voice is learned from captions.
 
 **Start says speech-to-text isn't set up** · The model is still downloading, or the download failed (no internet). Check with `./aos doctor`; `./aos doctor --fix` retries the download. Your voice is learned from captions until then.
-
-**Competitors say "Not scanned"** · The line says why: no Apify token yet, the notice isn't ticked (Competitors step), or this month's scraping budget is used up.
 
 **The brief doesn't appear** · The Strategist starts a minute after you go live. Open **Agents → Strategist** to see what it's doing, or run it yourself there: **Run now → Plan today's filming**.
 

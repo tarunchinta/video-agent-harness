@@ -21,9 +21,11 @@ async function seedResearch(ws: WorkspaceContext) {
   await ws.sql`insert into trends (workspace_id, source_id, external_id, title, url, heat, status, story, last_seen_at, film_by)
     values (${ws.id}, 'industry-feed', 'e1', 'County permits move online', 'https://news.example.org/a', 82, 'kit',
             ${ws.sql.json({ header: "Permits just went online", hook: "x" })}, ${NOW}, ${new Date(NOW.getTime() + 20 * 3_600_000)})`;
-  for (const [id, x] of [["o1", 4.4], ["o2", 3.1]] as const) {
-    await ws.sql`insert into external_posts (workspace_id, platform, platform_post_id, author_handle, url, published_at, x_score, is_outlier)
-      values (${ws.id}, 'instagram', ${id}, 'demo_creator_a', ${`https://www.instagram.com/reel/${id}/`}, ${new Date(NOW.getTime() - 2 * 86_400_000)}, ${x}, true)`;
+  // The owner's imported posts: median 11,000 views, two breakouts (o1 4x, o2 2.8x).
+  const [own] = await ws.sql`insert into tracked_creators (workspace_id, platform, handle, tier) values (${ws.id}, 'instagram', 'examplebrand', 'own') returning id`;
+  for (const [id, views] of [["n1", 9000], ["n2", 10_000], ["n3", 11_000], ["o1", 44_000], ["o2", 30_800]] as const) {
+    await ws.sql`insert into external_posts (workspace_id, tracked_creator_id, platform, platform_post_id, author_handle, url, published_at, views)
+      values (${ws.id}, ${own!.id}, 'instagram', ${id}, 'examplebrand', ${`https://www.instagram.com/reel/${id}/`}, ${new Date(NOW.getTime() - 2 * 86_400_000)}, ${views})`;
   }
 }
 
@@ -48,14 +50,14 @@ describe("daily brief", () => {
     expect(approval).toMatchObject({ kind: "other", subject_type: "daily_brief", agent: "strategist" });
     // Remix-first: the slate asks for 5 remixes (remixShare 0.7 of 7), keeps 1 news slot and the offer; only 2 proven
     // posts exist, so the rest is backfilled with talking heads.
-    expect(approval!.summary).toMatch(/^Film today: \d+ pieces \(1 news reel, 2 outlier remixes, 1 offer piece, \d+ talking heads\)$/);
+    expect(approval!.summary).toMatch(/^Film today: \d+ pieces \(1 news reel, 2 remixes, 1 offer piece, \d+ talking heads\)$/);
     const remixes = r.items.filter((i) => i.brief.kind === "remix");
     expect(remixes.map((i) => i.sourceRefs[0])).toEqual([
       { type: "external_post", id: expect.any(String), url: "https://www.instagram.com/reel/o1/" },
       { type: "external_post", id: expect.any(String), url: "https://www.instagram.com/reel/o2/" },
     ]);
-    expect(remixes[0]!.brief.remixOf).toMatchObject({ handle: "demo_creator_a", own: false, x: 4.4, line: "Based on @demo_creator_a's reel, 4.4x their normal" });
-    expect(remixes[0]!.brief.why).toContain("Based on @demo_creator_a's reel");
+    expect(remixes[0]!.brief.remixOf).toMatchObject({ handle: "examplebrand", own: true, x: 4, line: "Based on your own reel, 44K views, 4x your normal" });
+    expect(remixes[0]!.brief.why).toContain("Based on your own reel");
     const [msg] = await ws.sql`select body, ref from messages where workspace_id = ${ws.id}`;
     expect((msg!.body as { text: string }).text).toContain("1. Permits just went online · Local news take · film by");
     expect((msg!.body as { text: string }).text).toContain("3 remix slots left open");

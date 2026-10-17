@@ -300,12 +300,12 @@ export async function contentDetail(id: string): Promise<ContentDetail | null> {
         select title, url, heat::text, source_id from trends where workspace_id = ${ws.id} and id = ${rid}`;
       sources.push({ type: "Trend", label: t?.title ?? "A trend", detail: t?.heat ? `Heat ${Number(t.heat).toFixed(2)}` : null, url: t?.url ?? (ref.url as string) ?? null, href: "/research#trends" });
     } else if (type === "external_post" && rid && UUID.test(rid)) {
-      const [e] = await ws.sql<{ author_handle: string; spoken_hook: string | null; caption: string | null; x_score: string | null; url: string }[]>`
-        select author_handle, spoken_hook, caption, x_score::text, url from external_posts where workspace_id = ${ws.id} and id = ${rid}`;
+      const [e] = await ws.sql<{ author_handle: string; spoken_hook: string | null; caption: string | null; url: string; own: boolean }[]>`
+        select author_handle, spoken_hook, caption, url, tracked_creator_id is not null as own from external_posts where workspace_id = ${ws.id} and id = ${rid}`;
       sources.push({
-        type: "Outlier remix",
-        label: e?.spoken_hook ?? e?.caption ?? "A competitor post",
-        detail: e ? `${e.author_handle.startsWith("@") ? e.author_handle : `@${e.author_handle}`}${e.x_score ? ` · ${Number(e.x_score).toFixed(1)}× their usual` : ""}` : null,
+        type: "Remix",
+        label: e?.spoken_hook ?? e?.caption ?? "A post in your research library",
+        detail: e ? (e.own ? "One of your own posts" : e.author_handle.startsWith("@") ? e.author_handle : `@${e.author_handle}`) : null,
         url: e?.url ?? null,
         href: "/research",
       });
@@ -386,9 +386,7 @@ export async function contentDetail(id: string): Promise<ContentDetail | null> {
           sourceLabel: (() => {
             const s = (hookRow.source_ref ?? null) as Json | null;
             if (!s) return null;
-            if (s.author) return `from ${String(s.author)}`;
             if (s.post_id) return "from one of your own posts";
-            if (s.external_post_id) return "from a competitor outlier (structure only)";
             return null;
           })(),
         }

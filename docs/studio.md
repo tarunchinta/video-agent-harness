@@ -13,7 +13,7 @@ Studio comes with the Docker stack (see [Install](install.md)). It runs in Docke
 - **Installed on this computer:** open **http://localhost:4747** (`./aos open` from your AttentionOS folder). There's no sign-in: Studio is published to `127.0.0.1` only, so nothing else on your network can reach it.
 - **On a server:** Studio is on the server's `127.0.0.1:4747`; open it through an SSH tunnel (`ssh -L 4747:127.0.0.1:4747 root@<server>`, then http://localhost:4747). See [AttentionOS on a server](deploy/server.md).
 
-The first time, Studio opens on setup (`/setup`): your website and handles, your keys, competitors, then your team drafts your Brand Kit for you to approve, and you go live. Studio then opens **Agents**, so you can watch your team start. See [Onboarding](modules/onboarding.md). After that, the daily loop is [Scripts, Edit and Calendar](daily-workflow.md).
+The first time, Studio opens on setup (`/setup`): your website and handles, your keys (and the scraping notice), then your team drafts your Brand Kit for you to approve, and you go live. Studio then opens **Agents**, so you can watch your team start. See [Onboarding](modules/onboarding.md). After that, the daily loop is [Scripts, Edit and Calendar](daily-workflow.md).
 
 | Task | Command (from your AttentionOS folder) |
 |---|---|
@@ -53,7 +53,7 @@ pnpm attentionos up          # Studio + the worker, on your Tailscale address wh
 | **Edit** | Drop your footage here, as many files as you like. Takes are matched to their scripts on their own. **Being edited** shows the progress; **Ready for you** is where you watch each video and press **Needs changes** (notes pinned to moments make a new version) or **Looks good** (then **Schedule**, **Download** or **Save as ready**). **Recently done** below. **Settings** at the top has **Review cuts before editing** |
 | **Calendar** | Scheduled posts by week or month, with a filter per platform. Below it, **Ready to post**: approved videos that aren't scheduled yet (**Schedule**, **Download**, **Mark as posted**), and any that failed to post, with **Try again** |
 | **Agents** | **Worker view**: a room where each agent lights up while it works. **Command view**: an orbit view of the whole team. **Full screen** for filming. Your team is listed below; open an agent to see its work and set how much it can do on its own |
-| **Analytics** | Overview, Your posts, What's working and Competitors. Your setup scan of your own account and your competitors shows straight away, including followers. **Remix this** on a competitor's post turns it into a script on Scripts |
+| **Analytics** | Overview, Your posts and What's working. Your setup scan of your own account shows straight away, including followers |
 | **Brand Kit** | Your business, voice, lanes, house style and lessons, to read and edit |
 | **Settings** | How your workspace runs (see below) |
 

@@ -20,13 +20,13 @@ First public release. AttentionOS runs from a clone of this repository as a Dock
 #### Studio
 
 - The dashboard: Home, Scripts (with a teleprompter), Edit (upload takes, review videos with timestamped notes), Calendar, Agents (worker view and command view), Analytics, Brand Kit and Settings, plus the Chief of Staff chat on every page.
-- Guided setup at `/setup`: your website and handles, provider keys with live checks, competitors, then a drafted Brand Kit for you to approve.
+- Guided setup at `/setup`: your website and handles, provider keys with live checks and the scraping notice, then a drafted Brand Kit for you to approve.
 - Settings for the workspace and mode, modules, services and keys, budgets, a checkup (the same checks as `./aos doctor`) and access. How much each agent does on its own is set on the Agents page.
 
 #### Modules
 
 - `onboarding`: reads your website, imports your own posts, learns your voice from their transcripts and drafts your Brand Kit.
-- `research`: own-account sync, competitor outliers against each creator's own baseline, the trend radar and teardowns.
+- `research`: own-account sync with teardowns of your best posts, the trend radar, and teardowns of any post you paste in.
 - `strategy`: content lanes with weekly quotas, funnel mix, proof pickers and the daily "Film today" brief.
 - `scripting`: hook banks with provenance, 6-beat scripts with a claim ledger, per-platform captions and a deterministic script validator.
 - `production`: the daily loop from script to post, with bulk upload of takes matched to their scripts and an automatic edit queue.

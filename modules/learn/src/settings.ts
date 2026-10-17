@@ -11,7 +11,7 @@ export const learnSettingsSchema = z.object({
   weights: z.object({
     /** Share of picks that ignore the weights and explore. */
     explore: z.number().min(0).max(1).default(0.2),
-    /** Own data takes over from competitor signals at about this many own posts. */
+    /** Own data moves the weights in full from about this many own posts (fewer: shrunk toward neutral). */
     fullTrustAt: z.number().int().positive().default(20),
     min: z.number().positive().default(0.5),
     max: z.number().positive().default(2),

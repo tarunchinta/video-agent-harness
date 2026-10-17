@@ -66,7 +66,6 @@ my-brand/
     pillars.md             lanes (YAML front matter), angles, story structures, rejected concepts
     proof-inventory.yaml   case studies, wins, FAQs, objections: the only source of numbers
     house-style.md         editing taste every edit inherits
-    competitors.yaml       creators you track, per platform and tier
     sources.yaml           trend and news sources for your niche
     lessons.md             dated rules from your corrections
     knowledge/             optional deeper documents
@@ -115,7 +114,7 @@ Your own local Postgres with the pgvector extension (Postgres 16+ with pgvector;
 | Area | Tables |
 |---|---|
 | Tenancy | workspaces, members, settings, budgets, counters |
-| Research | tracked creators, external posts and snapshots, trends, teardowns |
+| Research | your own accounts (tracked creators), the research library (external posts and snapshots), trends, teardowns |
 | Content | hooks, content, scripts, keywords, lead magnets |
 | Media | media assets, edit jobs |
 | Publishing | social accounts, posts, post metrics |
@@ -133,7 +132,7 @@ The `knowledge` module keeps a searchable memory in the same Postgres ([ADR-15](
 - **Embeddings are local by default**: `BAAI/bge-small-en-v1.5` (384 dimensions) runs on the CPU through `media-py` (fastembed, ONNX). No key, no cost. OpenAI or Voyage embeddings are optional (`knowledge.embeddings` in the config).
 - **Search is hybrid**: the top matches by meaning (cosine distance, HNSW index) and by keywords (`ts_rank`) are fused with reciprocal rank fusion. Agents use it through the `knowledge_search` tool.
 - **Indexing is incremental**: an hourly job (and every search, when the index is over an hour old) re-reads sources, skips anything whose hash hasn't changed, and embeds only new or edited passages.
-- **Trust is recorded per passage**: other people's words (competitor transcripts, comments, teardowns, trend kits) are marked untrusted and returned apart, as data, never instructions.
+- **Trust is recorded per passage**: other people's words (transcripts of pasted posts, comments, teardowns, trend kits) are marked untrusted and returned apart, as data, never instructions.
 - **Taste still lives in files.** The index is a derived copy; the Brand Kit files stay the source of truth.
 
 ## Providers

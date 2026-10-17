@@ -14,7 +14,7 @@ The Copywriter turns a picked idea into a script you would actually say, with a 
 
 ### Copy what works (remix first)
 
-If a reel pulled a million views, the fastest way to a good script is to remake it, not to reinvent it. Most scripts are **close remixes** of one proven post: a competitor's outlier, or one of your own breakouts ("do that again, new angle").
+If one of your reels beat your normal, the fastest way to a good script is to remake it, not to reinvent it. Most scripts are **close remixes** of one of your own breakouts ("do that again, new angle"). You can also paste in any public post for a teardown and attach it to a piece by hand.
 
 A remix keeps, almost exactly:
 
@@ -28,11 +28,11 @@ It changes only what makes it yours: the topic specifics (moved to your offer an
 
 **Never without its blueprint.** A remix is only written from its source's checked blueprint. If the teardown isn't in yet, the script waits for it in code (no AI time spent) and starts the moment it lands; a failed teardown is retried, and after two failures the script stops and tells you to pick another source rather than writing something generic. The working title becomes the blueprint's topic as soon as it's known.
 
-Every remix says where it came from, next to the script in Studio: "Based on @handle's reel, 1.2M views, 14x their normal".
+Every remix says where it came from, next to the script in Studio: "Based on your own reel, 48K views, 3.2x your normal".
 
-**How it stays safe.** Other people's transcripts and captions are untrusted text, so the Copywriter (which has tools) never reads them. A tool-less teardown reads the post and writes a **remix blueprint**: the hook line quoted exactly, the beats with timing, the format, the call-to-action mechanic, why it worked, and what belongs to the creator. Code checks the blueprint (the hook line must really be in the post; no links, handles or instructions) before the Copywriter sees it. The validator then keeps the creator's handle, name, brand, products, catchphrases and numbers out of your script, and fails a script that reads long passages of their transcript back after the hook.
+**How it stays safe.** Transcripts and captions of posts in the research library are untrusted text, so the Copywriter (which has tools) never reads them. A tool-less teardown reads the post and writes a **remix blueprint**: the hook line quoted exactly, the beats with timing, the format, the call-to-action mechanic, why it worked, and what belongs to the creator. Code checks the blueprint (the hook line must really be in the post; no links, handles or instructions) before the Copywriter sees it. The validator then keeps the creator's handle, name, brand, products, catchphrases and numbers out of your script, and fails a script that reads long passages of their transcript back after the hook.
 
-**When you ask for a script about something** ("Ask the AI", or a planned talking head), the Copywriter first looks for proven posts on that topic (`scripting_find_remix_sources`) and adapts the best match when there is one, saying which. If nothing fits, it writes an original modelled on your own best posts.
+**When you ask for a script about something** ("Ask the AI", or a planned talking head), the Copywriter first looks for your breakouts on that topic (`scripting_find_remix_sources`) and adapts the best match when there is one, saying which. If nothing fits, it writes an original modelled on your own best posts.
 
 **Your own best posts, every time.** Each brief carries your top posts against your own normal (the scripts of posts made here, and the hook lines and beats of your imported posts), so the words sound like you.
 
@@ -40,10 +40,10 @@ Every remix says where it came from, next to the script in Studio: "Based on @ha
 
 Before the Copywriter starts, code gathers everything it needs into one work packet: the brief, the remix blueprint (or proven posts on the topic), your best posts, your Brand Kit text, the numbers it may use, free keywords and recent scripts. The Copywriter thinks once and drafts once, then saves. Saving runs every check and, when one fails, lists the exact fix, so a revision only sends the changed lines instead of retyping the script.
 
-### Two hook banks
+### Hook banks
 
 - **Your own bank:** openers from your posts that beat your median by 3× or more.
-- **Competitor bank:** openers harvested from outliers, capped in size and decaying over time.
+- **Manual bank:** hooks saved by hand.
 
 Both use a named pattern taxonomy. Every script records which hook it used and where it came from. Original scripts use a bank hook's structure with new words; a remix uses its source's hook, with only the topic words changed.
 

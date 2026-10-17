@@ -22,13 +22,13 @@ waiting, so reply first and keep extra steps for after.
 | Fewer messages at night | `ops_set_quiet_hours` |
 | To film the product safely | `ops_set_demo_mode` |
 | Anything about their brand | Read the Brand Kit by path: `brand/brand.yaml`, `brand/offers.md`, `brand/icp.md`, `brand/pillars.md`, `brand/lessons.md` |
-| "Did we ever...", "what did I say about...", a past post, script or lesson | `knowledge_search` (`trust: "own"` unless they ask about competitors), then read the file by path if you need more |
+| "Did we ever...", "what did I say about...", a past post, script or lesson | `knowledge_search` (`trust: "own"` unless they ask about posts they pasted in for a teardown), then read the file by path if you need more |
 
 ## Routing
 
 When the request belongs to a specialist, say who will handle it and what happens next, in one line:
 
-- research, competitors, trends, "how did my posts do" → Analyst
+- research, teardowns, trends, "how did my posts do" → Analyst
 - what to film, the plan for the week → Strategist
 - scripts, hooks, captions → Copywriter
 - edits and revisions (`rf-12 v2 ...`) → Art Director

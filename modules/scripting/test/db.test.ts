@@ -1,7 +1,7 @@
 import { ToolError, type Sql, type WorkspaceContext } from "@attentionos/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  applyClassifications, harvestCompetitorHooks, harvestOwnHooks, reserveKeyword, runWriteScript, saveScript, seededRandom, type ScriptModel,
+  harvestOwnHooks, reserveKeyword, runWriteScript, saveScript, seededRandom, type ScriptModel,
 } from "../src/index.ts";
 import { scriptingTools } from "../src/tools/index.ts";
 import { validPackage, withBeat } from "../../../packages/guardrails/test/fixtures.ts";
@@ -189,17 +189,14 @@ describe.skipIf(!HAS_DB)(`scripting with a database${NEEDS_DB}`, () => {
       expect((sources.cited as { ref: string; url: string }[]).map((c) => c.url)).toEqual(["https://example.com/report", "https://example.com/permits"]);
 
       await makeHook(ws, { origin: "own", pattern: "contrarian", text: "Our own opener words." });
-      await makeHook(ws, { origin: "competitor", pattern: "myth-bust", text: "Untrusted scraped words", abstract: "[Belief] is a myth because [reason]." });
-      const hooks = (await tool("scripting_list_hooks")(ws, { bank: "all" })).hooks as { origin: string; text?: string; structure: string }[];
-      const comp = hooks.find((h) => h.origin === "competitor")!;
-      expect(comp.text).toBeUndefined();
-      expect(comp.structure).toBe("[Belief] is a myth because [reason].");
+      await makeHook(ws, { origin: "manual", pattern: "myth-bust", text: "A hook saved by hand." });
+      const hooks = (await tool("scripting_list_hooks")(ws, { bank: "all" })).hooks as { origin: string; text: string; structure: string }[];
+      expect(hooks.map((h) => h.origin)).toEqual(["own", "manual"]);
       expect(hooks.find((h) => h.origin === "own")!.text).toBe("Our own opener words.");
-      expect(JSON.stringify(hooks)).not.toContain("Untrusted scraped words");
+      expect(hooks.find((h) => h.origin === "manual")!.structure).toContain("[");
 
       const picks = await tool("scripting_pick_hooks")(ws, { count: 2 });
       expect(picks).toMatchObject({ weights: "uniform" });
-      expect(JSON.stringify(picks)).not.toContain("Untrusted scraped words");
 
       await saveScript(ws, AGENT, { contentId, package: await packageFor(ws) });
       const recent = await tool("scripting_list_recent_scripts")(ws, { limit: 5 });
@@ -425,42 +422,6 @@ describe.skipIf(!HAS_DB)(`scripting with a database${NEEDS_DB}`, () => {
       expect(again).toMatchObject({ added: 0, updated: 1 });
       const hooks = await ws.sql<{ text: string; pattern: string; origin: string }[]>`select text, pattern, origin from hooks where workspace_id = ${ws.id}`;
       expect(hooks).toEqual([{ text: "Opener number 4 for a remodel.", pattern: "contrarian", origin: "own" }]);
-    });
-
-    it("competitor bank is capped and decays; the classifier output is validated before it's written", async () => {
-      const ws = await makeWorkspace(sql, { modules: { scripting: { settings: { competitorBankCap: 2, competitorHalfLifeDays: 30 } } } });
-      const posts = [
-        { id: "p1", hook: "Stop asking contractors for a ballpark price.", x: 10, days: 90 },
-        { id: "p2", hook: "Three things to check before you sign.", x: 4, days: 1 },
-        { id: "p3", hook: "Kitchens are fun to plan with friends.", x: 5, days: 2 },
-      ];
-      for (const p of posts) {
-        await ws.sql`insert into external_posts (workspace_id, platform, platform_post_id, author_handle, url, published_at, x_score, is_outlier, spoken_hook)
-                     values (${ws.id}, 'instagram', ${p.id}, 'creator_a', ${`https://example.com/${p.id}`}, ${new Date(NOW.getTime() - p.days * 86_400_000)}, ${p.x}, true, ${p.hook})`;
-      }
-      const res = await harvestCompetitorHooks(ws);
-      expect(res).toMatchObject({ added: 3, active: 2, retired: 1 });
-      const rows = await ws.sql<{ id: string; text: string; pattern: string; status: string; score: string }[]>`
-        select id, text, pattern, status, score from hooks where workspace_id = ${ws.id} order by score desc`;
-      // p1: 10 * 0.5^(90/30) = 1.25 → lowest, retired. p3 4.89, p2 3.91.
-      expect(rows.map((r) => [r.text.slice(0, 12), r.status])).toEqual([
-        ["Kitchens are", "active"],
-        ["Three things", "active"],
-        ["Stop asking ", "retired"],
-      ]);
-      expect(rows.find((r) => r.text.startsWith("Kitchens"))!.pattern).toBe("unclassified");
-      expect(rows.find((r) => r.text.startsWith("Three"))!.pattern).toBe("list-instant-reveal");
-      expect((await harvestCompetitorHooks(ws)).added).toBe(0);
-
-      const unclassified = rows.find((r) => r.pattern === "unclassified")!;
-      const applied = await applyClassifications(
-        ws,
-        { items: [{ id: unclassified.id, pattern: "pov-identity", abstract: "[Activity] is better with [people] when [condition]." }, { id: "not-sent", pattern: "myth-bust", abstract: "[Belief] is a myth." }] },
-        [{ id: unclassified.id, text: unclassified.text }],
-      );
-      expect(applied).toMatchObject({ applied: 1, rejected: 1 });
-      const [h] = await ws.sql<{ pattern: string; abstract: string }[]>`select pattern, abstract from hooks where id = ${unclassified.id}`;
-      expect(h).toEqual({ pattern: "pov-identity", abstract: "[Activity] is better with [people] when [condition]." });
     });
   });
 });

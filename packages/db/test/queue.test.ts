@@ -51,7 +51,7 @@ describe("queue, approvals and spend", () => {
   it("claims user work before background work, then by run_after and age", async () => {
     await db.sql`update agent_runs set status = 'cancelled' where workspace_id = ${ws} and status = 'queued'`;
     const old = new Date(Date.now() - 3_600_000);
-    const bg = await enqueueRun(db.sql, { workspaceId: ws, jobId: "research.competitor-scan", agent: "analyst", trigger: "schedule", runAfter: old });
+    const bg = await enqueueRun(db.sql, { workspaceId: ws, jobId: "research.trend-radar", agent: "analyst", trigger: "schedule", runAfter: old });
     const upload = await enqueueRun(db.sql, { workspaceId: ws, jobId: "production.match-upload", agent: "art_director", trigger: "event", createdBy: "user:studio" });
     const chat = await enqueueRun(db.sql, { workspaceId: ws, jobId: "ops.chief-of-staff", agent: "chief_of_staff", trigger: "chat", createdBy: "user:telegram:1" });
     const pinned = await enqueueRun(db.sql, { workspaceId: ws, jobId: "ops.outbox", agent: "chief_of_staff", trigger: "schedule", priority: 105 });
@@ -68,7 +68,7 @@ describe("queue, approvals and spend", () => {
     expect((await claimRun(db.sql, ws, "w1"))?.id).toBe(pinned.id);
     expect((await claimRun(db.sql, ws, "w1", undefined, { minPriority: RUN_PRIORITY.user }))?.id).toBe(upload.id);
     expect(await claimRun(db.sql, ws, "w1", undefined, { minPriority: RUN_PRIORITY.user })).toBeNull();
-    expect(await claimRun(db.sql, ws, "w1", undefined, { excludeJobs: ["research.competitor-scan"] })).toBeNull();
+    expect(await claimRun(db.sql, ws, "w1", undefined, { excludeJobs: ["research.trend-radar"] })).toBeNull();
     expect((await claimRun(db.sql, ws, "w1"))?.id).toBe(bg.id);
 
     // Within one priority, an earlier run_after (an earlier film-by deadline) goes first.

@@ -20,7 +20,7 @@ export default async function AnalyticsOverviewPage({ searchParams }: { searchPa
     return (
       <EmptyState
         title="No posts to measure yet"
-        body="Add your handles in setup and press Start. We read your recent posts and your competitors' and show the numbers here in a few minutes."
+        body="Add your handles in setup and press Start. We read your recent posts and show the numbers here in a few minutes."
         action={
           <Link href="/setup" className={buttonClass("primary")}>
             Go to setup

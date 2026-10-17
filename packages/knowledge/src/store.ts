@@ -4,7 +4,7 @@ import { chunkDocument, formatForPath, type Chunk, type ChunkFormat } from "./ch
 import { SOURCE_TYPES, TRUST_LEVELS, type SourceType, type Trust } from "./constants.ts";
 import { chunkTokensFor, toVectorLiteral, workspaceEmbedder, type Embedder } from "./embedder.ts";
 
-/** One thing to index: a Brand Kit file, a post, a script, a competitor transcript... */
+/** One thing to index: a Brand Kit file, a post, a script, a teardown... */
 export type SourceDoc = {
   sourceType: SourceType;
   /** Stable id within its type: a workspace-relative path for files, a row id for database rows. */

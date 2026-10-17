@@ -43,18 +43,19 @@ export async function quietWindow(ws: WorkspaceContext): Promise<QuietWindow | n
 /** People whose names must not appear on camera in demo mode. */
 export async function loadMasker(ws: WorkspaceContext): Promise<Masker> {
   if (!(await isDemoMode(ws))) return createMasker(false, []);
-  const [contacts, triage, creators] = await Promise.all([
+  const [contacts, triage, authors] = await Promise.all([
     ws.sql<{ name: string | null; email: string | null; handle: string | null; phone: string | null }[]>`
       select name, email::text as email, handle, phone from contacts where workspace_id = ${ws.id} order by updated_at desc limit 5000`,
     ws.sql<{ from_handle: string | null }[]>`
       select distinct from_handle from triage_items where workspace_id = ${ws.id} and from_handle is not null limit 5000`,
-    ws.sql<{ handle: string }[]>`select handle from tracked_creators where workspace_id = ${ws.id} and tier <> 'own'`,
+    // Creators of posts pasted in for a teardown (the owner's own posts sit under a tracked creator).
+    ws.sql<{ handle: string }[]>`select distinct author_handle as handle from external_posts where workspace_id = ${ws.id} and tracked_creator_id is null limit 5000`,
   ]);
   const pairs = maskPairs({
     names: contacts.map((c) => c.name).filter((x): x is string => !!x),
     emails: contacts.map((c) => c.email).filter((x): x is string => !!x),
     phones: contacts.map((c) => c.phone).filter((x): x is string => !!x),
-    handles: [...contacts.map((c) => c.handle), ...triage.map((t) => t.from_handle), ...creators.map((c) => c.handle)].filter((x): x is string => !!x),
+    handles: [...contacts.map((c) => c.handle), ...triage.map((t) => t.from_handle), ...authors.map((c) => c.handle)].filter((x): x is string => !!x),
   });
   return createMasker(true, pairs);
 }

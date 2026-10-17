@@ -203,7 +203,7 @@ function itemLabel(item: unknown, index: number): string {
 const yamlText = (v: unknown) => stringifyYaml(v, { lineWidth: 0 }).trim();
 
 /**
- * YAML: one chunk per item of every list of objects (proof inventory items, competitors, sources, offers);
+ * YAML: one chunk per item of every list of objects (proof inventory items, sources, offers);
  * everything else (scalars, lists of words) is packed together as the file's overview.
  */
 export function chunkYaml(text: string, opts: ChunkOptions = {}): Chunk[] {

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Pure scoring for AttentionOS: baselines, outlier ratios, trend heat, hook scores, creator rotation and feature attribution.",
+  "description": "Pure scoring for AttentionOS: baselines, outlier ratios, trend heat, hook scores and feature attribution.",
   "license": "MIT",
   "exports": {
     ".": "./src/index.ts"

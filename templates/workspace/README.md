@@ -15,7 +15,7 @@ This folder is where your content system lives. It holds what makes your brand y
 ## First steps
 
 1. **Check your setup.** Run `./aos doctor` from your AttentionOS folder. It lists what's ready and how to fix what isn't.
-2. **Follow setup in Studio** (`./aos open` from your AttentionOS folder; about 15 minutes of your time). Give it your website and your handles; your team reads your site, pulls your own posts, transcribes your best videos, studies your competitors and drafts your first Brand Kit, including a voice profile built from how you actually talk. You approve it before anything is used. You never paste a post. (Prefer Claude Code? Open this folder in it and run `/attention:init`.)
+2. **Follow setup in Studio** (`./aos open` from your AttentionOS folder; about 15 minutes of your time). Give it your website and your handles; your team reads your site, pulls your own posts, transcribes your best videos, tears down your best posts and drafts your first Brand Kit, including a voice profile built from how you actually talk. You approve it before anything is used. You never paste a post. (Prefer Claude Code? Open this folder in it and run `/attention:init`.)
 3. **Read your Brand Kit.** Open the files in `brand/` (or **Brand Kit** in Studio) and fix anything that isn't quite right. Look for lines marked `TODO`.
 4. **Get your first brief.** Studio's **Home** shows what to film today; in Claude Code, `/attention:brief`.
 
@@ -32,7 +32,7 @@ You don't need everything on day one.
 
 | Level | What you get | Extra time |
 |---|---|---|
-| 1 · Research and scripts | Install, Brand Kit, competitor research, trends, daily brief, scripts | 60–90 min, mostly waiting |
+| 1 · Research and scripts | Install, Brand Kit, teardowns of your best posts, trends, daily brief, scripts | 60–90 min, mostly waiting |
 | 2 · Edit | Raw footage to finished reel | +20 min |
 | 3 · Publish and engage | Scheduling, comment-to-DM, tracked links | +20 min |
 | 4 · Autopilot | Work on a schedule, Telegram on your phone, optionally a server | +10 min, or about 45 min with a server |

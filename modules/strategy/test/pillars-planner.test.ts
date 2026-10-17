@@ -94,10 +94,10 @@ function baseInput(over: Partial<PlannerInput> = {}): PlannerInput {
       { id: "t2", url: "https://news.example.org/b", heat: 95, header: null, hasKit: false },
       { id: "t3", url: "https://news.example.org/c", heat: 60, header: "Lumber prices ease again", hasKit: true },
     ],
-    outliers: [
-      { id: "o1", url: "https://www.instagram.com/reel/a/", creator: "@demo_creator_a", platform: "instagram", x: 4.4, hookPattern: "question" },
-      { id: "o2", url: "https://www.instagram.com/reel/b/", creator: "@demo_creator_c", platform: "instagram", x: 3.1 },
-      { id: "o3", url: "https://www.instagram.com/reel/c/", creator: "@demo_creator_c", platform: "instagram", x: 2.2 },
+    remixes: [
+      { id: "o1", url: "https://www.instagram.com/reel/a/", creator: "@examplebrand", platform: "instagram", x: 4.4, hookPattern: "question" },
+      { id: "o2", url: "https://www.instagram.com/reel/b/", creator: "@examplebrand", platform: "instagram", x: 3.1 },
+      { id: "o3", url: "https://www.instagram.com/reel/c/", creator: "@examplebrand", platform: "instagram", x: 2.2 },
     ],
     proof: kit.proofInventory.items.map((p) => ({ id: p.id, kind: p.kind, title: p.title, summary: p.summary, numbers: p.numbers, clientConsent: p.clientConsent, lastUsedAt: null })),
     offers: kit.brand.offers.map((o) => ({ id: o.id, name: o.name, cta: o.cta })),
@@ -117,7 +117,7 @@ describe("planner", () => {
     expect(planSlate(baseInput())).toEqual(planSlate(baseInput()));
   });
 
-  it("fills the slate in order: news with kits, outlier remixes, talking heads, offer", () => {
+  it("fills the slate in order: news with kits, remixes, talking heads, offer", () => {
     const { items, notes } = planSlate(baseInput());
     expect(items.map((i) => i.kind)).toEqual(["news", "news", "remix", "remix", "talking_head", "talking_head", "offer"]);
     expect(items[0]).toMatchObject({ title: "Permits just went online", lane: "local-news-take", template: "news-greenscreen", ctaType: "follow", angle: null, storyStructure: null });
@@ -126,7 +126,7 @@ describe("planner", () => {
     expect(items.some((i) => i.sourceRefs.some((r) => r.id === "t2"))).toBe(false);
     expect(items[2]!.sourceRefs[0]).toEqual({ type: "external_post", id: "o1", url: "https://www.instagram.com/reel/a/" });
     // A remix keeps the source's structure (no angle or story structure of its own) and says where it came from.
-    expect(items[2]).toMatchObject({ angle: null, storyStructure: null, title: "Remix: @demo_creator_a's instagram post", remixOf: { externalPostId: "o1", line: "Based on @demo_creator_a's reel, 4.4x their normal" } });
+    expect(items[2]).toMatchObject({ angle: null, storyStructure: null, title: "Remix: your instagram post", remixOf: { externalPostId: "o1", own: true, line: "Based on your own reel, 4.4x your normal" } });
     expect(items[6]).toMatchObject({ kind: "offer", lane: "offer", ctaType: "book_call", funnelStage: "bofu", title: "Offer: Renovation plan session" });
     expect(items.map((i) => i.slot)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(notes).toEqual([]);
@@ -141,7 +141,7 @@ describe("planner", () => {
     expect(planSlate(baseInput({ proof: allUsed })).items.filter((i) => i.proof).length).toBe(0);
   });
 
-  it("skips outliers and trends already used, topics in cooldown and rejected concepts", () => {
+  it("skips remix sources and trends already used, topics in cooldown and rejected concepts", () => {
     const recent = [{ title: "Permits just went online", lane: "local-news-take", funnelStage: "tofu" as const, angle: null, template: "news-greenscreen", storyStructure: null, createdAt: new Date(NOW.getTime() - 2 * 86_400_000).toISOString(), sourceIds: ["o1"] }];
     const { items } = planSlate(baseInput({ recent, rejected: ["Lumber prices ease"] }));
     expect(items.filter((i) => i.kind === "news")).toHaveLength(0);
@@ -178,8 +178,8 @@ describe("planner", () => {
   });
 
   it("reports open slots it couldn't fill", () => {
-    const { notes, items } = planSlate(baseInput({ trends: [], outliers: [], slots: { news: 1, remix: 1, talking_head: 0, offer: 0 } }));
-    expect(notes).toEqual(["1 news slot left open: no fresh story on the trend desk", "1 remix slot left open: no new outliers to remix"]);
+    const { notes, items } = planSlate(baseInput({ trends: [], remixes: [], slots: { news: 1, remix: 1, talking_head: 0, offer: 0 } }));
+    expect(notes).toEqual(["1 news slot left open: no fresh story on the trend desk", "1 remix slot left open: no new breakouts of yours to remix"]);
     expect(items).toHaveLength(2);
     expect(items.every((i) => i.kind === "talking_head")).toBe(true);
   });

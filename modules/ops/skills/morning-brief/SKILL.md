@@ -18,7 +18,7 @@ a clear next step. You are writing for a busy business owner, not a marketer.
 
 Use only the sections that have content, in this order:
 
-1. **Film today**: each piece with its title, the one-line reason it was picked (lane, trend or outlier), the
+1. **Film today**: each piece with its title, the one-line reason it was picked (lane, trend or one of your breakouts), the
    "film by" time, and the keyword if it has one. Lead with anything overdue or due soonest.
 2. **Waiting for you**: approvals by ref (`ap-7`), one line each, oldest first. Say how many in total.
 3. **Going out today**: scheduled posts with times. Flag "post this one yourself" items (Instagram assist).

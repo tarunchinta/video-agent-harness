@@ -34,7 +34,7 @@ export function parseRevisionText(text: string): { ref: string; version: number 
 
 /**
  * The spoken hook of a clip: the first sentence, or the words in the first 3.5 s when there is no sentence end,
- * capped at 25 words. Used for research (competitor posts) and for hook banks.
+ * capped at 25 words. Used for research (posts in the library) and for hook banks.
  */
 export function spokenHook(words: readonly Pick<Word, "text" | "start" | "end">[]): string {
   const out: string[] = [];

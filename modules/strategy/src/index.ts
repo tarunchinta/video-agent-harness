@@ -20,5 +20,5 @@ export { parsePillars, appendRejectedConcept, loadPresetDefaults, inferLaneKinds
 export { runBrief, buildPlannerInput, summarise, type BriefResult } from "./jobs/brief.ts";
 export { strategySettings, strategySettingsSchema } from "./settings.ts";
 export { pickScriptTargets, queueScriptsForBrief, cancelQueuedScripts, autoScriptsQueued, isFilmable, writeScriptKey, remixSourceOf, WRITE_SCRIPT_JOB, REMIX_READY_JOB, TEARDOWN_PREP_JOB, FILMED_IDEA_KINDS, type ScriptHandoff, type ScriptTarget } from "./script-handoff.ts";
-export { rankRemixSources, remixSlots, provenScore, nicheRelevance, nicheWordsFrom, TIER_WEIGHT, type RemixPoolItem, type RankedRemix, type RemixRankOptions } from "./remix.ts";
+export { rankRemixSources, remixSlots, provenScore, nicheRelevance, nicheWordsFrom, type RemixPoolItem, type RankedRemix, type RemixRankOptions } from "./remix.ts";
 export { remixPool } from "./repo.ts";

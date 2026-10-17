@@ -6,13 +6,12 @@ import { learnSettings } from "./settings.ts";
 
 /**
  * Feature attribution into `feature_stats` and the weights API the Strategist reads.
- * Own windows: "30d", "90d", "all". Competitor signals are stored under "competitor:90d".
+ * Own windows: "30d", "90d", "all".
  * Outcome metrics: "x" (vs your normal; the one the weights use), "send_rate" and "follows_per_1k".
  */
 
 export const OWN_WINDOWS = { "30d": 30, "90d": 90, all: null } as const;
 export type OwnWindow = keyof typeof OWN_WINDOWS;
-export const COMPETITOR_WINDOW = "competitor:90d";
 
 export const ATTRIBUTION_METRICS = {
   x: { label: "", format: (v: number | null) => (v === null ? "n/a" : `${Math.round(v * 100) / 100}x`), value: (p: PostFact) => p.x },
@@ -33,13 +32,13 @@ async function replaceWindow(ws: AnalyticsCtx, window: string, metric: string, r
   });
 }
 
-export type AttributionRun = { windows: Record<string, { n: number; overallMedian: number | null; values: number; gaps: string[] }>; competitor: { n: number; values: number } };
+export type AttributionRun = { windows: Record<string, { n: number; overallMedian: number | null; values: number; gaps: string[] }> };
 
 export async function runAttribution(ws: WorkspaceContext): Promise<AttributionRun> {
   const s = learnSettings(ws).attribution;
   const { posts } = await postFacts(ws, { persist: true });
   const now = ws.now().getTime();
-  const out: AttributionRun = { windows: {}, competitor: { n: 0, values: 0 } };
+  const out: AttributionRun = { windows: {} };
   for (const [window, days] of Object.entries(OWN_WINDOWS)) {
     const inWindow = posts.filter((p) => p.settled && (days === null || now - new Date(p.publishedAt).getTime() <= days * 86_400_000));
     for (const metric of ATTRIBUTION_METRIC_KEYS) {
@@ -50,17 +49,6 @@ export async function runAttribution(ws: WorkspaceContext): Promise<AttributionR
     }
   }
 
-  // Competitor signals: outliers and non-outliers alike, by vision-tagged format and hook pattern.
-  const comp = await ws.sql`
-    select x_score, tags from external_posts
-     where workspace_id = ${ws.id} and x_score is not null and not is_meme
-       and published_at >= ${new Date(now - 90 * 86_400_000)}`;
-  const compRes = featureAttribution(comp.map((r) => {
-    const tags = (r.tags as Record<string, unknown> | null) ?? {};
-    return { x: num(r.x_score), features: { format: typeof tags.format === "string" ? tags.format : null, hook_pattern: typeof tags.hook_pattern === "string" ? tags.hook_pattern : null } };
-  }), { minN: s.minN, confidence: s.confidence, dimensions: ["format", "hook_pattern"] });
-  await replaceWindow(ws, COMPETITOR_WINDOW, "x", compRes);
-  out.competitor = { n: compRes.n, values: compRes.stats.length };
   return out;
 }
 
@@ -114,13 +102,14 @@ export async function loadFeatureStats(ws: AnalyticsCtx, window: string, minN?: 
 }
 
 export type Weights = {
-  /** 0 = competitor signals only, 1 = own data only. */
+  /** How far own data is trusted: 0 = every weight neutral, 1 = own lifts in full. */
   ownShare: number;
   ownPosts: number;
   /** Share of picks that should explore regardless of weights. */
   explore: number;
   weights: FeatureWeights;
-  source: "competitor" | "blend" | "own" | "none";
+  /** "partial" while the weights are still shrunk toward neutral (fewer than `fullTrustAt` own posts). */
+  source: "partial" | "own" | "none";
 };
 
 /**
@@ -131,22 +120,20 @@ export async function getWeights(ws: AnalyticsCtx): Promise<Weights> {
   const s = learnSettings(ws).weights;
   let own = await loadFeatureStats(ws, "90d");
   if (own.length === 0) own = await loadFeatureStats(ws, "all");
-  const competitor = await loadFeatureStats(ws, COMPETITOR_WINDOW);
   const [r] = await ws.sql`
     select count(*)::int as n from posts p
      where p.workspace_id = ${ws.id} and p.status = 'published' and p.variant_of is null
        and exists (select 1 from post_metrics m where m.post_id = p.id and m.workspace_id = p.workspace_id)`;
   const ownPosts = Number(r?.n ?? 0);
-  const blended = blendWeights({ own, competitor, ownPosts, fullTrustAt: s.fullTrustAt, min: s.min, max: s.max });
+  const blended = blendWeights({ own, ownPosts, fullTrustAt: s.fullTrustAt, min: s.min, max: s.max });
   const hasOwn = own.some((x) => x.sufficient);
-  const hasComp = competitor.some((x) => x.sufficient);
-  const source = !hasOwn && !hasComp ? "none" : blended.ownShare >= 1 && hasOwn ? "own" : blended.ownShare === 0 || !hasOwn ? "competitor" : "blend";
+  const source = !hasOwn || blended.ownShare === 0 ? "none" : blended.ownShare >= 1 ? "own" : "partial";
   return { ownShare: blended.ownShare, ownPosts, explore: s.explore, weights: blended.weights, source };
 }
 
 /**
  * Weights for ONE dimension, e.g. `getFeatureWeights(ws, "hook_pattern")` → `{ question: 1.4, list: 0.7 }`.
- * Values are multipliers around 1 (missing value = 1), already blended between competitor and own data and
+ * Values are multipliers around 1 (missing value = 1), shrunk toward 1 until there are enough own posts and
  * clamped to [0.5, 2]. They do NOT include exploration: callers pick with
  * `pickWeighted(options, rand, (await getWeights(ws)).explore)` from `@attentionos/scoring`, which explores
  * uniformly 20% of the time by default.

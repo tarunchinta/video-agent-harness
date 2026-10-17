@@ -532,7 +532,6 @@ export const BOARD_JOBS = {
   site: "onboarding.analyze-site",
   import: "onboarding.import-own-posts",
   ownSync: "research.own-sync",
-  scan: "research.competitor-scan",
   transcribe: "editing.transcribe",
   voice: "onboarding.voice-profile",
   index: "knowledge.index-workspace",
@@ -543,7 +542,6 @@ export type BoardRun = RunInfo & { output: Record<string, unknown> | null; creat
 
 export type StartBoard = {
   own: { posts: number; byPlatform: Record<string, number>; transcribed: number; transcribing: number; noTranscript: number };
-  competitors: { posts: number; creatorsScanned: number; outliers: number; outlierCreators: number; transcribed: number };
   runs: Partial<Record<BoardJob, BoardRun>>;
   /** Transcription runs since the start: how many failed, and the first reason (e.g. the speech model is missing). */
   transcription: { runs: number; failed: number; firstError: string | null };
@@ -565,14 +563,6 @@ export async function startBoard(since: string | undefined, ws: StudioWorkspace 
   const byPlatform = await ws.sql<{ platform: string; n: number }[]>`
     select p.platform, count(*)::int as n from external_posts p join tracked_creators c on c.id = p.tracked_creator_id
      where p.workspace_id = ${ws.id} and c.tier = 'own' group by p.platform`;
-  const [comp] = await ws.sql<Record<string, unknown>[]>`
-    select count(p.id)::int as posts,
-           count(distinct c.id) filter (where c.last_scanned_at is not null)::int as scanned,
-           count(p.id) filter (where p.is_outlier)::int as outliers,
-           count(distinct c.id) filter (where p.is_outlier)::int as outlier_creators,
-           count(p.id) filter (where p.transcript_status = 'done')::int as transcribed
-      from tracked_creators c left join external_posts p on p.tracked_creator_id = c.id and p.workspace_id = ${ws.id}
-     where c.workspace_id = ${ws.id} and c.tier <> 'own' and c.active`;
   const runs = await ws.sql<{ id: string; job_id: string; status: RunInfo["status"]; error: string | null; output: unknown; created_at: Date; progress: string | null }[]>`
     select distinct on (r.job_id) r.id, r.job_id, r.status, r.error, r.output, r.created_at,
            (select e.message from agent_events e where e.workspace_id = r.workspace_id and e.run_id = r.id and e.kind = 'progress' order by e.id desc limit 1) as progress
@@ -597,7 +587,6 @@ export async function startBoard(since: string | undefined, ws: StudioWorkspace 
       transcribing: int(own?.transcribing),
       noTranscript: int(own?.no_transcript),
     },
-    competitors: { posts: int(comp?.posts), creatorsScanned: int(comp?.scanned), outliers: int(comp?.outliers), outlierCreators: int(comp?.outlier_creators), transcribed: int(comp?.transcribed) },
     runs: Object.fromEntries(
       runs.map((r) => [
         byJob[r.job_id],

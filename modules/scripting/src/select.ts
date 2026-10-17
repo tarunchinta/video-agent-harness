@@ -8,8 +8,8 @@ import type { WorkspaceContext } from "@attentionos/core";
 export type HookCandidate = {
   id: string;
   pattern: string;
-  origin: "own" | "competitor" | "manual";
-  /** Bank score (own: x vs own median; competitor: decayed outlier x). */
+  origin: "own" | "manual";
+  /** Bank score (own: x vs own median). */
   score: number | null;
 };
 
@@ -27,7 +27,7 @@ export function seededRandom(seed: number): () => number {
   };
 }
 
-const ORIGIN_BOOST: Record<HookCandidate["origin"], number> = { own: 1.5, manual: 1.2, competitor: 1 };
+const ORIGIN_BOOST: Record<HookCandidate["origin"], number> = { own: 1.5, manual: 1.2 };
 
 function weightedIndex(weights: number[], rng: () => number): number {
   const total = weights.reduce((a, b) => a + b, 0);

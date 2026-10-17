@@ -7,7 +7,6 @@ export { postFacts, whyLines, hold3sOf, type PostFact, type PostFacts, type Plat
 export { overview, type Overview, type Kpi, type TrendWeek, type BestPost } from "./overview.ts";
 export { postDetail, type PostDetail, type SeriesPoint, type CurvePoint } from "./detail.ts";
 export { bestSlots, bestSlotsFrom, SLOT_METRICS, type BestSlots, type SlotMetric } from "./slots.ts";
-export { competitorBenchmarks, type PlatformBenchmark, type CompetitorOutlier } from "./benchmarks.ts";
 export { funnelReport, funnelByPost, funnelSources, loadFunnelEvents, recordFunnelEvents, funnelEventInput, type FunnelReport, type FunnelEventInput } from "./funnel.ts";
 export { followerGrowth, type FollowerGrowth, type FollowerPoint } from "./accounts.ts";
 export { weeklyReport, type WeeklyReport } from "./report.ts";

@@ -17,7 +17,7 @@ export type JobContext<I> = {
 };
 
 type JobBase<I extends z.ZodType> = {
-  /** Globally unique, `<module>.<job>` e.g. "research.competitor-scan". */
+  /** Globally unique, `<module>.<job>` e.g. "research.own-sync". */
   id: string;
   agent: AgentKey;
   /** Plain-language description shown in the activity stream and docs. */

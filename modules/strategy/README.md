@@ -6,7 +6,7 @@ Decides what to make and when. Core module, setup level 1.
 
 | Job | Kind | Default schedule | What it does |
 |---|---|---|---|
-| `strategy.daily-brief` | native | 06:00 weekdays | Plans the "Film today" slate (default 2 news reels, 2 outlier remixes, 2 talking heads, 1 offer) with the deterministic planner, writes `content` rows (status `idea`, lane, funnel stage, angle, story structure, template, CTA, `source_refs`, `film_by`, brief payload), opens one approval (`ap-N`), queues one notification and hands off to `strategy.draft-brief`. Idempotent per date; `{ replan: true }` archives the open ideas and plans again. |
+| `strategy.daily-brief` | native | 06:00 weekdays | Plans the "Film today" slate (default 2 news reels, 2 remixes of your breakouts, 2 talking heads, 1 offer) with the deterministic planner, writes `content` rows (status `idea`, lane, funnel stage, angle, story structure, template, CTA, `source_refs`, `film_by`, brief payload), opens one approval (`ap-N`), queues one notification and hands off to `strategy.draft-brief`. Idempotent per date; `{ replan: true }` archives the open ideas and plans again. |
 | `strategy.batch-day` | native | Sunday 17:00 | Same planner for a week of videos filmed in one session. Size: `settings.batchSize`, else `weeklyTarget.shortVideos` from `brand/knowledge/preset-cadence.yaml`, else the sum of lane quotas. No news (news is filmed the day it breaks). |
 | `strategy.draft-brief` | llm | after a brief | Drafts headers, a hook idea and shoot directions per item through `strategy_get_todays_brief` / `strategy_save_brief_item`. The save tool rejects banned phrases and any number not in the item's proof. |
 
@@ -29,7 +29,7 @@ Each run uses the dedupe key `write-script:<content id>` in any run state, so a 
 
 ## Planner rules (`src/planner.ts`, pure and seeded)
 
-Lane by weekly deficit × funnel need × learn weight; funnel need from the last 20 pieces vs `brand.yaml` `funnelMix`; topic cooldown (14 days) and rejected concepts by content-word overlap; angle cooldown (3 days); story structure on about one idea in three (least recently used); template rotation (least recently used per kind); proof rotation with a 21-day cooldown, the only source of numbers; 20% exploration from learn's weights. News only from trends with a validated kit; remixes only from outliers not used before. Open slots are backfilled with talking heads and reported.
+Lane by weekly deficit × funnel need × learn weight; funnel need from the last 20 pieces vs `brand.yaml` `funnelMix`; topic cooldown (14 days) and rejected concepts by content-word overlap; angle cooldown (3 days); story structure on about one idea in three (least recently used); template rotation (least recently used per kind); proof rotation with a 21-day cooldown, the only source of numbers; 20% exploration from learn's weights. News only from trends with a validated kit; remixes only from your own breakouts not used before. Open slots are backfilled with talking heads and reported.
 
 ## MCP tools
 
@@ -37,4 +37,4 @@ Lane by weekly deficit × funnel need × learn weight; funnel need from the last
 
 ## Feedback weighting
 
-`getWeights(ws)` from `@attentionos/module-learn`: competitor signals dominate until about 20 own posts, then own data; weights are clamped multipliers around 1 and the planner explores 20% of the time.
+`getWeights(ws)` from `@attentionos/module-learn`: neutral until there are enough own posts, own data in full from about 20; weights are clamped multipliers around 1 and the planner explores 20% of the time.

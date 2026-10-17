@@ -1,4 +1,4 @@
-import { jsonb, usdToMicro, microToUsd, type Actor, type AgentKey, type WorkspaceContext } from "@attentionos/core";
+import { jsonb, usdToMicro, microToUsd, type Actor, type AgentKey, type Scraper, type WorkspaceContext } from "@attentionos/core";
 import { zonedParts } from "@attentionos/scoring";
 import { num } from "./db.ts";
 
@@ -106,3 +106,21 @@ export async function spendSince(ws: WorkspaceContext, category: CostCategory, s
 }
 
 export const fmtUsd = (usd: number) => `$${usd.toFixed(usd < 10 ? 2 : 0)}`;
+
+/** Optional capability some scrapers have beyond the core contract (see provider-scrape-apify). */
+type AccountUsage = { accountUsageUsd(): Promise<{ usedUsd: number }> };
+const reportsAccountUsage = (s: Scraper): s is Scraper & AccountUsage => typeof (s as Partial<AccountUsage>).accountUsageUsd === "function";
+
+/** Scraping spend this month: the cost ledger, or the scraper account's own usage when that is higher. */
+export async function scrapingBudgetUsed(ws: WorkspaceContext, scraper?: Scraper): Promise<number> {
+  const ledger = await spendSince(ws, "scraping", periodStart(ws.now(), ws.config.workspace.timezone, "month"));
+  if (scraper && reportsAccountUsage(scraper)) {
+    try {
+      const account = await scraper.accountUsageUsd();
+      return Math.max(ledger, account.usedUsd);
+    } catch {
+      // Ledger alone is still a safe floor.
+    }
+  }
+  return ledger;
+}

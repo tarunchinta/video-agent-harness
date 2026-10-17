@@ -2,13 +2,12 @@ import { z } from "zod";
 import { compact, defineNativeJob, defineTool, ToolError } from "@attentionos/core";
 import { PLATFORMS } from "@attentionos/core";
 import { blockLabel, median, round, FEATURE_DIMENSIONS, WEEKDAYS } from "@attentionos/scoring";
-import { competitorBenchmarks } from "./analytics/benchmarks.ts";
 import { postDetail } from "./analytics/detail.ts";
 import { funnelEventInput, funnelReport, recordFunnelEvents } from "./analytics/funnel.ts";
 import { overview } from "./analytics/overview.ts";
 import { postFacts, type PostFact } from "./analytics/posts.ts";
 import { bestSlots } from "./analytics/slots.ts";
-import { COMPETITOR_WINDOW, getWeights, loadFeatureStats, runAttribution } from "./attribution.ts";
+import { getWeights, loadFeatureStats, runAttribution } from "./attribution.ts";
 import { buildWeeklyBriefing } from "./briefing.ts";
 import { goalPacingReport, northStar } from "./northStar.ts";
 import { checkPostMortemBody, listPostMortems, postContext, postMortemBodySchema, savePostMortem } from "./postMortems.ts";
@@ -119,31 +118,6 @@ export const bestSlotsTool = defineTool({
   },
 });
 
-export const benchmarksTool = defineTool({
-  name: "learn_get_benchmarks",
-  description:
-    "Your typical post against tracked creators', per platform: median views, engagement and outlier rate for you and each creator, your position, and their recent outliers (hook, format, x). Medians only.",
-  input: z.object({ days: z.number().int().positive().max(365).default(90) }),
-  annotations: { readOnly: true },
-  async handler({ ws }, input) {
-    const { posts } = await postFacts(ws, { includeScanned: true });
-    const b = await competitorBenchmarks(ws, posts, { days: input.days });
-    if (!b.length) return { empty: "GAP: no tracked-creator posts yet. Add creators to brand/competitors.yaml; the daily scan fills this in." };
-    return b.map((x) => compact({
-      platform: x.platform,
-      you: x.own,
-      creators: x.peers,
-      peerMedianViews: x.peerMedianViews,
-      yourViewsVsPeers: x.viewsRatio,
-      yourEngagementVsPeers: x.engagementRatio,
-      shareOfCreatorsBelowYou: x.viewsPercentile,
-      peerOutlierShare: x.peerOutlierShare,
-      recentOutliers: x.outliers.map((o) => compact({ handle: o.handle, x: o.x, views: o.views, hook: o.hook, format: o.format, url: o.url })),
-      gaps: x.gaps.length ? x.gaps : undefined,
-    }));
-  },
-});
-
 export const goalPacingTool = defineTool({
   name: "learn_get_goal_pacing",
   description: "The north star and every active goal for this calendar week: target, actual so far, projected end of week, status (met / on track / at risk / behind) and what's needed per day.",
@@ -197,15 +171,14 @@ export const featureStatsTool = defineTool({
     "Lines starting with GAP mean there isn't enough data yet; say so instead of guessing. Also returns the picker weights the Strategist uses.",
   input: z.object({
     dimension: z.enum(FEATURE_DIMENSIONS).optional(),
-    window: z.enum(["30d", "90d", "all", "competitor"]).default("90d"),
+    window: z.enum(["30d", "90d", "all"]).default("90d"),
     /** Outcome to attribute: x vs your normal (default; what the weights use), send rate, or follows per 1k views. */
     metric: z.enum(["x", "send_rate", "follows_per_1k"]).default("x"),
     includeGaps: z.boolean().default(true),
   }),
   annotations: { readOnly: true },
   async handler({ ws }, input) {
-    const window = input.window === "competitor" ? COMPETITOR_WINDOW : input.window;
-    const stats = (await loadFeatureStats(ws, window, undefined, input.window === "competitor" ? "x" : input.metric)).filter((s) => !input.dimension || s.dimension === input.dimension);
+    const stats = (await loadFeatureStats(ws, input.window, undefined, input.metric)).filter((s) => !input.dimension || s.dimension === input.dimension);
     const weights = await getWeights(ws);
     return compact({
       window: input.window,
@@ -277,6 +250,6 @@ export const savePostMortemTool = defineTool({
 });
 
 export const LEARN_TOOLS = [
-  performanceSummaryTool, postDetailTool, featureStatsTool, bestSlotsTool, benchmarksTool, goalPacingTool, funnelTool,
+  performanceSummaryTool, postDetailTool, featureStatsTool, bestSlotsTool, goalPacingTool, funnelTool,
   listPostMortemsTool, weeklyBriefingTool, postContextTool, savePostMortemTool, recordFunnelEventTool,
 ];

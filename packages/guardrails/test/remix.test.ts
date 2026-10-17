@@ -3,7 +3,7 @@ import { checkRemix, longestSharedRun, validateScript, type RemixRules, type Scr
 import { SOURCES, validCaptions } from "./fixtures.ts";
 
 /**
- * A close remix of a (fictional) outlier: same hook wording with the topic words swapped, the same four beats in the
+ * A close remix of a (fictional) proven post: same hook wording with the topic words swapped, the same four beats in the
  * same order, the same comment-a-keyword ending. The source is a demo creator's transcript; the script is the
  * fictional demo brand's.
  */
@@ -30,7 +30,7 @@ function remixPackage(over: Partial<ScriptPackageInput> = {}): ScriptPackageInpu
     body: beats.map((b) => b.text).join(" "),
     beats,
     hookText: HOOK,
-    hookSource: { hookId: null, pattern: "cost-of-mistake", origin: "competitor", ref: "https://www.instagram.com/reel/demo/" },
+    hookSource: { hookId: null, pattern: "cost-of-mistake", origin: "remix", ref: "https://www.instagram.com/reel/demo/" },
     cta: { type: "comment_keyword", keyword: "blueprint" },
     claimLedger: [
       { id: "c1", claim: "We tracked 42 projects last year", verdict: "PASS", source: "proof:project-tracker" },

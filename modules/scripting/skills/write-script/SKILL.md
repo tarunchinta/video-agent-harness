@@ -1,6 +1,6 @@
 ---
 name: write-script
-description: Write one short-form video script for a content item in the owner's own voice. Remix first (closely remake a proven post, a competitor's outlier or the owner's own breakout, from its checked blueprint, changing only the topic specifics, the proof and the words), otherwise write an original on the 6-beat skeleton. Includes a claim ledger and per-platform captions, saved through the validator for human review. Use for "script this", "write today's script", or the scripting.write-script job.
+description: Write one short-form video script for a content item in the owner's own voice. Remix first (closely remake a proven post, usually one of the owner's own breakouts, from its checked blueprint, changing only the topic specifics, the proof and the words), otherwise write an original on the 6-beat skeleton. Includes a claim ledger and per-platform captions, saved through the validator for human review. Use for "script this", "write today's script", or the scripting.write-script job.
 ---
 
 # Write a script
@@ -45,8 +45,8 @@ A post that already pulled 10x its creator's normal is a better bet than anythin
 
 - Map each source beat to the script beat with the same job (`hook`, `turn`, `proof`, `rehook`, `play`, `close`). A remix may skip a beat the source didn't have, and keep the source's order.
 - Never use anything in `neverUse` (the creator's handle, names, brands, numbers): the checks fail the script if one slips in, or if a number of theirs is said without a `proof:` source, or if a long passage after the hook tracks their words. Swap `blueprint.theirSpecifics` (their stories and examples) for the owner's own. The topic or trade itself can stay when it is the owner's niche too.
-- `hookSource`: origin `own` when `brief.remix.own` is true, else `competitor`; `ref` is `brief.remix.url`; `pattern` is the closest taxonomy id.
-- Start your summary with `brief.remix.basedOn` (for example "Based on @handle's reel, 1.2M views, 14x their normal"), then say what you kept and what you changed.
+- `hookSource`: origin `own` when `brief.remix.own` is true, else `remix`; `ref` is `brief.remix.url`; `pattern` is the closest taxonomy id.
+- Start your summary with `brief.remix.basedOn` (for example "Based on your own reel, 48K views, 3.2x your normal"), then say what you kept and what you changed.
 - A remix is only written from its blueprint: the job waits for the teardown before you start, and the save fails a remix without one. If you switch a piece to a remix yourself, pick a `ready` post.
 - `title`: 3 to 8 words, the owner's version of the blueprint's topic.
 - Facts about the owner's own offers (free, call length, what's included) and about themselves are theirs to state: cite the matching `claimSources.own` ref (`offer:<id>`, `own:site`, or `own:own-post` when remaking their own post), no "they say" needed.
@@ -73,7 +73,7 @@ The `beats` array holds these roles in this order, and `body` is exactly the bea
 A remix uses its source's hook (above). For an original:
 
 1. Use `hookPicks` from the packet (or call `scripting_pick_hooks`): candidates with different patterns, weighted by what has worked for this account, with some exploration built in.
-2. Own-bank hooks show the owner's words: reuse them freely, it's their voice. Competitor-bank hooks show only their structure: use the structure with new words for this topic.
+2. Own-bank hooks show the owner's words: reuse them freely, it's their voice. Hooks saved by hand are theirs too: adapt them to this topic.
 3. Run the `hook-audit` skill on your hook.
 4. Record the source in `hookSource`: the bank hook's `hookId`, its `pattern`, its `origin`. A hook you wrote from scratch is `origin: "fresh"` with the closest taxonomy pattern.
 

@@ -1,6 +1,6 @@
 /**
- * Provenance of a remix: a script that closely remakes one proven post (a competitor's outlier or one of the
- * owner's own breakouts). Stored on `content.brief.remixOf` by whoever picks the source (the Strategist, Studio's
+ * Provenance of a remix: a script that closely remakes one proven post (one of the owner's own breakouts, or a
+ * post pasted in for a teardown). Stored on `content.brief.remixOf` by whoever picks the source (the Strategist, Studio's
  * "Remix this", or the Copywriter), so every surface can say where a script came from.
  */
 export type RemixOf = {
@@ -11,7 +11,7 @@ export type RemixOf = {
   /** True for the owner's own post ("do that again, new angle"). */
   own: boolean;
   views: number | null;
-  /** Times the creator's normal (competitors: the outlier x score; own posts: views over the owner's median). */
+  /** Times the creator's normal (own posts: views over the owner's median; unknown for pasted posts). */
   x: number | null;
   /** "Based on @handle's reel, 1.2M views, 14x their normal". */
   line: string;

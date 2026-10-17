@@ -200,7 +200,7 @@ function Brief({ d, tz }: { d: ContentDetail; tz: string }) {
                 {humanize(d.hookPattern)}
                 {d.hook ? (
                   <span className="block text-caption text-fg-3">
-                    {d.hook.origin === "own" ? "Your own bank" : d.hook.origin === "competitor" ? "Competitor bank, structure only" : "Written by hand"}
+                    {d.hook.origin === "own" ? "Your own bank" : "Saved by hand"}
                     {d.hook.uses ? ` · used ${d.hook.uses}×, ${d.hook.wins} win${d.hook.wins === 1 ? "" : "s"}` : ""}
                     {d.hook.sourceLabel ? ` · ${d.hook.sourceLabel}` : ""}
                   </span>

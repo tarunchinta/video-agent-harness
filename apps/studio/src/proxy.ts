@@ -5,7 +5,9 @@ import { MOVED } from "./lib/nav";
 /** Old page addresses (bookmarks, links in messages) go to the page that holds that work now. */
 function moved(pathname: string): string | null {
   if (MOVED[pathname]) return MOVED[pathname];
-  const m = /^\/insights\/(posts|competitors|working)(\/.*)?$/.exec(pathname);
+  // Competitor tracking was removed; its old pages land on the Analytics overview.
+  if (/^\/(insights|analytics)\/competitors(\/.*)?$/.test(pathname)) return "/analytics";
+  const m = /^\/insights\/(posts|working)(\/.*)?$/.exec(pathname);
   return m ? `/analytics/${m[1]}${m[2] ?? ""}` : null;
 }
 

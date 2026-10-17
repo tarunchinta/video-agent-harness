@@ -105,9 +105,8 @@ When a post goes live, its comment keyword starts sending DMs with your guide ([
 | Overview | Your north star and pace, key numbers against the last period, your best post and why. Links to the **Weekly report** (the week in one page, sent on Mondays) and **Leads and sales** (clicks, leads and sales traced back to the post that brought them) once there's data |
 | Your posts | Every post, sortable; open one for its curve against your usual, retention, funnel and post-mortem |
 | What's working | Which hooks, formats and lanes lift results, which hold them back, and your best time to post |
-| Competitors | How you compare with the creators you watch, and their posts that beat their normal. **Remix this** turns one into a script on Scripts |
 
-Right after setup, Analytics already shows the scan of your own account and your competitors, including your followers.
+Right after setup, Analytics already shows the scan of your own account, including your followers.
 
 The Strategist uses the same numbers to plan what you film next. More: [Analytics](analytics.md).
 

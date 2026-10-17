@@ -24,14 +24,14 @@ Install it from Claude Code:
 | `/attention:learn` | What worked, what didn't and why, with post-mortems and proposed lessons |
 | `/attention:lesson` | Save a correction as a dated rule in brand/lessons.md so every agent follows it from now on |
 | `/attention:publish` | Schedule approved content across your platforms, with tracked links and keyword DMs |
-| `/attention:research` | Find what's working in your niche, competitor outliers, trends and your own top posts |
+| `/attention:research` | Find what's working for you, from your own breakouts, their teardowns and trends |
 | `/attention:script` | Write a validated script for an idea or a planned piece of content |
 
 ## Agents
 
 | Agent | When it's used |
 |---|---|
-| `attention:analyst` | Research and measurement. Use for competitor outliers, trend radar, teardowns of a specific post, syncing and reading the owner's own resul… |
+| `attention:analyst` | Research and measurement. Use for the owner's breakouts, trend radar, teardowns of a specific post, syncing and reading the owner's own res… |
 | `attention:art-director` | Visuals. Use to edit raw footage into a reel (cuts, captions, overlays, sound, QC), plan formats and shoot directions, handle revision note… |
 | `attention:chief-of-staff` | The owner's single point of contact. Use for the morning brief, the approvals queue, routing a free-form request to the right specialist, q… |
 | `attention:community` | Conversations. Use to triage DMs and comments (hot, warm, cold), draft replies in the owner's voice, manage keyword-to-DM automations and l… |
@@ -51,7 +51,6 @@ Install it from Claude Code:
 | `reel-editor` | editing | Plan a vertical short (Reels, TikTok, Shorts) from an approved cut list. The Art Director writes an EditPlan from a format template, the tr… |
 | `post-mortem` | learn | Write a post-mortem for one post (breakout, flop or new best) with wins and losses at the same depth. Used by the learn.post-mortem job and… |
 | `weekly-briefing` | learn | Turn the weekly numbers into a short plain-language summary with up to three things to focus on next week. Used by the learn.weekly-briefin… |
-| `onboarding-competitor-suggestions` | onboarding | Suggest 6 to 12 real creators a business should track for outliers (by platform and tier) and up to 8 trend sources for its niche, using pu… |
 | `onboarding-interview` | onboarding | Run the live onboarding interview in Studio's setup wizard - one question at a time about the owner's customers (pains in their words), off… |
 | `onboarding-site-analysis` | onboarding | Read a business's own website and draft the first Brand Kit basics - name, one-liner, offers, results it may claim and a first ideal-custom… |
 | `onboarding-voice-profile` | onboarding | Build a voice profile from the owner's OWN posts (captions and transcripts) so scripts sound like them on their best day - rhythm, openers,… |
@@ -59,7 +58,7 @@ Install it from Claude Code:
 | `owner-chat` | ops | Act as the owner's Chief of Staff in chat - answer questions about their content system, take decisions on approvals, change quiet hours or… |
 | `cross-post` | publishing | Repurpose a reel that's already on Instagram to TikTok, YouTube Shorts, Facebook and LinkedIn, or backfill recent reels. Swaps the comment-… |
 | `publishing` | publishing | Schedule posts safely as the Publisher. Plan the week from the cadence, validate every payload before any API call, dry-run first, respect … |
-| `content-research` | research | Find what to make next from competitor outliers, cross-creator trends and your own numbers. Use when asked "what's working", "what should I… |
+| `content-research` | research | Find what to make next from the owner's own breakouts, their teardowns, the trend desk and any post the owner pastes in. Use when asked "wh… |
 | `teardown` | research | Template and rules for tearing down one short-form video (hook frame by frame, pacing, caption style, signature move, what's theirs) plus t… |
 | `trend-desk` | research | Run the trend desk: triage hot stories from the trend radar, write a filmable news reel kit, fact-check it, and set a film-by deadline. Use… |
 | `captions` | scripting | Turn one script or transcript into strict per-platform caption JSON for Instagram, TikTok, YouTube, Facebook, LinkedIn and X, following eac… |
@@ -70,7 +69,7 @@ Install it from Claude Code:
 | `spoken-humanizer` | scripting | Remove the tells of machine-written text from words that will be said out loud on camera, so a script sounds like the owner talking, not a … |
 | `text-posts` | scripting | Write the weekly batch of text posts for X, Threads and LinkedIn from what the business already said and proved this week, checked in code … |
 | `voice-profile` | scripting | Build or refresh brand/voice.md from the owner's own on-camera transcripts, as counted evidence rather than adjectives, including the banne… |
-| `write-script` | scripting | Write one short-form video script for a content item in the owner's own voice. Remix first (closely remake a proven post, a competitor's ou… |
+| `write-script` | scripting | Write one short-form video script for a content item in the owner's own voice. Remix first (closely remake a proven post, usually one of th… |
 | `content-strategy` | strategy | Decide what content to make and why, using lanes, weekly quotas, the funnel mix, angles, story structures and the proof inventory. Use for … |
 | `daily-brief` | strategy | Run and draft the "Film today" brief (or the weekly batch-day edition): what to film today, why, by when, with headers and shoot directions… |
 | `trial-reels` | trial-reels | Turn clean reels (no captions, no title) into a day of Instagram trial reel variations and schedule them as TRIAL reels only. Each variatio… |

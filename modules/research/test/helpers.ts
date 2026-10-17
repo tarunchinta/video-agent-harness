@@ -1,10 +1,10 @@
 import { cpSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ExternalPost, OwnAnalytics, Platform, PostMetricsSnapshot, Scraper, TrendItem, TrendSource } from "@attentionos/core";
+import type { ExternalPost, OwnAnalytics, PostMetricsSnapshot, TrendItem, TrendSource } from "@attentionos/core";
 import { DEMO_BRAND_DIR } from "../src/testing/db.ts";
 
-/** A writable copy of the demo Brand Kit (tools edit competitors.yaml). */
+/** A writable copy of the demo Brand Kit (tests edit sources.yaml and friends). */
 export function tempBrandDir(): string {
   const root = mkdtempSync(join(tmpdir(), "aos-research-"));
   const dir = join(root, "brand");
@@ -13,25 +13,6 @@ export function tempBrandDir(): string {
 }
 
 export const daysAgo = (now: Date, d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
-
-/** Fake scraper with per-handle posts, a fixed price, and Apify-style spend reporting. */
-export function fakeScraper(posts: Record<string, ExternalPost[]>, opts: { id?: string; usdPerCreator?: number; failFor?: string[] } = {}) {
-  const calls: string[] = [];
-  const spend: { usd: number }[] = [];
-  const scraper: Scraper & { drainSpend(): { usd: number }[] } = {
-    id: opts.id ?? "fake",
-    health: async () => ({ ok: true, detail: "ok" }),
-    estimateCostUsd: async (handles) => handles.length * (opts.usdPerCreator ?? 0.05),
-    async listCreatorPosts(handle: string, platform: Platform) {
-      calls.push(`${platform}:${handle}`);
-      if (opts.failFor?.includes(handle)) throw new Error("profile is private");
-      spend.push({ usd: opts.usdPerCreator ?? 0.05 });
-      return posts[handle] ?? [];
-    },
-    drainSpend: () => spend.splice(0, spend.length),
-  };
-  return { scraper, calls };
-}
 
 export function igPost(handle: string, id: string, publishedAt: string, m: { views?: number; comments?: number; likes?: number; durationS?: number; pinned?: boolean; caption?: string }): ExternalPost {
   return {

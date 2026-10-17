@@ -15,7 +15,7 @@ const NAMES: Record<AgentKey, string> = {
 
 type EventRow = { id: string | number; ts: Date; agent: string; run_id: string | null; kind: LiveEvent["kind"]; message: string; data: unknown };
 
-/** "research.competitor-scan" → "Working on competitor scan" (never show raw job ids in the default view). */
+/** "research.trend-radar" → "Working on trend radar" (never show raw job ids in the default view). */
 export function jobLabel(jobId: string): string {
   const name = jobId.split(".").pop() ?? jobId;
   return `Working on ${name.replace(/-/g, " ")}`;

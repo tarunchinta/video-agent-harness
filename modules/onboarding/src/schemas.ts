@@ -4,8 +4,6 @@ import { slugify } from "./lib/brand-files.ts";
 import { isHttpUrl } from "./lib/render.ts";
 import {
   businessDraftSchema,
-  competitorSuggestionSchema,
-  sourceSuggestionSchema,
   voiceDraftSchema,
   type BusinessDraft,
   type ImportedPost,
@@ -69,12 +67,6 @@ export const interviewTurnOutput = z.object({
 });
 export type InterviewTurnOutput = z.output<typeof interviewTurnOutput>;
 
-export const competitorSuggestionsOutput = z.object({
-  competitors: z.array(z.object({ handle: text, platform: z.enum(PLATFORMS), tier: z.enum(["core", "adjacent", "aspirational", "remake"]), why: text })),
-  sources: z.array(z.object({ kind: z.enum(["rss", "google_news", "hn", "reddit", "github"]), target: text, why: text })),
-});
-export type CompetitorSuggestionsOutput = z.output<typeof competitorSuggestionsOutput>;
-
 // ───────────────────────────── Sanitizers (rules in code) ─────────────────────────────
 
 const clip = (s: string | undefined, n: number) => (s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -130,38 +122,6 @@ export function sanitizeVoice(out: VoiceProfileOutput, posts: Pick<ImportedPost,
     summary: clip(out.summary, 600),
     basedOnPosts: posts.length,
   });
-}
-
-const HANDLE = /^@?[\p{L}\p{N}._-]{2,60}$/u;
-
-export function sanitizeSuggestions(out: CompetitorSuggestionsOutput, ownHandles: string[] = []) {
-  const own = new Set(ownHandles.map((h) => h.replace(/^@/, "").toLowerCase()));
-  const seen = new Set<string>();
-  const competitors = out.competitors
-    .map((c) => ({ ...c, handle: clip(c.handle, 80).replace(/^https?:\/\/\S+?\/@?/i, "").replace(/[/?#].*$/, ""), why: clip(c.why, 300) }))
-    .filter((c) => {
-      const bare = c.handle.replace(/^@/, "").toLowerCase();
-      const key = `${c.platform}:${bare}`;
-      if (!HANDLE.test(c.handle) || own.has(bare) || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .map((c) => competitorSuggestionSchema.parse({ ...c, handle: c.handle.startsWith("@") ? c.handle : `@${c.handle}` }))
-    .slice(0, 15);
-  const seenSources = new Set<string>();
-  const sources = out.sources
-    .map((s) => ({ ...s, target: clip(s.target, 300).replace(/^r\//i, ""), why: clip(s.why, 300) }))
-    .filter((s) => {
-      if (s.target.length < 2) return false;
-      if (s.kind === "rss" && !isHttpUrl(s.target)) return false;
-      const key = `${s.kind}:${s.target.toLowerCase()}`;
-      if (seenSources.has(key)) return false;
-      seenSources.add(key);
-      return true;
-    })
-    .map((s) => sourceSuggestionSchema.parse(s))
-    .slice(0, 10);
-  return { competitors, sources };
 }
 
 // ───────────────────────────── Reading the model's answer ─────────────────────────────

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AgentsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const view: AgentsViewId = sp.view === "command" ? "command" : "worker";
-  const [extras, feed] = await Promise.all([getRosterExtras(), getWallFeed().catch(() => ({ cards: [], handle: null, totalViews: 0, totalPosts: 0, rivals: [], rivalCreators: 0 }))]);
+  const [extras, feed] = await Promise.all([getRosterExtras(), getWallFeed().catch(() => ({ cards: [], handle: null, totalViews: 0, totalPosts: 0 }))]);
   return (
     <div className="@container">
       <AgentsBoard view={view} feed={feed} hold={sp.hold === "1"} />

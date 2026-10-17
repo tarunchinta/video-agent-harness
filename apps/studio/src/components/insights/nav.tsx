@@ -8,7 +8,6 @@ export const INSIGHT_TABS = [
   { href: "/insights/posts", label: "Posts" },
   { href: "/insights/working", label: "What's working" },
   { href: "/insights/timing", label: "When to post" },
-  { href: "/insights/competitors", label: "Competitors" },
   { href: "/insights/funnel", label: "Funnel" },
   { href: "/insights/report", label: "Weekly report" },
 ] as const;

@@ -1,7 +1,6 @@
-// The feed: phone screens on the back walls with real posts and their real view counts. The left wall shows the
-// workspace's own best posts; a post the Publisher puts out lands on a left wall phone, which flashes and swipes to
-// the next post. The right wall shows the tracked competitors' scraped posts, outliers first, under their own handles.
-// With no competitors scraped yet, both walls share the workspace's posts. With no posts at all, the phones stay blank.
+// The feed: phone screens on the back walls with the workspace's own posts and their real view counts. A post the
+// Publisher puts out lands on a left wall phone, which flashes and swipes to the next post. Both walls share the
+// workspace's posts. With no posts at all, the phones stay blank.
 
 import { memo } from "react";
 import { compact, planeX, planeY, S, Z } from "./iso";
@@ -85,18 +84,10 @@ function cardFor(cards: readonly FeedCard[], side: "L" | "R", k: number, shift: 
   return cards[(k * 2 + (odd ? 1 : 0)) % cards.length] ?? null;
 }
 
-/** A phone's post when a wall has its own list: phone k starts on post k and each landing moves it on a full wall. */
-function cardAt(cards: readonly FeedCard[], k: number, shift: number, offset = 0): FeedCard | null {
-  if (!cards.length) return null;
-  return cards[(k + offset + shift * WALL_PHONES) % cards.length] ?? null;
-}
-
-export const WallFeed = memo(function WallFeed({ cards, rivals = [], handle, shifts, flashes }: { cards: readonly FeedCard[]; rivals?: readonly FeedCard[]; handle: string | null; shifts: readonly number[]; flashes: readonly number[] }) {
+export const WallFeed = memo(function WallFeed({ cards, handle, shifts, flashes }: { cards: readonly FeedCard[]; handle: string | null; shifts: readonly number[]; flashes: readonly number[] }) {
   const ks = Array.from({ length: WALL_PHONES }, (_, k) => k);
-  const split = rivals.length > 0;
-  const right = (k: number) => (split ? cardAt(rivals, k, shifts[k] ?? 0) : cardFor(cards, "R", k, shifts[k] ?? 0));
-  // With competitors on the right, the left wall is the workspace's own; it borrows competitor posts only while it has none.
-  const left = (k: number) => (!split ? cardFor(cards, "L", k, shifts[k] ?? 0) : cards.length ? cardAt(cards, k, shifts[k] ?? 0) : cardAt(rivals, k, shifts[k] ?? 0, WALL_PHONES));
+  const right = (k: number) => cardFor(cards, "R", k, shifts[k] ?? 0);
+  const left = (k: number) => cardFor(cards, "L", k, shifts[k] ?? 0);
   const v = (H - PHONE.z1) * Z;
   return (
     <g>

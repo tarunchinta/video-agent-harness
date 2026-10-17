@@ -122,11 +122,10 @@ export async function getAgentProfile(key: AgentKey): Promise<AgentProfile> {
 /**
  * The worker room's feed walls. `cards`: the workspace's own best posts with their real view counts. Published posts
  * first (latest metrics, one card per piece of content, cover from its thumbnail asset), then the owner's own imported
- * posts from setup (scraped thumbnails). `rivals`: the tracked competitors' scraped posts, outliers first. Nothing here
- * is invented: no posts means blank phones.
+ * posts from setup (scraped thumbnails). Nothing here is invented: no posts means blank phones.
  */
 export type WallCard = { id: string; cover: string | null; views: number | null; title: string; platform: string; handle: string | null };
-export type WallFeed = { cards: WallCard[]; handle: string | null; totalViews: number; totalPosts: number; rivals: WallCard[]; rivalCreators: number };
+export type WallFeed = { cards: WallCard[]; handle: string | null; totalViews: number; totalPosts: number };
 
 export async function getWallFeed(limit = 14): Promise<WallFeed> {
   const ws = workspace();
@@ -151,18 +150,6 @@ export async function getWallFeed(limit = 14): Promise<WallFeed> {
      where e.workspace_id = ${ws.id} and c.workspace_id = ${ws.id} and c.tier = 'own'
      order by e.views desc nulls last, e.published_at desc nulls last
      limit 60`;
-  const rivals = await sql<{ id: string; platform: string; caption: string | null; views: string | null; thumbnail_url: string; handle: string }[]>`
-    select e.id, e.platform, e.caption, e.views::text as views, e.thumbnail_url, c.handle
-      from external_posts e join tracked_creators c on c.id = e.tracked_creator_id
-     where e.workspace_id = ${ws.id} and c.workspace_id = ${ws.id} and c.tier <> 'own' and c.active
-       and e.thumbnail_url ~* '^https://'
-     order by e.is_outlier desc, e.x_score desc nulls last, e.views desc nulls last
-     limit ${limit * 2}`;
-  const [rivalCount] = await sql<{ creators: number }[]>`
-    select count(distinct c.id)::int as creators
-      from tracked_creators c
-     where c.workspace_id = ${ws.id} and c.tier <> 'own' and c.active
-       and exists (select 1 from external_posts e where e.workspace_id = ${ws.id} and e.tracked_creator_id = c.id)`;
   const [account] = await sql<{ handle: string }[]>`
     select handle from social_accounts where workspace_id = ${ws.id} and status = 'connected'
      order by (platform = 'instagram') desc, connected_at asc limit 1`;
@@ -202,8 +189,6 @@ export async function getWallFeed(limit = 14): Promise<WallFeed> {
     handle: account?.handle?.replace(/^@/, "") ?? own[0]?.handle?.replace(/^@/, "") ?? null,
     totalViews: Number(totals?.views ?? 0) + ownViews,
     totalPosts: (totals?.posts ?? 0) + own.length,
-    rivals: rivals.map((r) => ({ id: r.id, cover: r.thumbnail_url, views: r.views === null ? null : Number(r.views), title: firstLine(r.caption) ?? `@${r.handle}`, platform: r.platform, handle: r.handle.replace(/^@/, "") })),
-    rivalCreators: rivalCount?.creators ?? 0,
   };
 }
 

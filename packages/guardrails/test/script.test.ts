@@ -210,7 +210,7 @@ describe("validateScript rules", () => {
   });
 
   it("hook_source must say which bank entry", () => {
-    const r = run({ ...validPackage(), hookSource: { pattern: "cost-of-mistake", origin: "competitor" } });
+    const r = run({ ...validPackage(), hookSource: { pattern: "cost-of-mistake", origin: "remix" } });
     expect(codes(r)).toContain("hook_source.missing_ref");
     const fresh = run({ ...validPackage(), hookSource: { pattern: "cost-of-mistake", origin: "fresh" } });
     expect(codes(fresh)).not.toContain("hook_source.missing_ref");

@@ -3,8 +3,8 @@ import { contentStems, type RemixRules } from "@attentionos/guardrails";
 import { getContent, UUID_RE, type ContentRow } from "./db.ts";
 
 /**
- * "Copy what works": a remix closely remakes one proven post (a competitor's outlier or one of the owner's own
- * breakouts). The source's transcript and caption are untrusted text, so the Copywriter never reads them. It reads
+ * "Copy what works": a remix closely remakes one proven post (one of the owner's own breakouts, or a post a person
+ * pasted in for a teardown). The source's transcript and caption are untrusted text, so the Copywriter never reads them. It reads
  * the REMIX BLUEPRINT the tool-less teardown wrote and code checked (research `validate/blueprint.ts`): the hook
  * line quoted as data, the beats with timing, the format, the CTA mechanic, why it worked and what belongs to the
  * creator. Code keeps the transcript for the validator (their names, their numbers, whole copied passages).
@@ -42,7 +42,7 @@ export type RemixSource = {
   handle: string;
   own: boolean;
   views: number | null;
-  /** Times the creator's normal (competitors: research's x score; own posts: views over the owner's median). */
+  /** Times the owner's normal (views over their median); unknown for pasted posts. */
   x: number | null;
   publishedAt: string | null;
   durationS: number | null;
@@ -80,12 +80,12 @@ export async function ownMedianViews(ws: WorkspaceContext): Promise<number | nul
 }
 
 type SourceRow = {
-  id: string; url: string; platform: string; author_handle: string; tier: string | null; views: string | null; x_score: string | null;
+  id: string; url: string; platform: string; author_handle: string; tier: string | null; views: string | null;
   published_at: Date | null; duration_s: string | null; tags: Record<string, unknown> | null; transcript: string | null; blueprint: Blueprint | null;
 };
 
 const SOURCE_COLUMNS = (ws: WorkspaceContext) => ws.sql`
-  ep.id, ep.url, ep.platform, ep.author_handle, tc.tier, ep.views, ep.x_score, ep.published_at, ep.duration_s, ep.tags, ep.transcript,
+  ep.id, ep.url, ep.platform, ep.author_handle, tc.tier, ep.views, ep.published_at, ep.duration_s, ep.tags, ep.transcript,
   (select t.fingerprint -> 'facets' -> 'blueprint' from teardowns t
     where t.workspace_id = ep.workspace_id and t.external_post_id = ep.id and t.fingerprint -> 'facets' ? 'blueprint'
     order by t.created_at desc limit 1) as blueprint`;
@@ -93,7 +93,7 @@ const SOURCE_COLUMNS = (ws: WorkspaceContext) => ws.sql`
 function toSource(r: SourceRow, ownMedian: number | null): RemixSource {
   const own = r.tier === "own";
   const views = num(r.views);
-  const x = own ? (views !== null && ownMedian ? Math.round((views / ownMedian) * 10) / 10 : null) : num(r.x_score);
+  const x = own && views !== null && ownMedian ? Math.round((views / ownMedian) * 10) / 10 : null;
   return {
     externalPostId: r.id,
     url: r.url,
@@ -316,24 +316,23 @@ const USED_SQL = (ws: WorkspaceContext) => ws.sql`
                  or exists (select 1 from scripts sc where sc.workspace_id = c.workspace_id and sc.content_id = c.id and sc.status = 'approved')))`;
 
 /**
- * Ranks proven posts (competitor outliers and the owner's breakouts) by how well they match a topic and how far they
- * beat their creator's normal. Post text is matched in code only; the result carries facts and blueprint fields.
+ * Ranks the owner's breakouts by how well they match a topic and how far they beat the owner's normal. Post text
+ * is matched in code only; the result carries facts and blueprint fields.
  */
 export async function findRemixSources(ws: WorkspaceContext, opts: { topic: string; limit?: number; sinceDays?: number; includeUsed?: boolean }): Promise<RemixCandidate[]> {
   const since = new Date(ws.now().getTime() - (opts.sinceDays ?? 180) * 86_400_000);
   const med = await ownMedianViews(ws);
   const rows = await ws.sql<(SourceRow & { caption: string | null; spoken_hook: string | null; used: boolean })[]>`
     select ${SOURCE_COLUMNS(ws)}, ep.caption, ep.spoken_hook, ${USED_SQL(ws)} as used
-      from external_posts ep left join tracked_creators tc on tc.id = ep.tracked_creator_id and tc.workspace_id = ep.workspace_id
-     where ep.workspace_id = ${ws.id} and not ep.is_meme
+      from external_posts ep join tracked_creators tc on tc.id = ep.tracked_creator_id and tc.workspace_id = ep.workspace_id
+     where ep.workspace_id = ${ws.id} and tc.tier = 'own' and ep.views is not null
        and (ep.published_at is null or ep.published_at >= ${since})
-       and (ep.is_outlier or (tc.tier = 'own' and ep.views is not null))
-     order by ep.x_score desc nulls last, ep.views desc nulls last
+     order by ep.views desc
      limit 400`;
   const out: (RemixCandidate & { score: number })[] = [];
   for (const r of rows) {
     const s = toSource(r, med);
-    if (s.own && (s.x === null || s.x < 1.5)) continue;
+    if (s.x === null || s.x < 1.5) continue;
     if (r.used && !opts.includeUsed) continue;
     const bp = s.blueprint;
     const text = [bp?.topic, bp?.hookLine, ...(bp?.beats.map((b) => b.says) ?? []), r.caption, r.spoken_hook, r.transcript].filter(Boolean).join(" ");

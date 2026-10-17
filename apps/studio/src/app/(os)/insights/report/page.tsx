@@ -126,7 +126,7 @@ export default async function WeeklyReportPage() {
         )}
       </Panel>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Funnel this week" id="funnel-w">
           <p className="text-small text-fg-2">
             {fmtCompact(r.funnel.totals.views)} views → {r.funnel.clicksSource === "none" ? "clicks n/a" : `${fmtCompact(r.funnel.totals.clicks)} clicks`} → {r.funnel.totals.leads} leads → {r.funnel.totals.bookings} booked
@@ -140,12 +140,6 @@ export default async function WeeklyReportPage() {
           <p className="text-small text-fg-2">{slot ? `${WEEKDAYS[slot.day]} ${blockLabel(slot.startHour, slot.endHour)} leads at ${fmtX(slot.shrunkX)} over ${slot.n} posts.` : "No slot has enough posts yet."}</p>
           <Link href="/insights/timing" className="mt-3 inline-block text-small text-brand-fg hover:underline hover:underline-offset-4">
             See the heatmap
-          </Link>
-        </Panel>
-        <Panel title="Against tracked creators" id="bench-w">
-          <p className="text-small text-fg-2">{r.benchmark && r.benchmark.viewsRatio !== null ? `Your typical post gets ${fmtX(r.benchmark.viewsRatio)} their median views.` : "Not enough competitor posts yet."}</p>
-          <Link href="/insights/competitors" className="mt-3 inline-block text-small text-brand-fg hover:underline hover:underline-offset-4">
-            See benchmarks
           </Link>
         </Panel>
       </div>

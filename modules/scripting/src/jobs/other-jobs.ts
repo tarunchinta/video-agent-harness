@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { defineLlmJob, defineNativeJob, type JobContext, type LlmJob } from "@attentionos/core";
+import { defineLlmJob, defineNativeJob } from "@attentionos/core";
 import { captionsSchema, textPostSchema } from "@attentionos/guardrails";
-import { applyClassifications, classificationEnvelopeSchema, harvestCompetitorHooks, harvestOwnHooks, hooksToClassify } from "../hooks.ts";
-import { classifyHooksPrompt } from "../prompts.ts";
+import { harvestOwnHooks } from "../hooks.ts";
 import { loadRemixSource, remixSourceId, retitleRemix, startWaitingScript } from "../remix.ts";
 import { getContent } from "../db.ts";
 import { scriptingSettings } from "../settings.ts";
@@ -10,66 +9,20 @@ import { HOOK_PATTERNS } from "../taxonomy.ts";
 
 const tool = (name: string) => `mcp__attentionos__${name}`;
 
-/** `scripting.harvest-hooks` (native): refreshes the own and competitor hook banks. */
+/** `scripting.harvest-hooks` (native): refreshes the own hook bank. */
 export const harvestHooksJob = defineNativeJob({
   kind: "native",
   id: "scripting.harvest-hooks",
   agent: "copywriter",
-  description: "Refreshes the hook banks from your best posts and competitor outliers.",
+  description: "Refreshes the hook bank from your best posts.",
   input: z.object({}).default({}),
   timeoutMs: 5 * 60_000,
   async run(ctx) {
     const own = await harvestOwnHooks(ctx.ws);
-    const competitor = await harvestCompetitorHooks(ctx.ws);
-    await ctx.progress(`Hook banks updated: ${own.added} new own hook${own.added === 1 ? "" : "s"}, ${competitor.added} new competitor hook${competitor.added === 1 ? "" : "s"} (${competitor.active} active).`);
-    return { own, competitor };
+    await ctx.progress(`Hook bank updated: ${own.added} new hook${own.added === 1 ? "" : "s"} from your best posts.`);
+    return { own };
   },
 });
-
-export const classifyHooksInput = z.object({ limit: z.number().int().min(1).max(100).default(40) });
-
-/**
- * `scripting.classify-hooks` (LLM, tool-less): harvested hooks are untrusted, so the model gets no tools and
- * its output is validated by `validateClassification` before `applyOutput` writes anything.
- * The hooks are loaded in `prompt()` and kept on the context for `applyOutput`.
- */
-const sentByRun = new Map<string, { id: string; text: string }[]>();
-
-export const classifyHooksJob: LlmJob<typeof classifyHooksInput> & {
-  applyOutput(ctx: JobContext<z.output<typeof classifyHooksInput>>, output: unknown): Promise<{ applied: number; rejected: number }>;
-} = {
-  ...defineLlmJob({
-    kind: "llm",
-    id: "scripting.classify-hooks",
-    agent: "copywriter",
-    description: "Sorts new competitor hooks into hook patterns and records their structure.",
-    input: classifyHooksInput,
-    skill: "hook-audit",
-    toolless: true,
-    allowedTools: [],
-    defaultModel: "haiku",
-    // The structured answer itself takes a step on the Claude Code engine (its StructuredOutput call).
-    maxTurns: 3,
-    budgetUsd: 0.1,
-    output: classificationEnvelopeSchema,
-    async prompt(ctx) {
-      const hooks = (await hooksToClassify(ctx.ws, ctx.input.limit)).map((h) => ({ id: h.id, text: h.text }));
-      sentByRun.set(ctx.runId, hooks);
-      return classifyHooksPrompt(hooks, HOOK_PATTERNS.map((p) => ({ id: p.id, definition: p.definition, template: p.template })));
-    },
-  }),
-  // The runner stores a toolless job's answer through onOutput.
-  async onOutput(ctx, output) {
-    await classifyHooksJob.applyOutput(ctx, output);
-  },
-  async applyOutput(ctx, output) {
-    const sent = sentByRun.get(ctx.runId) ?? (await hooksToClassify(ctx.ws, ctx.input.limit)).map((h) => ({ id: h.id, text: h.text }));
-    sentByRun.delete(ctx.runId);
-    const res = await applyClassifications(ctx.ws, output, sent);
-    await ctx.progress(`Classified ${res.applied} hook${res.applied === 1 ? "" : "s"}${res.rejected ? `; ${res.rejected} answer${res.rejected === 1 ? "" : "s"} didn't pass the checks` : ""}.`);
-    return { applied: res.applied, rejected: res.rejected };
-  },
-};
 
 export const captionsInput = z.object({
   contentId: z.string().uuid(),

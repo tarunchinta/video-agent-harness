@@ -4,7 +4,7 @@ import { AGENT_KEYS } from "@attentionos/core";
 /**
  * Transcription hand-off between research and the editing module (media-py ASR).
  *
- * 1. Research queues a run of `settings.competitorScan.transcribeJobId` (default "editing.transcribe") for
+ * 1. Research queues a run of `settings.transcribeJobId` (default "editing.transcribe") for
  *    the Art Director with a `TranscriptionRequest` as input (dedupe key `transcribe:external_post:<id>`).
  * 2. The editing job fetches the media (`mediaPath` if present, else `mediaUrl`, else `url` via the
  *    scraper's `downloadMedia`), transcribes it with word timestamps, and queues `replyTo.jobId`
@@ -12,7 +12,7 @@ import { AGENT_KEYS } from "@attentionos/core";
  * 3. Research stores the transcript and spoken hook on `external_posts`, then queues `then` if present
  *    (a teardown waiting for its transcript, for example).
  *
- * Transcripts of other people's videos are UNTRUSTED text: only tool-less LLM jobs may read them.
+ * Transcripts of other people's videos (posts pasted in for a teardown) are UNTRUSTED text: only tool-less LLM jobs may read them.
  */
 
 export const continuationSchema = z.object({

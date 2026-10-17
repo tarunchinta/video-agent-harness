@@ -51,9 +51,6 @@ describe("onboarding module definition", () => {
       const j = byId[id]!;
       expect(j.kind === "llm" && j.toolless && j.allowedTools.length === 0).toBe(true);
     }
-    // The web-reading job may search and fetch, but never touch files or write anything.
-    const scout = byId["onboarding.suggest-competitors"]!;
-    expect(scout.kind === "llm" && scout.allowedTools).toEqual(["WebSearch", "WebFetch"]);
   });
 
   it("validates tool inputs: numbers in answers need a source", () => {

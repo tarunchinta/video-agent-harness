@@ -22,38 +22,25 @@ export const strategySettingsSchema = z.object({
     angleDays: z.number().int().nonnegative().default(3),
   }).default({ topicDays: 14, proofDays: 21, angleDays: 3 }),
   /**
-   * Share of each slate that remakes a proven post (competitor outliers and your own breakouts). The rest is what
-   * the lanes require: the offer piece, fresh news, and talking heads when there aren't enough proven posts.
+   * Share of each slate that remakes one of your own breakouts. The rest is what the lanes require: the offer piece,
+   * fresh news, and talking heads when there aren't enough breakouts to remake.
    */
   remixShare: z.number().min(0).max(1).default(0.7),
-  /** Which proven posts qualify as remix sources. */
+  /** Which of your own posts qualify as remix sources. */
   remixSources: z.object({
-    /** Competitor posts older than this are skipped. */
-    maxAgeDays: z.number().int().positive().default(30),
-    /** Your own breakouts stay remixable much longer ("do that again, new angle"). */
+    /** Your own breakouts stay remixable this long ("do that again, new angle"). */
     ownMaxAgeDays: z.number().int().positive().default(365),
-    /** A competitor post with this many views is proven whatever their normal ("a reel that popped off for 1M"). */
-    bigViews: z.number().int().positive().default(500_000),
-    /** Pinned and big-view competitor posts stay remixable this long. */
-    provenMaxAgeDays: z.number().int().positive().default(365),
-    /** Times their normal a competitor post must reach. */
-    minX: z.number().positive().default(2),
     /** Times your normal (median views) one of your own posts must reach. */
     ownMinX: z.number().positive().default(2),
-    /**
-     * ...and the views it needs whatever your normal, so a small post that beat a tiny median never outranks a
-     * competitor reel that pulled hundreds of thousands. 0 turns the bar off.
-     */
+    /** ...and the views it needs whatever your normal, so a small post that beat a tiny median isn't remade. 0 turns the bar off. */
     ownMinViews: z.number().int().nonnegative().default(10_000),
-    /** Competitor posts lose half their pull every N days. */
-    halfLifeDays: z.number().positive().default(14),
     /**
      * A remix whose source has no blueprint yet is queued to check back after this long; the teardown normally starts
      * it sooner. A remix is never written without its blueprint: the script keeps waiting (and asks for the teardown
      * again) until there is one.
      */
     waitForBlueprintMinutes: z.number().int().nonnegative().max(24 * 60).default(30),
-  }).default({ maxAgeDays: 30, ownMaxAgeDays: 365, bigViews: 500_000, provenMaxAgeDays: 365, minX: 2, ownMinX: 2, ownMinViews: 10_000, halfLifeDays: 14, waitForBlueprintMinutes: 30 }),
+  }).default({ ownMaxAgeDays: 365, ownMinX: 2, ownMinViews: 10_000, waitForBlueprintMinutes: 30 }),
   /** About one idea in three uses a story structure. */
   storyShare: z.number().min(0).max(1).default(1 / 3),
   filmBy: z.object({

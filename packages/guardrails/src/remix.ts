@@ -3,8 +3,8 @@ import { extractNumbers } from "./numbers.ts";
 import { contentStems, countWords, normalizeQuotes, phraseRegex, tokenize, truncate } from "./text.ts";
 
 /**
- * Remix checks: a script that closely adapts a proven post (a competitor's outlier or one of the owner's own
- * breakouts). Copying the source's structure, pacing and hook wording is the point, so nothing here punishes
+ * Remix checks: a script that closely adapts a proven post (one of the owner's own breakouts, or someone else's
+ * post pasted in for a teardown). Copying the source's structure, pacing and hook wording is the point, so nothing here punishes
  * closeness. What stays a hard gate is what would make the script someone else's:
  * - their handle, name, brand, product or catchphrase in the script or captions;
  * - their numbers or personal claims said as if they were the owner's (numbers still need a proof-inventory PASS);

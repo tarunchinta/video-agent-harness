@@ -2,12 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { competitorsSchema, proofInventorySchema, sourcesSchema } from "@attentionos/core";
+import { proofInventorySchema, sourcesSchema } from "@attentionos/core";
 import { parse as parseYaml } from "yaml";
 import { validateBrandFile } from "../src/lib/brand-files.ts";
 import {
   brandYamlFromBusiness,
-  competitorsYaml,
   houseStyleMd,
   icpMd,
   icpMdWithAnswers,
@@ -18,13 +17,11 @@ import {
   voiceMd,
 } from "../src/lib/render.ts";
 import {
-  competitorSuggestionsOutput,
   interviewTurnOutput,
   jsonShape,
   parseModelJson,
   readModelOutput,
   sanitizeBusiness,
-  sanitizeSuggestions,
   sanitizeVoice,
   siteAnalysisOutput,
   verbatimExamples,
@@ -59,7 +56,7 @@ const POSTS = [
 
 describe("job output schemas", () => {
   it("convert to JSON Schema for the model", () => {
-    for (const s of [siteAnalysisOutput, voiceProfileOutput, interviewTurnOutput, competitorSuggestionsOutput]) {
+    for (const s of [siteAnalysisOutput, voiceProfileOutput, interviewTurnOutput]) {
       const json = z.toJSONSchema(s) as { type?: string; properties?: object };
       expect(json.type).toBe("object");
       expect(json.properties).toBeTruthy();
@@ -123,28 +120,6 @@ describe("sanitizers", () => {
     expect(v.examples).toEqual(["Stop posting tips. Start posting decisions."]);
     expect(v.basedOnPosts).toBe(3);
   });
-
-  it("drops own handles, bad handles, duplicates and non-URL feeds from suggestions", () => {
-    const s = sanitizeSuggestions(
-      competitorSuggestionsOutput.parse({
-        competitors: [
-          { handle: "@peer_one", platform: "instagram", tier: "core", why: "Same audience" },
-          { handle: "peer_one", platform: "instagram", tier: "core", why: "dupe" },
-          { handle: "https://www.tiktok.com/@peer_two?lang=en", platform: "tiktok", tier: "adjacent", why: "" },
-          { handle: "@examplebrand", platform: "instagram", tier: "core", why: "own" },
-          { handle: "not a handle!", platform: "youtube", tier: "core", why: "" },
-        ],
-        sources: [
-          { kind: "reddit", target: "r/smallbusiness", why: "" },
-          { kind: "rss", target: "industry news", why: "" },
-          { kind: "google_news", target: "creator economy report", why: "" },
-        ],
-      }),
-      ["@examplebrand"],
-    );
-    expect(s.competitors.map((c) => `${c.platform}:${c.handle}`)).toEqual(["instagram:@peer_one", "tiktok:@peer_two"]);
-    expect(s.sources.map((x) => x.target)).toEqual(["smallbusiness", "creator economy report"]);
-  });
 });
 
 describe("renderers produce valid Brand Kit files", () => {
@@ -192,12 +167,10 @@ describe("renderers produce valid Brand Kit files", () => {
     expect(proofInventorySchema.parse(parseYaml(yaml)).items[0]!.numbers[0]!.source).toContain("onboarding interview");
   });
 
-  it("voice.md, competitors.yaml, sources.yaml and house-style.md", () => {
+  it("voice.md, sources.yaml and house-style.md", () => {
     const voice = voiceMd(tpl("voice.md"), sanitizeVoice(voiceProfileOutput.parse({ oneLine: "Calm", howWeTalk: ["Short"], signatureMoves: [], neverSay: [], bannedPhrases: ["game changer"], examples: [POSTS[2]!.text], summary: "" }), POSTS));
     expect(voice).toContain("## In one line\n\nCalm");
     expect(voice).toContain('Hard bans (also in brand.yaml): "game changer"');
-    const comp = competitorsYaml([{ handle: "peer_one", platform: "instagram", tier: "core" }, { handle: "@Peer_One", platform: "instagram", tier: "core" }]);
-    expect(competitorsSchema.parse(parseYaml(comp)).creators).toHaveLength(1);
     const src = sourcesYaml([{ id: "", kind: "reddit", target: "smallbusiness", weight: 1, enabled: true }, { id: "", kind: "reddit", target: "smallbusiness", weight: 1, enabled: false }]);
     const ids = sourcesSchema.parse(parseYaml(src)).sources.map((s) => s.id);
     expect(new Set(ids).size).toBe(2);
