@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The 400,000 Missing Votes</title>
+<link href="fonts/fonts.css" rel="stylesheet">
+<style>
+/* One colour, one meaning, for the whole film:
+   amber   = the 400,000 (Cornyn's March voters, the voter we follow) — brightest thing in frame
+   crimson = Paxton      blue = Talarico / Texas turning blue      ink + paper = everything else */
+:root {
+  --paper: #ece5d3; --paper-2: #e2d9c3; --ink: #17161a; --mute: #7d766a; --rule: #b9b09d;
+  --amber: #f5a800; --amber-deep: #b97b00; --crimson: #b8202b; --blue: #1f4fd1; --dark: #141318;
+  --sans: "Inter", "Inter Display", system-ui, sans-serif;
+  --serif: "Source Serif 4", "Caladea", "Liberation Serif", serif;
+  --type: "Courier Prime", "Courier 10 Pitch", "Liberation Mono", monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #0d0d10; color: var(--ink); font-family: var(--sans); }
+body.render { overflow: hidden; }
+#viewport { position: relative; width: 100vw; height: 100vh; display: grid; place-items: center; overflow: hidden; }
+body.render #viewport { width: 1080px; height: 1920px; display: block; }
+#stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--paper); transform-origin: 0 0; }
+.layer, .scene { position: absolute; inset: 0; }
+.scene { display: none; }
+.abs { position: absolute; }
+svg { overflow: visible; }
+
+/* paper board: grain + vignette, fixed seed so every render matches */
+#grain { position: absolute; inset: 0; opacity: .5; mix-blend-mode: multiply; pointer-events: none; }
+#vignette { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(60,40,10,.22) 100%); }
+#darkbg { position: absolute; inset: 0; background: var(--dark); opacity: 0; }
+
+/* collage pieces sit on the board as paper */
+.paper { background: #f7f2e6; border: 10px solid #fbf8f1; box-shadow: 0 18px 30px rgba(40,28,8,.28), 0 2px 4px rgba(40,28,8,.25); }
+
+.kicker { position: absolute; left: 80px; top: 238px; font: 700 30px/1 var(--type); letter-spacing: .12em; color: var(--ink); text-transform: uppercase; white-space: nowrap; }
+.kicker b { color: var(--crimson); font-weight: 700; }
+  border: 2px solid var(--mute); padding: 6px 10px; text-transform: uppercase; }
+.source { position: absolute; left: 80px; width: 840px; top: 1330px; font: 400 22px/1.3 var(--type); color: var(--mute); }
+
+#captions { position: absolute; left: 100px; width: 820px; top: 1392px; text-align: center; font: 800 50px/1.18 var(--sans); color: var(--ink); letter-spacing: -.01em; }
+#captions .w { display: inline-block; padding: 0 .09em; border-radius: 6px; }
+#captions .on { background: var(--amber); color: var(--ink); }
+#captions.dark { color: #f3eee2; }
+
+.num { font-family: var(--sans); font-weight: 900; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.label { font: 700 30px/1.1 var(--type); letter-spacing: .06em; text-transform: uppercase; }
+.chip { position: absolute; font: 900 46px/1 var(--sans); padding: 10px 18px; border-radius: 10px; white-space: nowrap; }
+
+/* preview controls (not part of the frame) */
+#controls { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: rgba(13,13,16,.92); color: #ddd; font: 500 14px var(--sans); z-index: 10; }
+#controls button { font: 600 14px var(--sans); padding: 6px 14px; border-radius: 6px; border: 1px solid #555; background: #222; color: #eee; cursor: pointer; }
+#controls input[type=range] { flex: 1; }
+body.render #controls { display: none; }
+</style>
+</head>
+<body>
+<div id="viewport">
+<div id="stage">
+  <svg id="grain" width="1080" height="1920"><filter id="grainf" x="0" y="0"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .28  0 0 0 .55 0"/></filter><rect width="1080" height="1920" filter="url(#grainf)"/></svg>
+  <div id="darkbg"></div>
+
+  <!-- 1 · HOOK: Texas, blue bleeding in from the edges -->
+  <div class="scene" id="s1">
+    <div class="abs" id="s1title" style="left:80px; top:320px; width:920px; font:900 92px/0.98 var(--serif); letter-spacing:-.02em;">
+      The <span style="background:var(--amber); padding:0 .08em;">400,000</span><br>missing votes
+    </div>
+    <svg class="abs" id="s1map" style="left:110px; top:560px;" width="860" height="817" viewBox="0 0 1000 950"></svg>
+    <div class="abs label" id="s1nov" style="left:640px; top:600px; color:var(--blue); background:#f7f2e6; padding:10px 14px; border:3px solid var(--blue);">Nov 3, 2026</div>
+  </div>
+
+  <!-- 1b · the number, then it scatters -->
+  <div class="scene" id="s1b">
+    <div class="abs num" id="s1bnum" style="left:0; width:1080px; top:700px; text-align:center; font-size:228px; line-height:1; color:var(--amber);">400,000</div>
+    <div class="abs label" id="s1brep" style="left:0; width:1080px; top:960px; text-align:center; font-size:46px; letter-spacing:.32em; color:#f3eee2;">Republicans</div>
+    <div class="abs label" id="s1bmay" style="left:0; width:1080px; top:1040px; text-align:center; font-size:30px; letter-spacing:.2em; color:#9b968c;">voted in March · gone by May</div>
+  </div>
+
+  <!-- 2 · FOLLOW THE VOTER -->
+  <div class="scene" id="s2">
+    <svg class="abs" id="voter" width="300" height="450" viewBox="0 0 200 300" style="left:0; top:0;">
+      <g stroke="#fbf8f1" stroke-width="22" stroke-linejoin="round" fill="#fbf8f1"><circle cx="100" cy="72" r="50"/><path d="M18 300 C18 188 55 142 100 142 C145 142 182 188 182 300 Z"/></g>
+      <g stroke="var(--ink)" stroke-width="6" fill="var(--amber)" stroke-linejoin="round"><circle cx="100" cy="72" r="50"/><path d="M18 300 C18 188 55 142 100 142 C145 142 182 188 182 300 Z"/></g>
+    </svg>
+    <div class="abs paper" id="cal" style="left:0; top:0; width:300px; height:330px; perspective:900px; padding:0;">
+      <div style="height:62px; background:var(--ink); color:#f3eee2; font:700 24px/62px var(--type); letter-spacing:.18em; text-align:center;" id="calhead">2026</div>
+      <div id="calpage" style="position:absolute; left:0; right:0; top:62px; bottom:0; background:#f7f2e6; transform-origin:50% 0; backface-visibility:hidden;">
+        <div class="label" id="calmon" style="text-align:center; margin-top:18px; font-size:34px;">March</div>
+        <div class="num" id="calday" style="text-align:center; font-size:124px; line-height:1.02;">3</div>
+        <div class="label" id="calwhat" style="text-align:center; font-size:24px; color:var(--mute);">Primary</div>
+      </div>
+    </div>
+    <div class="abs paper" id="ballot" style="left:0; top:0; width:470px; padding:26px 30px;">
+      <div class="label" style="font-size:22px; color:var(--mute);">Sample ballot · illustration</div>
+      <div style="font:900 34px/1.1 var(--sans); margin:10px 0 18px; border-bottom:4px solid var(--ink); padding-bottom:12px;">U.S. Senator<br><span style="font-weight:700; font-size:24px;">Republican primary</span></div>
+      <div class="brow" style="display:flex; align-items:center; gap:18px; font:700 34px var(--sans); margin:14px 0;"><svg width="64" height="40" viewBox="0 0 64 40"><ellipse cx="32" cy="20" rx="28" ry="16" fill="none" stroke="var(--ink)" stroke-width="4"/><ellipse id="bfill" cx="32" cy="20" rx="24" ry="12" fill="var(--amber)"/><path id="bscrib" d="M10 22 L22 12 L18 26 L32 10 L28 28 L44 11 L40 27 L54 15" fill="none" stroke="var(--ink)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>John Cornyn</div>
+      <div style="display:flex; align-items:center; gap:18px; font:700 34px var(--sans); margin:14px 0;"><svg width="64" height="40" viewBox="0 0 64 40"><ellipse cx="32" cy="20" rx="28" ry="16" fill="none" stroke="var(--ink)" stroke-width="4"/></svg>Ken Paxton</div>
+      <div style="display:flex; align-items:center; gap:18px; font:500 28px var(--sans); color:var(--mute); margin:14px 0 4px;"><svg width="64" height="40" viewBox="0 0 64 40"><ellipse cx="32" cy="20" rx="28" ry="16" fill="none" stroke="var(--mute)" stroke-width="4"/></svg>Other candidates</div>
+    </div>
+    <div class="abs" id="s2count" style="left:0; width:1080px; top:300px; text-align:center;">
+      <div class="num" id="s2countnum" style="font-size:150px; line-height:1;">910,000</div>
+      <div class="label" style="font-size:32px; margin-top:6px;">Republicans voted <span style="background:var(--amber); padding:0 .2em;">Cornyn</span></div>
+    </div>
+    <div class="abs paper" id="result" style="left:110px; top:520px; width:860px; padding:34px 40px 30px;">
+      <div class="label" style="font-size:26px; color:var(--mute);">March 3 primary · result</div>
+      <div style="display:flex; align-items:center; margin-top:26px; gap:20px;"><div class="label" style="width:200px;">Cornyn</div><div id="rbarC" style="height:64px; background:var(--amber); border:3px solid var(--ink);"></div><div class="num" id="rnumC" style="font-size:56px;">42.0%</div></div>
+      <div style="display:flex; align-items:center; margin-top:18px; gap:20px;"><div class="label" style="width:200px;">Paxton</div><div id="rbarP" style="height:64px; background:var(--crimson); border:3px solid var(--ink);"></div><div class="num" id="rnumP" style="font-size:56px;">40.5%</div></div>
+      <div class="label" id="rnote" style="font-size:24px; margin-top:24px; color:var(--ink);">Nobody reached 50% → <span style="border-bottom:4px solid var(--ink);">runoff May 26</span></div>
+    </div>
+    <svg class="abs" id="s2map" style="left:220px; top:700px;" width="640" height="608" viewBox="0 0 1000 950"></svg>
+    <div class="abs label" id="s2home" style="font-size:30px; white-space:nowrap;"></div>
+  </div>
+
+  <!-- 3 · THE NUMBERS -->
+  <div class="scene" id="s3">
+    <div class="abs" id="s3top" style="left:100px; top:300px; width:880px;">
+      <div class="label" style="font-size:26px; color:var(--mute);">May 26 runoff</div>
+      <div style="position:relative; height:110px; margin-top:16px; border:4px solid var(--ink); background:var(--amber); overflow:hidden;">
+        <div id="s3barP" style="position:absolute; left:0; top:0; bottom:0; background:var(--crimson); border-right:4px solid var(--ink);"></div>
+        <div class="num abs" id="s3numP" style="left:22px; top:14px; font-size:76px; line-height:1; color:#fbf3f0;">64</div>
+        <div class="label abs" style="left:24px; bottom:8px; font-size:20px; color:#fbf3f0; display:none;">Paxton</div>
+        <div class="num abs" id="s3numC" style="right:22px; top:14px; font-size:76px; line-height:1; color:var(--ink);">36</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:8px;"><div class="label" style="font-size:24px; color:var(--crimson);">Paxton</div><div class="label" style="font-size:24px; color:var(--amber-deep);">Cornyn</div></div>
+    </div>
+    <div class="chip" id="s3chip28" style="background:var(--ink); color:#f3eee2;">+28 pts</div>
+    <svg class="abs" id="s3bars" style="left:0; top:0;" width="1080" height="1920"></svg>
+    <div class="abs" id="s3stamp" style="width:250px; height:250px; border-radius:50%; border:9px solid var(--ink); display:grid; place-items:center; background:rgba(247,242,230,.92);">
+      <div style="text-align:center;"><div class="num" style="font-size:80px; line-height:.95;">−45%</div><div class="label" style="font-size:22px;">Cornyn's vote</div></div>
+    </div>
+  </div>
+
+  <!-- 4 · WHY -->
+  <div class="scene" id="s4">
+    <svg class="abs" id="s4line" style="left:0; top:0;" width="1080" height="420"></svg>
+    <div class="abs paper" id="clip" style="left:120px; top:440px; width:840px; padding:34px 40px 36px; background:#f9f6ee;">
+      <div class="label" style="font-size:22px; color:var(--mute); border-bottom:2px solid var(--rule); padding-bottom:12px;">May 2026 · one week before the runoff</div>
+      <div style="font:900 72px/1.04 var(--serif); margin-top:18px; letter-spacing:-.01em;">Trump endorses <span style="position:relative; white-space:nowrap;">Paxton<svg id="clipul" style="position:absolute; left:-6px; bottom:-14px;" width="250" height="26" viewBox="0 0 250 26"><path d="M4 16 C 60 6, 150 24, 246 10" fill="none" stroke="var(--crimson)" stroke-width="9" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg></span> in Texas Senate runoff</div>
+      <div style="margin-top:28px; display:grid; gap:12px;">
+        <div style="height:12px; background:#cfc6b2; width:100%"></div><div style="height:12px; background:#cfc6b2; width:94%"></div><div style="height:12px; background:#cfc6b2; width:97%"></div><div style="height:12px; background:#cfc6b2; width:60%"></div>
+      </div>
+    </div>
+    <div class="abs" id="clipnote" style="left:120px; top:1000px; width:840px; font:italic 400 24px/1.3 var(--serif); color:var(--mute);">Placeholder clipping. Swap in the sourced headline screenshot.</div>
+    <div class="abs label" id="s4maptitle" style="left:80px; top:420px; width:920px; font-size:30px;">Paxton's margin swing, March → May</div>
+    <svg class="abs" id="s4map" style="left:170px; top:620px;" width="740" height="703" viewBox="0 0 1000 950"></svg>
+    <div class="abs" id="s4type" style="left:80px; top:560px; width:920px; font:900 104px/1.02 var(--sans); letter-spacing:-.03em;">
+      <div id="s4l1"><span id="s4h1" style="background:linear-gradient(var(--amber),var(--amber)) no-repeat 0 85% / 0% 42%;">The establishment</span><br><span style="color:var(--mute);">stayed home.</span></div>
+      <div id="s4l2" style="margin-top:56px;"><span id="s4h2" style="color:#fbf3f0; background:linear-gradient(var(--crimson),var(--crimson)) no-repeat 0 50% / 0% 100%; padding:0 .08em;">The base</span><br>took the party.</div>
+    </div>
+  </div>
+
+  <!-- 5 · NOVEMBER MATH -->
+  <div class="scene" id="s5">
+    <div class="abs" id="s5grid" style="left:124px; top:470px; width:832px; height:692px; transform-origin:0 0;"></div>
+    <div class="abs" id="s5head" style="left:80px; top:310px; width:920px;">
+      <div class="num" style="font-size:96px; line-height:1;">11.4 million</div>
+      <div class="label" style="font-size:28px; margin-top:6px;">Texans voted · Nov 2024</div>
+    </div>
+    <div class="abs label" id="s5legend" style="left:124px; top:1180px; font-size:24px; color:var(--mute); display:flex; align-items:center; gap:12px;"><span style="display:inline-block; width:28px; height:28px; background:#d3c9b4; border:2px solid #a89d85;"></span>= 100,000 voters</div>
+    <div class="abs" id="s5callout" style="white-space:nowrap;"><span class="num" style="font-size:64px; background:var(--amber); padding:0 .12em;">400,000 = 3.5%</span></div>
+    <div class="abs paper" id="poll" style="left:90px; top:760px; width:900px; padding:30px 36px 28px;">
+      <div class="label" style="font-size:24px; color:var(--mute);">Polling average, Nov 3 race</div>
+      <div style="position:relative; margin-top:26px; height:190px;" id="pollbars"></div>
+      <div class="label" style="font-size:22px; color:var(--mute); margin-top:6px;">270toWin 5-poll average</div>
+    </div>
+    <div class="abs label" id="s5mid" style="left:80px; top:310px; width:920px; font-size:34px; line-height:1.3;">Midterm: a smaller electorate<br><span style="color:var(--mute); font-size:24px;">illustrative · 2026 turnout unknown</span></div>
+  </div>
+
+  <!-- 6 · CLOSER -->
+  <div class="scene" id="s6">
+    <svg class="abs" id="s6map" style="left:120px; top:470px;" width="840" height="798" viewBox="0 0 1000 950"></svg>
+    <div class="abs" id="s6q" style="left:80px; top:310px; width:920px; font:900 64px/1.05 var(--sans); letter-spacing:-.02em;">Will they <span style="background:var(--amber); padding:0 .08em;">show up?</span></div>
+  </div>
+
+  <!-- END CARD -->
+  <div class="scene" id="s7">
+    <div class="abs" style="left:80px; top:520px; width:920px; color:#f3eee2;">
+      <div class="label" style="font-size:30px; color:#9b968c;">Texas · U.S. Senate</div>
+      <div style="font:900 118px/1.0 var(--serif); margin-top:24px; letter-spacing:-.02em;" id="s7a">Early voting starts tomorrow</div>
+      <div class="num" style="font-size:96px; margin-top:40px; color:var(--amber);" id="s7b">Oct 19 – 30</div>
+      <div class="label" style="font-size:36px; margin-top:28px;" id="s7c">Election Day · Nov 3</div>
+      <div style="font:400 22px/1.3 var(--type); color:#8a857b; margin-top:120px;">Texas Secretary of State</div>
+    </div>
+  </div>
+
+  <canvas id="dots" class="layer" width="1080" height="1920" style="pointer-events:none;"></canvas>
+
+  <div class="kicker" id="kicker"></div>
+  <div class="source" id="source"></div>
+  <div id="captions"></div>
+  <div id="vignette"></div>
+</div>
+</div>
+<div id="controls"><button id="play">Play</button><input id="scrub" type="range" min="0" max="1000" value="0"><span id="clock">0.00</span></div>
+<audio id="vo" preload="auto"></audio>
+
+<script src="words.js"></script>
+<script>
+"use strict";
+const FPS = 30;
+const $ = (id) => document.getElementById(id);
+
+// ---------- word timing (same contract as the animated-video template's lib.ts) ----------
+const WORDS = window.WORDS;
+const norm = (s) => s.toLowerCase().replace(/[^a-z0-9']/g, "");
+function cue(phrase, nth) {
+  const p = phrase.split(/\s+/).map(norm), hits = [];
+  for (let i = 0; i + p.length <= WORDS.length; i++) if (p.every((x, j) => norm(WORDS[i + j].w) === x)) hits.push(i);
+  if (nth === undefined && hits.length > 1) throw new Error(`cue "${phrase}" is said ${hits.length} times; pass nth`);
+  const i = hits[nth ?? 0];
+  if (i === undefined) throw new Error(`cue not found: ${phrase}`);
+  return WORDS[i].s;
+}
+function cueEnd(phrase, nth) {
+  const p = phrase.split(/\s+/).map(norm), hits = [];
+  for (let i = 0; i + p.length <= WORDS.length; i++) if (p.every((x, j) => norm(WORDS[i + j].w) === x)) hits.push(i);
+  const i = hits[nth ?? 0];
+  if (i === undefined) throw new Error(`cue not found: ${phrase}`);
+  return WORDS[i + p.length - 1].e;
+}
+
+// Every beat times off the words, so a new recording re-times the film.
+const T = {
+  blue: cue("turn blue"), nov: cue("in November because"), num: cue("because 400,000"), gone: cue("disappeared"),
+  take: cue("Take one of them"), march: cue("March 3rd"), cornyn: cue("John Cornyn"), k910: cue("910,000"),
+  beats: cue("Cornyn beats"), n42: cue("42 to 40.5"), may26: cue("Then May 26th"), stays: cue("He stays home"),
+  landslide: cue("Paxton wins"), n64: cue("64 to 36"), n28: cue("28 points"), count: cue("His count"), n883: cue("883,000"),
+  fell: cue("Cornyn's fell"), down45: cue("down 45 percent"), lost: cue("Cornyn lost"), none: cue("gained none"),
+  week: cue("A week before"), trump: cue("Trump endorses"), city: cue("city vote collapses"), swings: cue("margin swings"),
+  houston: cue("in Houston"), elpaso: cue("El Paso"), estab: cue("The establishment"), base: cue("the base took"),
+  zoom: cue("Now zoom out"), m114: cue("11.4 million"), half: cue("three and a half points"), lead: cue("about the lead"),
+  polls: cue("in the polls"), midterms: cue("And midterms"), fewer: cue("fewer votes"), more: cue("count for even more"),
+  already: cue("May already happened"), novComes: cue("November comes down"), showup: cue("show up"),
+};
+T.voEnd = WORDS[WORDS.length - 1].e;
+T.end = cueEnd("show up") + 0.6;
+const DURATION = T.end + 3.2;
+
+// Captions: hand-written sense units, checked against the words at load.
+const LINES = [
+  "Texas might turn blue in November,", "because 400,000 Republicans disappeared in May.",
+  "Take one of them.", "March 3rd — he votes for John Cornyn.", "910,000 Republicans do the same.",
+  "Cornyn beats Ken Paxton by a point:", "42 to 40.5.", "Then May 26th, the runoff.", "He stays home.",
+  "Paxton wins in a landslide:", "64 to 36, 28 points.", "His count barely moved from 883,000.",
+  "Cornyn's fell by 400,000 — down 45 percent.", "Cornyn lost 400,000 votes,", "and Paxton gained none of them.",
+  "A week before the runoff,", "Trump endorses Paxton.", "Cornyn's city vote collapses —",
+  "Paxton's margin swings 30 points in Houston,", "40 in El Paso.", "The establishment stayed home,", "and the base took the party.",
+  "Now zoom out.", "Last November, 11.4 million Texans voted.", "400,000 is three and a half points of that —",
+  "about the lead Talarico holds in the polls right now.", "And midterms draw fewer votes,", "so those 400,000 count for even more.",
+  "May already happened.", "November comes down to whether", "400,000 Republicans show up.",
+];
+const CHUNKS = (() => {
+  let k = 0;
+  return LINES.map((l) => {
+    const toks = l.split(/\s+/).filter((x) => norm(x));
+    const g = WORDS.slice(k, k + toks.length);
+    if (g.map((w) => norm(w.w)).join(" ") !== toks.map(norm).join(" ")) throw new Error(`caption mismatch at "${l}"`);
+    k += toks.length;
+    return { toks, words: g, s: g[0].s };
+  });
+})();
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const E = {
+  lin: (x) => x, out: (x) => 1 - Math.pow(1 - x, 3), in: (x) => x * x * x,
+  inOut: (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  back: (x) => { const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); },
+};
+const P = (t, a, d = .5, e = E.out) => e(clamp((t - a) / d));
+const q12 = (t) => Math.floor(t * 12) / 12;       // collage pieces animate on twos
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const hash = (n) => { const r = rng(n * 9301 + 49297); return r(); };
+const css = (el, o) => { for (const k in o) el.style[k] = o[k]; };
+const show = (el, on) => { el.style.display = on ? "block" : "none"; };
+const fmt = (n) => Math.round(n).toLocaleString("en-US");
+const fmtK = (n) => `${Math.round(n / 1000)}K`;
+const SVGNS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+// ---------- Texas (simplified outline from lon/lat, equirectangular at 31°N) ----------
+const TX = [[-106.62,32.00],[-103.06,32.00],[-103.04,36.50],[-100.00,36.50],[-100.00,34.56],[-99.69,34.38],[-99.2,34.33],[-98.95,34.21],[-98.5,34.06],[-98.1,34.14],[-97.95,33.88],[-97.6,33.9],[-97.2,33.75],[-96.9,33.95],[-96.6,33.85],[-96.3,33.75],[-95.8,33.86],[-95.4,33.87],[-95.2,33.95],[-94.73,33.70],[-94.48,33.64],[-94.04,33.55],[-94.04,31.99],[-93.82,31.75],[-93.6,31.2],[-93.53,30.93],[-93.7,30.45],[-93.71,30.07],[-93.84,29.69],[-94.1,29.67],[-94.75,29.37],[-95.1,29.1],[-95.5,28.8],[-96.2,28.5],[-96.6,28.3],[-97.0,28.0],[-97.2,27.7],[-97.35,27.3],[-97.4,26.8],[-97.25,26.3],[-97.15,25.96],[-97.5,25.88],[-97.95,26.06],[-98.3,26.1],[-98.8,26.37],[-99.1,26.5],[-99.3,26.9],[-99.5,27.5],[-99.8,27.8],[-100.3,28.3],[-100.5,28.7],[-100.65,29.1],[-101.0,29.4],[-101.4,29.77],[-101.8,29.8],[-102.3,29.88],[-102.6,29.75],[-102.85,29.35],[-103.1,28.98],[-103.4,29.03],[-103.8,29.27],[-104.2,29.48],[-104.5,29.7],[-104.7,30.1],[-104.9,30.55],[-105.2,30.8],[-105.6,31.08],[-106.0,31.39],[-106.3,31.62],[-106.53,31.78]];
+const KX = Math.cos(31 * Math.PI / 180), S = 1000 / (13.15 * KX);
+const proj = (lon, lat) => [(lon + 106.65) * KX * S, (36.5 - lat) * S];
+const TX_D = "M" + TX.map(([a, b]) => proj(a, b).map((v) => v.toFixed(1)).join(" ")).join(" L") + " Z";
+const CITIES = {
+  "El Paso": [-106.49, 31.76, 40], "Houston": [-95.37, 29.76, 30], "Fort Worth": [-97.33, 32.75, 27],
+  "San Antonio": [-98.49, 29.42, 25], "Dallas": [-96.80, 32.78, 19], "Austin": [-97.74, 30.27, 19],
+};
+const VOTER_LL = [-95.75, 29.95];   // the archetype voter: a Houston-area Republican
+function inTexas(x, y) {
+  let c = false; const pts = TX.map(([a, b]) => proj(a, b));
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+function texas(svg, { fill = "#d9c7b6", stroke = "var(--ink)", sw = 6 } = {}) {
+  const id = svg.id;
+  const defs = svgEl("defs", {}, svg);
+  const cp = svgEl("clipPath", { id: id + "-clip" }, defs); svgEl("path", { d: TX_D }, cp);
+  svgEl("path", { d: TX_D, fill: "#fbf8f1", stroke: "#fbf8f1", "stroke-width": sw + 22, "stroke-linejoin": "round" }, svg);
+  const base = svgEl("path", { d: TX_D, fill, stroke: "none" }, svg);
+  const inner = svgEl("g", { "clip-path": `url(#${id}-clip)` }, svg);
+  svgEl("path", { d: TX_D, fill: "none", stroke, "stroke-width": sw, "stroke-linejoin": "round" }, svg);
+  const over = svgEl("g", {}, svg);
+  return { base, inner, over };
+}
+
+// ---------- build ----------
+const S1 = texas($("s1map"), { fill: "#d8b3aa" });
+{
+  const f = svgEl("filter", { id: "bleed", x: "-20%", y: "-20%", width: "140%", height: "140%" }, $("s1map").querySelector("defs"));
+  svgEl("feTurbulence", { type: "fractalNoise", baseFrequency: ".012", numOctaves: "3", seed: "4" }, f);
+  svgEl("feDisplacementMap", { in: "SourceGraphic", scale: "60" }, f);
+}
+const bleed = svgEl("path", { d: TX_D, fill: "none", stroke: "var(--blue)", "stroke-linejoin": "round", filter: "url(#bleed)" }, S1.inner);
+
+const S2 = texas($("s2map"));
+const [vx, vy] = proj(...VOTER_LL);
+const s2halo = svgEl("circle", { cx: vx, cy: vy, r: 30, fill: "none", stroke: "var(--amber)", "stroke-width": 8 }, S2.over);
+const s2dot = svgEl("circle", { cx: vx, cy: vy, r: 26, fill: "var(--amber)", stroke: "var(--ink)", "stroke-width": 6 }, S2.over);
+
+const S4 = texas($("s4map"), { fill: "#ddd2c0" });
+const cityBars = {};
+for (const [name, [lon, lat, sw]] of Object.entries(CITIES)) {
+  const [x, y] = proj(lon, lat);
+  const g = svgEl("g", {}, S4.over);
+  const bar = svgEl("rect", { x: x - 17, y, width: 34, height: 0, fill: "var(--crimson)", stroke: "var(--ink)", "stroke-width": 4 }, g);
+  svgEl("circle", { cx: x, cy: y, r: 13, fill: "var(--ink)" }, g);
+  const left = name === "Fort Worth" || name === "San Antonio" || name === "El Paso";
+  const val = svgEl("text", { x: x + (left ? -26 : 26), y, "text-anchor": left ? "end" : "start", "font-family": "Inter", "font-weight": 900, "font-size": 64, fill: "var(--ink)" }, g);
+  const nm = svgEl("text", { x: x + (left ? -26 : 26), y: y + 40, "text-anchor": left ? "end" : "start", "font-family": "Courier Prime", "font-weight": 700, "font-size": 34, fill: "var(--ink)" }, g);
+  nm.textContent = name;
+  cityBars[name] = { g, bar, val, nm, x, y, sw };
+}
+
+const S6 = texas($("s6map"));
+const s6dots = [];
+{
+  const r = rng(26), hubs = Object.values(CITIES).map(([lon, lat]) => proj(lon, lat));
+  while (s6dots.length < 420) {
+    let x, y;
+    if (r() < .62) { const h = hubs[Math.floor(r() * hubs.length)]; const a = r() * 6.283, d = Math.pow(r(), .7) * 120; x = h[0] + Math.cos(a) * d; y = h[1] + Math.sin(a) * d; }
+    else { x = r() * 1000; y = r() * 950; }
+    if (!inTexas(x, y) || Math.hypot(x - vx, y - vy) < 40) continue;
+    s6dots.push({ el: svgEl("circle", { cx: x, cy: y, r: 9 }, S6.over), d: Math.hypot(x - vx, y - vy), ph: r() * 100, k: s6dots.length });
+  }
+}
+const s6halo = svgEl("circle", { cx: vx, cy: vy, r: 34, fill: "none", stroke: "var(--amber)", "stroke-width": 8 }, S6.over);
+const s6dot = svgEl("circle", { cx: vx, cy: vy, r: 26, stroke: "var(--ink)", "stroke-width": 6 }, S6.over);
+
+// grid of 114 squares = 11.4M voters, the first four amber = 400,000
+const TILES = [];
+for (let i = 0; i < 120; i++) {
+  const el = document.createElement("div"); const c = i % 12, rr = Math.floor(i / 12);
+  css(el, { position: "absolute", left: c * 70 + "px", top: rr * 70 + "px", width: "62px", height: "62px",
+    background: i < 4 ? "var(--amber)" : "#d3c9b4", border: i < 4 ? "3px solid var(--ink)" : "2px solid #a89d85" });
+  if (i >= 114) el.style.visibility = "hidden";
+  $("s5grid").appendChild(el); TILES.push(el);
+}
+// poll bars
+const PX_PT = 15;
+$("pollbars").innerHTML = `
+  <div class="label abs" style="left:0; top:6px; font-size:26px; color:var(--blue);">Talarico</div>
+  <div class="abs" id="pbT" style="left:0; top:40px; height:52px; background:var(--blue); border:3px solid var(--ink);"></div>
+  <div class="num abs" id="pnT" style="top:42px; font-size:46px;">49.0</div>
+  <div class="label abs" style="left:0; top:104px; font-size:26px; color:var(--crimson);">Paxton</div>
+  <div class="abs" id="pbP" style="left:0; top:138px; height:52px; background:var(--crimson); border:3px solid var(--ink);"></div>
+  <div class="num abs" id="pnP" style="top:140px; font-size:46px;">45.4</div>
+  <div class="abs" id="pgap" style="top:20px; height:184px; border-left:3px dashed var(--ink); border-right:3px dashed var(--ink);"></div>
+  <div class="abs" id="pslice" style="height:52px; background:var(--amber); border:3px solid var(--ink);"></div>`;
+
+// bar chart (scene 3) in stage coordinates
+const B = { base: 1240, h910: 560, w: 150, xs: { mC: 170, mP: 336, yC: 600, yP: 766 } };
+const bh = (v) => B.h910 * v / 910000;
+const s3svg = $("s3bars");
+svgEl("line", { x1: 120, x2: 960, y1: B.base, y2: B.base, stroke: "var(--ink)", "stroke-width": 5 }, s3svg);
+const lbl = (x, text) => { const e = svgEl("text", { x, y: B.base + 50, "text-anchor": "middle", "font-family": "Courier Prime", "font-weight": 700, "font-size": 32, fill: "var(--ink)" }, s3svg); e.textContent = text; return e; };
+lbl(328, "MARCH 3"); lbl(758, "MAY 26");
+const bars = {};
+for (const [k, col] of [["mC", "var(--amber)"], ["mP", "var(--crimson)"], ["yC", "var(--amber)"], ["yP", "var(--crimson)"]]) {
+  const ghost = svgEl("rect", { x: B.xs[k], width: B.w, fill: "none", stroke: "var(--ink)", "stroke-width": 4, "stroke-dasharray": "14 10", opacity: 0 }, s3svg);
+  const r = svgEl("rect", { x: B.xs[k], width: B.w, fill: col, stroke: "var(--ink)", "stroke-width": 5 }, s3svg);
+  const v = svgEl("text", { x: B.xs[k] + B.w / 2, "text-anchor": "middle", "font-family": "Inter", "font-weight": 900, "font-size": 50, fill: "var(--ink)" }, s3svg);
+  bars[k] = { r, v, ghost };
+}
+const s3lost = svgEl("text", { "text-anchor": "start", "font-family": "Inter", "font-weight": 900, "font-size": 56, fill: "var(--ink)" }, s3svg);
+const s3zero = svgEl("text", { "text-anchor": "middle", "font-family": "Inter", "font-weight": 900, "font-size": 50, fill: "var(--ink)" }, s3svg);
+
+// timeline (scene 4)
+const tl = $("s4line");
+const tlLine = svgEl("line", { x1: 150, x2: 930, y1: 330, y2: 330, stroke: "var(--ink)", "stroke-width": 5, pathLength: 1, "stroke-dasharray": 1 }, tl);
+const tlA = svgEl("g", {}, tl), tlB = svgEl("g", {}, tl);
+svgEl("circle", { cx: 250, cy: 330, r: 16, fill: "var(--crimson)", stroke: "var(--ink)", "stroke-width": 4 }, tlA);
+svgEl("text", { x: 250, y: 300, "text-anchor": "middle", "font-family": "Courier Prime", "font-weight": 700, "font-size": 28 }, tlA).textContent = "ENDORSEMENT";
+svgEl("circle", { cx: 830, cy: 330, r: 16, fill: "var(--ink)" }, tlB);
+svgEl("text", { x: 830, y: 300, "text-anchor": "middle", "font-family": "Courier Prime", "font-weight": 700, "font-size": 28 }, tlB).textContent = "RUNOFF";
+const tlWk = svgEl("text", { x: 540, y: 380, "text-anchor": "middle", "font-family": "Inter", "font-weight": 900, "font-size": 40 }, tl); tlWk.textContent = "1 week";
+
+// ---------- dots canvas ----------
+const cv = $("dots"), cx = cv.getContext("2d");
+let NUMDOTS = [];
+function sampleNumber() {
+  const el = $("s1bnum"), off = document.createElement("canvas"); off.width = 1080; off.height = 300;
+  const g = off.getContext("2d"), cs = getComputedStyle(el);
+  g.font = `900 ${cs.fontSize} ${cs.fontFamily}`; g.textAlign = "center"; g.textBaseline = "top";
+  if (g.letterSpacing !== undefined) g.letterSpacing = cs.letterSpacing;
+  g.fillText("400,000", 540, 18);
+  const d = g.getImageData(0, 0, 1080, 300).data, out = [], r = rng(400);
+  for (let y = 0; y < 300; y += 9) for (let x = 0; x < 1080; x += 9) if (d[(y * 1080 + x) * 4 + 3] > 140) out.push({ x, y: y + 700 - 18 + 12, a: r() * 6.283, sp: .5 + r(), dl: r() * .25 });
+  // the one we follow: nearest the middle of the number
+  let best = 0; out.forEach((p, i) => { if (Math.hypot(p.x - 540, p.y - 810) < Math.hypot(out[best].x - 540, out[best].y - 810)) best = i; });
+  out.hero = best; NUMDOTS = out;
+}
+const GRID910 = (() => { const out = [], cols = 35, rows = 26, sp = 22.5, x0 = 540 - (cols - 1) * sp / 2, y0 = 560; for (let i = 0; i < cols * rows; i++) out.push({ x: x0 + (i % cols) * sp, y: y0 + Math.floor(i / cols) * sp }); return out; })();
+const LEAK = (() => { const r = rng(45), out = []; for (let i = 0; i < 160; i++) out.push({ u: r(), v: r(), d: r() * .9, w: r() * 2 - 1, s: .6 + r() * .6 }); return out; })();
+function dot(x, y, rad, fill, a = 1, stroke = true) {
+  if (a <= 0 || rad <= 0) return;
+  cx.globalAlpha = a; cx.beginPath(); cx.arc(x, y, rad, 0, 6.2832); cx.fillStyle = fill; cx.fill();
+  if (stroke) { cx.lineWidth = Math.max(1, rad * .28); cx.strokeStyle = "#17161a"; cx.stroke(); }
+  cx.globalAlpha = 1;
+}
+const AMBER = "#f5a800";
+const mix = (a, b, p) => { const h = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const A = h(a), Bb = h(b); return "rgb(" + A.map((v, i) => Math.round(lerp(v, Bb[i], p))).join(",") + ")"; };
+
+// ---------- per-frame draw ----------
+const SCENES = [
+  ["s1", 0, T.num - .02], ["s1b", T.num - .02, T.take - .04], ["s2", T.take - .04, T.landslide - .3],
+  ["s3", T.landslide - .3, T.week - .25], ["s4", T.week - .25, T.zoom - .2], ["s5", T.zoom - .2, T.already - .3],
+  ["s6", T.already - .3, T.end], ["s7", T.end, Infinity],
+];
+const KICK = { s1: "Texas · U.S. Senate · <b>2026</b>", s1b: "", s2: "One voter", s3: "The runoff", s4: "Why", s5: "November math", s6: "November 3", s7: "" };
+const SRC = {
+  s1: "", s1b: "", s2: "Sources: Kalshi race timeline; Brookings (May 28, 2026)",
+  s3: "Sources: Brookings (May 28, 2026); Ballotpedia (May 27, 2026)",
+  s4: "Swings: Brookings (Galston, May 28, 2026) · Endorsement timing: Kalshi",
+  s5: "Sources: Texas SOS (11,388,674 ballots, Nov 2024); 270toWin", s6: "", s7: "",
+};
+
+function draw(t) {
+  let active = "s7";
+  for (const [id, a, b] of SCENES) { const on = t >= a && t < b; show($(id), on); if (on) active = id; }
+  const dark = active === "s1b" || active === "s7";
+  $("darkbg").style.opacity = dark ? 1 : 0;
+  $("grain").style.opacity = dark ? .12 : .5;
+  $("kicker").innerHTML = KICK[active]; $("kicker").style.color = dark ? "#f3eee2" : "";
+  $("source").textContent = SRC[active];
+  cx.clearRect(0, 0, 1080, 1920);
+  ({ s1, s1b, s2, s3, s4, s5, s6, s7 })[active](t);
+  captions(t, dark, active);
+}
+
+function captions(t, dark, active) {
+  const el = $("captions");
+  el.classList.toggle("dark", dark);
+  let c = null;
+  for (let i = 0; i < CHUNKS.length; i++) {
+    const end = i + 1 < CHUNKS.length ? Math.min(CHUNKS[i + 1].s, CHUNKS[i].words.at(-1).e + 1.2) : CHUNKS[i].words.at(-1).e + .5;
+    if (t >= CHUNKS[i].s - .05 && t < end) c = CHUNKS[i];
+  }
+  if (!c || active === "s7") { el.innerHTML = ""; return; }
+  el.innerHTML = c.toks.map((tok, j) => `<span class="w${t >= c.words[j].s && t < (c.words[j + 1]?.s ?? c.words[j].e + .3) ? " on" : ""}">${tok}</span>`).join(" ");
+}
+
+function s1(t) {
+  // already moving on frame 0 (the cover); blue bleeds faster from "blue"
+  const w = 14 + 46 * P(t, 0, T.blue + .3, E.inOut) + 190 * P(t, T.blue, T.num - T.blue, E.inOut);
+  bleed.setAttribute("stroke-width", w.toFixed(1));
+  css($("s1map"), { transform: `scale(${1 + .04 * t / T.num})` });
+  const n = P(q12(t), T.nov, .35, E.back);
+  css($("s1nov"), { opacity: n, transform: `translateY(${(1 - n) * -40}px) rotate(${(1 - n) * -8 + 3}deg)` });
+  css($("s1title"), { opacity: 1 });
+}
+
+function s1b(t) {
+  const slam = P(t, T.num, .28, E.out);
+  const gone = P(t, T.gone, .25, E.lin);
+  css($("s1bnum"), { transform: `scale(${lerp(1.35, 1, slam)})`, opacity: 1 - gone });
+  css($("s1brep"), { opacity: P(t, T.num + .45, .3) * (1 - P(t, T.gone + .3, .4)) });
+  css($("s1bmay"), { opacity: P(t, T.gone + .2, .4) * (1 - P(t, T.take - .6, .3)) });
+  if (t < T.gone) return;
+  const k = clamp((t - T.gone - .1) / (T.take - T.gone - .3));
+  NUMDOTS.forEach((p, i) => {
+    if (i === NUMDOTS.hero) return;
+    const e = E.in(clamp((k - p.dl) / (1 - p.dl)));
+    const d = e * 1500 * p.sp;
+    dot(p.x + Math.cos(p.a) * d, p.y + Math.sin(p.a) * d * .8 - e * 160, 3.6, AMBER, (1 - gone * .0) * (1 - e * .7), false);
+  });
+  const h = NUMDOTS[NUMDOTS.hero], m = E.inOut(k);
+  dot(lerp(h.x, 540, m), lerp(h.y, 860, m), lerp(3.6, 18, m), AMBER, 1, m > .3);
+}
+
+function s2(t) {
+  // the voter grows out of the dot, then steps aside for the calendar and ballot
+  const grow = P(t, T.take, .45, E.back);
+  const aside = P(t, T.march - .1, .5, E.inOut);
+  const toDot = P(t, T.k910 - .15, .45, E.inOut);
+  const vxS = lerp(540, 300, aside), vyS = lerp(860, 880, aside);
+  const sc = grow * lerp(1, .04, toDot);
+  css($("voter"), { left: vxS - 150 + "px", top: vyS - 225 + "px", transform: `scale(${sc})`, opacity: toDot >= 1 ? 0 : 1, filter: "drop-shadow(0 16px 18px rgba(40,28,8,.25))" });
+  if (t < T.take + .2) dot(540, 860, 18 * (1 - P(t, T.take, .2)), AMBER, 1, true);
+
+  // calendar: March 3 → flips to May 26
+  const calIn = P(q12(t), T.march, .35, E.back), calOut = P(q12(t), T.k910 - .2, .3, E.in);
+  const calBack = P(q12(t), T.may26 - .15, .35, E.back);
+  const flip = clamp((t - T.may26 - .2) / .45);
+  const firstHalf = flip < .5;
+  $("calmon").textContent = firstHalf ? "March" : "May";
+  $("calday").textContent = firstHalf ? "3" : "26";
+  $("calwhat").textContent = firstHalf ? "Primary" : "Runoff";
+  $("calpage").style.transform = `rotateX(${firstHalf ? -flip * 180 : (1 - flip) * 180}deg)`;
+  if (t < T.may26 - .3) css($("cal"), { left: "620px", top: lerp(-400, 330, calIn) + lerp(0, -800, calOut) + "px", transform: `rotate(${lerp(-14, 4, calIn)}deg)`, opacity: 1 });
+  else css($("cal"), { left: "390px", top: lerp(-420, 330, calBack) + "px", transform: `rotate(${lerp(10, -2, calBack)}deg)`, opacity: 1 });
+
+  // ballot: marked for Cornyn on "Cornyn"
+  const bIn = P(q12(t), T.cornyn - .55, .35, E.back), bOut = P(q12(t), T.k910 - .2, .3, E.in);
+  css($("ballot"), { left: "520px", top: lerp(1950, 720, bIn) + bOut * 1300 + "px", transform: `rotate(${lerp(10, -3, bIn)}deg)` });
+  $("bscrib").setAttribute("stroke-dashoffset", 1 - P(t, T.cornyn + .05, .4, E.lin));
+  $("bfill").setAttribute("opacity", P(t, T.cornyn + .3, .2));
+
+  // 910,000 do the same: the dot multiplies into a field
+  const cIn = P(t, T.k910 - .05, .3), cOut = P(t, T.beats - .2, .3);
+  css($("s2count"), { opacity: cIn * (1 - cOut), transform: `translateY(${(1 - cIn) * 30}px)` });
+  $("s2countnum").textContent = fmt(910000 * P(t, T.k910, 1.0, E.out));
+  if (t > T.k910 - .1 && t < T.beats + .4) {
+    const hx = 300, hy = 880;
+    GRID910.forEach((g, i) => {
+      const dd = Math.hypot(g.x - hx, g.y - hy);
+      const a = P(t, T.k910 + dd / 1400, .25, E.back);
+      const out = P(t, T.beats - .2 + (i % 7) * .02, .3, E.in);
+      dot(g.x, lerp(g.y, g.y + 60, out), 7.5 * a * (1 - out), AMBER, 1 - out, false);
+    });
+  }
+  // March result
+  const rIn = P(q12(t), T.beats - .1, .35, E.back), rOut = P(q12(t), T.may26 - .3, .3, E.in);
+  css($("result"), { opacity: rIn > 0 ? 1 : 0, transform: `translateX(${(1 - rIn) * 1200 - rOut * 1300}px) rotate(${(1 - rIn) * 6 - 1}deg)` });
+  const rb = P(t, T.n42 - .1, .7, E.inOut);
+  $("rbarC").style.width = 42.0 / 50 * 430 * rb + "px"; $("rbarP").style.width = 40.5 / 50 * 430 * rb + "px";
+  $("rnumC").textContent = (42.0 * rb).toFixed(1) + "%"; $("rnumP").textContent = (40.5 * rb).toFixed(1) + "%";
+  $("rnote").style.opacity = P(t, T.n42 + .6, .3);
+
+  // the map: his dot, then "he stays home" and it goes dark
+  const mIn = P(q12(t), T.may26 + .4, .4, E.back);
+  css($("s2map"), { opacity: mIn > 0 ? 1 : 0, left: "220px", top: "700px", transform: `translateY(${(1 - mIn) * 900}px) rotate(${(1 - mIn) * 5}deg)` });
+  const dark = P(t, T.stays + .15, .35, E.lin);
+  const pulse = (Math.sin((t - T.may26) * 7) + 1) / 2;
+  s2dot.setAttribute("fill", mix(AMBER, "#3a3833", dark));
+  s2halo.setAttribute("r", 30 + (dark > 0 ? 70 * dark : 14 * pulse));
+  s2halo.setAttribute("opacity", dark > 0 ? (1 - dark) * .8 : .35 + .5 * pulse);
+  const home = $("s2home"), [mx, my] = [220 + vx * .64, 700 + vy * .64];
+  const typed = Math.floor(clamp((t - T.stays - .3) / .5) * 11);
+  home.textContent = "Stayed home".slice(0, typed);
+  css(home, { left: mx + 32 + "px", top: my - 82 + "px", background: typed ? "#f7f2e6" : "transparent", padding: "6px 10px", border: typed ? "3px solid var(--ink)" : "none" });
+}
+
+function s3(t) {
+  // runoff split: 50/50 → 64/36
+  const sp = P(t, T.n64 - .15, .8, E.inOut);
+  const pct = lerp(50, 64, sp);
+  const topIn = P(t, T.landslide - .3, .35);
+  css($("s3top"), { opacity: topIn * (1 - P(t, T.count - .2, .35)), transform: `translateY(${(1 - topIn) * -30}px)` });
+  $("s3barP").style.width = pct + "%";
+  $("s3numP").textContent = Math.round(pct); $("s3numC").textContent = Math.round(100 - pct);
+  const c28 = P(q12(t), T.n28, .3, E.back), chipFade = 1 - P(t, T.count - .2, .3);
+  css($("s3chip28"), { left: 100 + 880 * .64 - 120 + "px", top: 248 + "px", opacity: c28 * chipFade, transform: `scale(${lerp(1.6, 1, c28)}) rotate(-4deg)` });
+
+  // twin bars
+  const set = (k, h, label, alpha = 1) => {
+    const b = bars[k]; b.r.setAttribute("y", B.base - h); b.r.setAttribute("height", Math.max(0, h)); b.r.setAttribute("opacity", alpha);
+    b.v.setAttribute("y", B.base - h - 18); b.v.textContent = label; b.v.setAttribute("opacity", alpha && h > 4 ? 1 : 0);
+  };
+  const g1 = P(t, T.count - .1, .6, E.inOut), g2 = P(t, T.count + .15, .6, E.inOut);
+  set("mC", bh(910000) * g1, "910K"); set("mP", bh(883000) * g2, "883K");
+  // Paxton's count "barely moved": the same bar slides across to May
+  const pm = P(t, T.n883 + .1, .7, E.inOut);
+  bars.yP.r.setAttribute("x", lerp(B.xs.mP, B.xs.yP, pm)); bars.yP.v.setAttribute("x", lerp(B.xs.mP, B.xs.yP, pm) + B.w / 2);
+  set("yP", pm > 0 ? bh(883000) : 0, "≈883K", pm > 0 ? 1 : 0);
+  // Cornyn's slides across full, then drains by 400K, the lost votes leaking away as amber dots
+  const cm = P(t, T.fell - .2, .5, E.inOut);
+  const drain = P(t, T.fell + .35, Math.max(.8, T.down45 - T.fell), E.inOut);
+  const v = 910000 - 400000 * drain;
+  bars.yC.r.setAttribute("x", lerp(B.xs.mC, B.xs.yC, cm)); bars.yC.v.setAttribute("x", lerp(B.xs.mC, B.xs.yC, cm) + B.w / 2);
+  set("yC", cm > 0 ? bh(v) : 0, cm > 0 ? (drain > 0 ? "≈" : "") + fmtK(v) : "", cm > 0 ? 1 : 0);
+  const gh = bars.yC.ghost;
+  gh.setAttribute("x", B.xs.yC); gh.setAttribute("y", B.base - bh(910000)); gh.setAttribute("height", bh(400000) * drain); gh.setAttribute("opacity", drain > 0 ? 1 : 0);
+  s3lost.textContent = "−400K"; s3lost.setAttribute("text-anchor", "middle"); s3lost.setAttribute("font-size", 42); s3lost.setAttribute("x", B.xs.yC + B.w / 2); s3lost.setAttribute("y", B.base - bh(910000) + bh(400000) * drain / 2 + 16);
+  s3lost.setAttribute("opacity", P(t, T.fell + .6, .3) * (1 - P(t, T.lost + 1.2, .4)));
+  const top = B.base - bh(v);
+  if (drain > 0) LEAK.forEach((d) => {
+    const k = clamp((t - T.fell - .35 - d.d * (T.down45 - T.fell + .5)) / 2.6);
+    if (k <= 0 || k >= 1) return;
+    const x = B.xs.yC + d.u * B.w + k * k * 380 * d.s + d.w * 30 * k, y = top - 12 - k * 520 * d.s + Math.sin(k * 9 + d.w * 4) * 10;
+    dot(x, y, 7, AMBER, 1 - k * k, false);
+  });
+  const st = P(q12(t), T.down45 + .1, .3, E.back);
+  css($("s3stamp"), { left: "180px", top: "300px", opacity: st * (1 - P(t, T.lost + 1.5, .3)), transform: `scale(${lerp(1.8, 1, st)}) rotate(${lerp(-25, -8, st)}deg)` });
+  const z = P(q12(t), T.none, .3, E.back);
+  s3zero.textContent = "+0"; s3zero.setAttribute("x", B.xs.yP + B.w / 2); s3zero.setAttribute("y", B.base - bh(883000) - 80);
+  s3zero.setAttribute("opacity", z); s3zero.setAttribute("font-size", 50 + 40 * z);
+  s3zero.setAttribute("fill", "var(--crimson)");
+}
+
+function s4(t) {
+  const lineIn = P(t, T.week - .1, .7, E.inOut), lineOut = P(t, T.city - .2, .3);
+  tlLine.setAttribute("stroke-dashoffset", 1 - lineIn);
+  tlA.setAttribute("opacity", P(t, T.week + .2, .3) * (1 - lineOut)); tlB.setAttribute("opacity", P(t, T.week, .3) * (1 - lineOut));
+  tlWk.setAttribute("opacity", P(t, T.week + .5, .3) * (1 - lineOut)); tlLine.setAttribute("opacity", 1 - lineOut);
+  // the headline lands on the name-drop
+  const land = P(q12(t), T.trump - .12, .3, E.back);
+  const away = P(t, T.city - .2, .55, E.inOut);
+  css($("clip"), { opacity: land > 0 ? 1 - P(t, T.estab - .3, .3) : 0, transformOrigin: "0 0",
+    transform: `translate(${lerp(0, -40, away)}px, ${lerp(-140, 0, land) + lerp(0, -175, away)}px) scale(${lerp(1.25, 1, land) * lerp(1, .42, away)}) rotate(${lerp(-9, -2, land)}deg)` });
+  css($("clipnote"), { opacity: P(t, T.trump + .5, .3) * (1 - away) });
+  document.querySelector("#clipul path").setAttribute("stroke-dashoffset", 1 - P(t, T.trump + .55, .4, E.lin));
+  // city margin swings, Houston and El Paso on their words
+  const mapIn = P(q12(t), T.city, .45, E.back), dim = P(t, T.estab - .15, .4);
+  css($("s4map"), { opacity: mapIn > 0 ? 1 - .85 * dim : 0, transform: `translateY(${(1 - mapIn) * 700}px)` });
+  css($("s4maptitle"), { opacity: P(t, T.swings - .2, .3) * (1 - dim), top: "560px" });
+  const start = { Houston: T.houston + .1, "El Paso": T.elpaso };
+  const rest = ["Fort Worth", "San Antonio", "Dallas", "Austin"];
+  rest.forEach((n, i) => (start[n] = T.elpaso + .55 + i * .22));
+  for (const [n, c] of Object.entries(cityBars)) {
+    const g = P(t, start[n], .5, E.out), h = c.sw * 7.2 * g;
+    c.bar.setAttribute("y", c.y - h); c.bar.setAttribute("height", h);
+    c.val.textContent = `+${Math.round(c.sw * g)}`; c.val.setAttribute("y", c.y - h + 18);
+    c.val.setAttribute("opacity", g > 0 ? 1 : 0);
+    const big = n === "Houston" || n === "El Paso";
+    c.val.setAttribute("font-size", big ? 72 : 52); c.nm.setAttribute("opacity", P(t, T.swings, .3));
+  }
+  // the establishment stayed home, and the base took the party
+  const l1 = P(t, T.estab - .1, .3), l2 = P(q12(t), T.base - .05, .25, E.back);
+  css($("s4type"), { display: l1 > 0 ? "" : "none" });
+  css($("s4l1"), { opacity: l1, transform: `translateY(${(1 - l1) * 30}px)` });
+  $("s4h1").style.backgroundSize = `${P(t, T.estab + .1, .5, E.inOut) * 100}% 42%`;
+  css($("s4l2"), { opacity: l2 > 0 ? 1 : 0, transform: `scale(${lerp(1.5, 1, l2)})`, transformOrigin: "0 50%" });
+  $("s4h2").style.backgroundSize = `${l2 * 100}% 100%`;
+}
+
+function s5(t) {
+  // zoom out from the four amber squares to 11.4 million
+  const z = P(t, T.zoom, 1.3, E.inOut);
+  const up = P(t, T.lead - .2, .6, E.inOut), back = P(t, T.midterms - .1, .6, E.inOut);
+  const gs = lerp(4.2, 1, z) * lerp(1, .5, up * (1 - back));
+  const ax = 131, ay = 66;  // centre of the amber squares inside the grid
+  const gx = lerp(540 - ax * gs, 124, z), gy = lerp(860 - ay * gs, 470, z);
+  const gx2 = lerp(gx, 540 - 416 * gs, up * (1 - back)), gy2 = lerp(gy, 380, up * (1 - back));
+  css($("s5grid"), { transform: `translate(${gx2 - 124}px, ${gy2 - 470}px) scale(${gs})` });
+  TILES.forEach((el, i) => {
+    if (i >= 114) return;
+    const fill = i < 4 ? 1 : P(t, T.zoom + .3 + (i / 114) * .6, .25);
+    const cut = i >= 4 ? P(t, T.fewer + (113 - i) * .025, .25) * (i >= 80 ? 1 : 0) : 0;   // illustrative: a smaller midterm electorate
+    el.style.opacity = fill * (1 - cut);
+    if (i < 4) el.style.transform = `scale(${1 + .18 * P(t, T.more, .3, E.back) * (1 - P(t, T.more + .9, .4))})`;
+  });
+  const head = P(t, T.m114 - .1, .35) * (1 - up) * (1 - back);
+  css($("s5head"), { opacity: head });
+  css($("s5legend"), { opacity: P(t, T.m114 + .3, .3) * (1 - up) });
+  const co = P(q12(t), T.half, .3, E.back) * (1 - up);
+  css($("s5callout"), { left: "124px", top: "1180px", opacity: co, transform: `scale(${lerp(1.3, 1, co)})`, transformOrigin: "0 50%" });
+  if (co > 0) $("s5legend").style.opacity = 0;
+  // poll: Talarico 49.0 / Paxton 45.4, and the 400,000 fits the gap
+  const pIn = P(q12(t), T.lead, .4, E.back), pOut = P(t, T.midterms - .1, .35);
+  css($("poll"), { opacity: pIn > 0 ? 1 - pOut : 0, transform: `translateY(${(1 - pIn) * 900}px)` });
+  const pb = P(t, T.lead + .25, .7, E.inOut);
+  $("pbT").style.width = 49.0 * PX_PT * pb + "px"; $("pbP").style.width = 45.4 * PX_PT * pb + "px";
+  css($("pnT"), { left: 49.0 * PX_PT * pb + 14 + "px" }); css($("pnP"), { left: 45.4 * PX_PT * pb + 14 + "px" });
+  css($("pgap"), { left: 45.4 * PX_PT + "px", width: 3.6 * PX_PT + "px", opacity: P(t, T.polls, .3) });
+  const sl = P(t, T.polls + .2, .7, E.inOut);
+  css($("pslice"), { left: lerp(20, 45.4 * PX_PT, sl) + "px", top: lerp(-520, 138, sl) + "px", width: 3.5 * PX_PT + "px", opacity: sl > 0 ? 1 : 0 });
+  const mid = P(t, T.midterms + .1, .35);
+  css($("s5mid"), { opacity: mid });
+}
+
+function s6(t) {
+  const m = P(t, T.already - .3, .4);
+  css($("s6map"), { opacity: m, transform: `scale(${lerp(.96, 1.02, clamp((t - T.already) / 8))})` });
+  // his dark dot flickers: will he come back?
+  const fl = hash(Math.floor(t * 9)) > .62;
+  s6dot.setAttribute("fill", fl ? AMBER : "#3a3833");
+  s6halo.setAttribute("opacity", fl ? .8 : 0);
+  // ...and there are 400,000 of him
+  s6dots.forEach((d) => {
+    const a = P(t, T.novComes + d.d / 900, .3, E.back);
+    const lit = hash(Math.floor(t * 7 + d.ph) * 131 + d.k) > lerp(.92, .55, P(t, T.showup, .8));
+    d.el.setAttribute("r", 9 * a); d.el.setAttribute("fill", lit ? AMBER : "#3a3833");
+    d.el.setAttribute("stroke", "var(--ink)"); d.el.setAttribute("stroke-width", lit ? 3 : 0);
+  });
+  css($("s6q"), { opacity: P(q12(t), T.showup + .1, .3), transform: `translateY(${(1 - P(t, T.showup + .1, .3)) * 20}px)` });
+}
+
+function s7(t) {
+  const a = P(q12(t), T.end, .3, E.back), b = P(q12(t), T.end + .45, .3, E.back), c = P(t, T.end + .85, .3);
+  css($("s7a"), { opacity: a, transform: `translateY(${(1 - a) * 40}px)` });
+  css($("s7b"), { opacity: b, transform: `scale(${lerp(1.3, 1, b)})`, transformOrigin: "0 50%" });
+  css($("s7c"), { opacity: c });
+}
+
+// Visible events worth hearing, derived from the same cue times that draw them.
+const EVENTS = [
+  { id: "bleed", t: 0.0, sfx: "whoosh-deep", gain: -14 },
+  { id: "number-slam", t: T.num, sfx: "impact-deep", gain: -6 },
+  { id: "scatter", t: T.gone + .1, sfx: "whoosh-fast", gain: -12 },
+  { id: "voter", t: T.take, sfx: "pop-soft", gain: -8 },
+  { id: "calendar", t: T.march, sfx: "card-riffle", gain: -12 },
+  { id: "ballot-mark", t: T.cornyn + .05, sfx: "screen-tap", gain: -10 },
+  { id: "field", t: T.k910, sfx: "tile-clicks", gain: -14 },
+  { id: "result", t: T.beats, sfx: "relay-click", gain: -12 },
+  { id: "cal-flip", t: T.may26 + .2, sfx: "card-riffle", gain: -12 },
+  { id: "dot-dark", t: T.stays + .15, sfx: "glass-ting", gain: -14 },
+  { id: "split", t: T.n64, sfx: "whoosh-fast", gain: -14 },
+  { id: "plus28", t: T.n28, sfx: "rubber-stamp", gain: -10 },
+  { id: "bars", t: T.count, sfx: "relay-click", gain: -12 },
+  { id: "drain", t: T.fell + .35, sfx: "bubbles-burst", gain: -16 },
+  { id: "minus45", t: T.down45 + .1, sfx: "rubber-stamp", gain: -8 },
+  { id: "plus0", t: T.none, sfx: "relay-click", gain: -12 },
+  { id: "headline", t: T.trump - .12, sfx: "dslr-shutter", gain: -10 },
+  { id: "headline-land", t: T.trump + .05, sfx: "impact-deep", gain: -10 },
+  { id: "houston", t: T.houston + .1, sfx: "pop-soft", gain: -10 },
+  { id: "elpaso", t: T.elpaso, sfx: "pop-soft", gain: -10 },
+  { id: "base", t: T.base, sfx: "rubber-stamp", gain: -8 },
+  { id: "zoom", t: T.zoom, sfx: "whoosh-deep", gain: -10 },
+  { id: "share", t: T.half, sfx: "glass-ting", gain: -14 },
+  { id: "poll", t: T.lead, sfx: "relay-click", gain: -12 },
+  { id: "slice-fits", t: T.polls + .9, sfx: "padlock-close", gain: -12 },
+  { id: "flicker", t: T.already, sfx: "electric-spark-crackle", gain: -22 },
+  { id: "showup", t: T.showup, sfx: "sonar-ping", gain: -14 },
+  { id: "endcard", t: T.end, sfx: "impact-deep", gain: -8 },
+];
+
+// ---------- runtime ----------
+window.FILM = { fps: FPS, duration: DURATION, T, events: EVENTS, draw };
+async function boot() {
+  await document.fonts.load('900 228px "Inter"'); await document.fonts.load('900 92px "Source Serif 4"'); await document.fonts.load('700 30px "Courier Prime"');
+  await document.fonts.ready;
+  sampleNumber();
+  const render = new URLSearchParams(location.search).has("render");
+  document.body.classList.toggle("render", render);
+  if (render) { window.FILM.ready = true; draw(0); return; }
+  const fit = () => { const s = Math.min(innerWidth / 1080, (innerHeight - 52) / 1920); css($("stage"), { transform: `scale(${s})`, left: (innerWidth - 1080 * s) / 2 + "px", top: "0px" }); };
+  addEventListener("resize", fit); fit();
+  const vo = $("vo"); vo.src = "vo.m4a"; let hasVo = true; vo.onerror = () => (hasVo = false);
+  let playing = false, t0 = 0, start = 0, t = 0;
+  const tick = (now) => {
+    if (playing) { t = hasVo && !vo.paused ? vo.currentTime : t0 + (now - start) / 1000; if (t >= DURATION) { t = DURATION - 1 / FPS; playing = false; vo.pause(); } }
+    draw(t); $("scrub").value = (t / DURATION) * 1000; $("clock").textContent = t.toFixed(2) + " / " + DURATION.toFixed(2);
+    requestAnimationFrame(tick);
+  };
+  $("play").onclick = () => { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; t0 = t; start = performance.now(); if (hasVo) { vo.currentTime = t; playing ? vo.play().catch(() => (hasVo = false)) : vo.pause(); } };
+  $("scrub").oninput = (e) => { t = (e.target.value / 1000) * DURATION; t0 = t; start = performance.now(); if (hasVo) vo.currentTime = t; };
+  requestAnimationFrame(tick);
+}
+boot();
+</script>
+</body>
+</html>

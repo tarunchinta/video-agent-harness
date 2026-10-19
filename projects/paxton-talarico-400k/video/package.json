@@ -1,0 +1,13 @@
+{
+  "name": "paxton-talarico-400k-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "words:standin": "python3 standin_words.py",
+    "stills": "node render.mjs --stills",
+    "render": "node render.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
