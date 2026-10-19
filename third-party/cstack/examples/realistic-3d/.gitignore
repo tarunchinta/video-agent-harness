@@ -1,0 +1,4 @@
+node_modules/
+out/
+# copied from the cstack templates by `npm run kit`; edit the originals
+src/kit/
