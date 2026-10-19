@@ -1,6 +1,6 @@
 # Onboarding
 
-The Chief of Staff's setup in Studio. You give your website and your handles; your team reads your site, pulls your own posts, transcribes your best videos, studies your competitors and drafts your first Brand Kit while you watch. About fifteen minutes of your time, and you never paste a post.
+The Chief of Staff's setup in Studio. You give your website and your handles; your team reads your site, pulls your own posts, transcribes your best videos and drafts your first Brand Kit while you watch. About fifteen minutes of your time, and you never paste a post.
 
 | | |
 |---|---|
@@ -8,7 +8,7 @@ The Chief of Staff's setup in Studio. You give your website and your handles; yo
 | Tier | Core (always on) |
 | Setup level | [Level 1](../setup/level-1.md) |
 | Needs | Claude signed in. An [Apify](../providers/apify.md) token (recommended) or a [Zernio](../providers/zernio.md) key to read your posts. The speech-to-text model to learn your voice from your videos (otherwise from your captions) |
-| Brand Kit files it writes | `brand/brand.yaml`, `brand/offers.md`, `brand/icp.md`, `brand/voice.md`, `brand/pillars.md`, `brand/competitors.yaml`, `brand/proof-inventory.yaml` |
+| Brand Kit files it writes | `brand/brand.yaml`, `brand/offers.md`, `brand/icp.md`, `brand/voice.md`, `brand/pillars.md`, `brand/proof-inventory.yaml` |
 
 ## Where it is
 
@@ -28,33 +28,28 @@ Your website and the accounts you post on (Instagram, TikTok, YouTube, LinkedIn,
 
 Two optional keys that let the team work without you copying anything:
 
-- **Apify** reads public posts: yours (views, captions and the video files your voice is learned from) and your competitors' (to find their outliers).
+- **Apify** reads your public posts: views, captions and the video files your voice is learned from. It also fetches any post you paste in later for a teardown.
 - **Zernio** brings back your real analytics and, later, publishes your posts and runs comment-to-DM.
 
 Each card shows where to find the key. **Save and check** tests it straight away. For Zernio, Studio lists the accounts it can see and **matches them to your handles**: *Connected as @yourname*, *Zernio has @other, not @yourname*, *Needs reconnecting inside Zernio* or *Not connected yet*, each with what to do, and **Refresh** after you fix it in Zernio. Keys are saved in your workspace's private `.env` file, never shown again.
 
-### 4. Competitors
+If you read posts through Apify, the **scraping notice** sits here too: reading public posts through a third-party service may conflict with a platform's terms. Tick **I understand, read my public posts for me** to allow it. Without it, your posts come from Zernio only. The full notice: [Notices](../notices.md).
 
-Three to ten creators per platform who make the kind of posts you want to make. Type or paste handles, one platform tab at a time. **Suggest some** has the Analyst search the web for creators in your niche; click a suggestion to add it (hover to see why it was suggested). Your own handles and duplicates are refused, with a reason.
-
-If you read posts through Apify, the **scraping notice** sits right here: reading public posts through a third-party service may conflict with a platform's terms. Tick **I understand, read public posts for me** to allow the scan. Without it, the scan waits and your own posts come from Zernio only. The full notice: [Notices](../notices.md).
-
-### 5. Start
+### 4. Start
 
 The page lists what happens when you press **Start**, then shows it live, one line per job:
 
 | Line | Who | What happens |
 |---|---|---|
 | Your posts | Analyst | Pulls your recent posts and their numbers (Apify: with the video files; Zernio only: captions and numbers) |
-| Transcripts | Art Director | Transcribes your best 15 videos and the top competitor outliers, on your own machine |
+| Transcripts | Art Director | Transcribes your best 15 videos, on your own machine |
 | Your voice | Copywriter | Starts by itself once your transcripts are in, and drafts your voice profile |
-| Competitors | Analyst | Scans the creators you picked and finds their outliers |
 | Your website | Analyst | Finishes reading your site and drafts your offers and ideal customer |
 | Search index | Analyst | Indexes everything so every agent can search it ([Knowledge](knowledge.md)) |
 
 It takes a few minutes. You can continue while it runs; drafts appear in Review as soon as they're ready. Each line says plainly when something didn't work and why (for example *Waiting for the scraping notice* or *this month's scraping budget is used up*). Pressing Start also switches on editing, which the transcripts need.
 
-### 6. Review
+### 5. Review
 
 Your team's drafts, side by side. Edit anything, then **Approve all** (or approve a card at a time):
 
@@ -68,7 +63,7 @@ Approved cards become your Brand Kit, which every agent reads before it writes. 
 
 **Add proof and stories** (from Review, or `/setup?step=interview`) is a live interview with the Chief of Staff, about ten minutes. It asks for results you can prove, client stories, the objections you hear and how customers describe their problem. Short answers are fine and you can stop any time. Numbers are only kept when you say where they come from. **Save to Brand Kit** adds them to `brand/proof-inventory.yaml` (the only place agents take numbers from) and `brand/icp.md`.
 
-### 7. Go live
+### 6. Go live
 
 The last choices, all changeable later:
 
@@ -89,6 +84,5 @@ Nothing in setup goes public. Brand Kit drafts are saved only when you approve t
 ## Limits
 
 - Private or region-locked accounts can't be read.
-- Without Apify there are no video files, so transcripts and competitor scans wait; your voice is drafted from captions.
+- Without Apify there are no video files, so transcripts wait; your voice is drafted from captions.
 - Without the speech-to-text model, transcripts are skipped and your voice is drafted from captions. Download it with `./aos doctor --fix` ([Level 2](../setup/level-2.md#step-1-check-the-speech-model-is-ready-1-minute)).
-- Platforms your scraper can't scan are saved for the Strategist but not scanned.

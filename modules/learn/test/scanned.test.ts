@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { WorkspaceContext } from "@attentionos/core";
 import { createTestWorkspace } from "@attentionos/module-research/testing";
-import { bestSlots, competitorBenchmarks, overview, postDetail, postFacts, postUrlKey } from "../src/analytics/index.ts";
+import { bestSlots, overview, postDetail, postFacts, postUrlKey } from "../src/analytics/index.ts";
 
 /**
  * Setup reads the owner's public account into `external_posts` under an `own` tracked creator (onboarding's
@@ -87,22 +87,6 @@ describe("scanned own posts", () => {
     expect(d!.caption).toContain("Caption for SC0");
     expect(d!.series).toEqual([]);
     expect(await postDetail(ws, ids.SC0!)).toBeNull();
-  });
-
-  it("never counts your own account as a competitor", async () => {
-    const ws = await createTestWorkspace({ now: () => NOW });
-    await seedScan(ws, tenPosts());
-    const [peer] = await ws.sql`insert into tracked_creators (workspace_id, platform, handle, tier) values (${ws.id}, 'instagram', 'peer.one', 'core') returning id`;
-    for (let i = 0; i < 6; i++) {
-      await ws.sql`
-        insert into external_posts (workspace_id, tracked_creator_id, platform, platform_post_id, author_handle, url, published_at, views, likes, comments, x_score, is_outlier)
-        values (${ws.id}, ${peer!.id}, 'instagram', ${`P${i}`}, 'peer.one', ${`https://www.instagram.com/p/P${i}/`}, ${new Date(NOW.getTime() - (5 + i) * D)}, ${20_000 + i * 1000}, 800, 60, ${i === 0 ? 4 : 1}, ${i === 0})`;
-    }
-    const { posts } = await postFacts(ws, { includeScanned: true });
-    const [ig] = await competitorBenchmarks(ws, posts, { days: 90, outlierDays: 90 });
-    expect(ig!.peers.map((p) => p.key)).toEqual(["peer.one"]);
-    expect(ig!.own.n).toBe(10);
-    expect(ig!.outliers.map((o) => o.handle)).toEqual(["@peer.one"]);
   });
 });
 

@@ -14,14 +14,14 @@ Your agents' memory. Everything you've written and everything the team has learn
 
 - **Indexes your workspace** every hour (and whenever a search finds it more than an hour old). Only what changed is processed again.
 - **Searches two ways at once**: by meaning (so "what do I charge" finds your pricing section) and by exact words (so names and numbers are found too), then combines the two rankings.
-- **Keeps other people's words apart.** Competitor transcripts, comments, teardowns and trend kits are marked as outside material. Agents treat them as data to learn from, never as instructions, and never copy their words.
+- **Keeps other people's words apart.** Transcripts of posts pasted in for a teardown, comments, teardowns and trend kits are marked as outside material. Agents treat them as data to learn from, never as instructions, and never copy their words.
 - **Stays on your machine.** The database and, by default, the embedding model run locally. No key and no cost.
 
 Your Brand Kit files stay the source of truth. The knowledge store is a copy that is rebuilt from them.
 
 ## What's searchable
 
-Brand Kit files and `brand/knowledge/` documents, `brand/lessons.md`, your published captions and transcripts, your scripts, both hook banks (competitor hooks only as their structure), post-mortems, competitor transcripts and top comments, teardowns and trend kits. DMs are never indexed.
+Brand Kit files and `brand/knowledge/` documents, `brand/lessons.md`, your published captions and transcripts, your scripts, the hook banks, post-mortems, transcripts and top comments of posts in the research library, teardowns and trend kits. DMs are never indexed.
 
 ## Settings
 

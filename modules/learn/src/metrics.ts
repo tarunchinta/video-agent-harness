@@ -7,7 +7,7 @@ import { aosOf, iso, num, type AnalyticsCtx } from "./analytics/ctx.ts";
 
 /**
  * Own-post scoring: every post's `x` against the user's own rolling baseline, per platform, using
- * the same weights as competitor scoring. The "settled" number for a post is its 7d snapshot, else 72h, else
+ * per-platform outlier weights. The "settled" number for a post is its 7d snapshot, else 72h, else
  * the latest capture. Metrics that only arrive through another capture (skip rate and retention from a CSV
  * import, for example) are filled in from the most recent capture that has them.
  *

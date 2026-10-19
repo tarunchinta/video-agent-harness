@@ -38,7 +38,7 @@ A self-hosted, agent-driven content pipeline for short-form video: research → 
 - **Code holds the gates.** Script, caption, keyword and payload validators in `packages/guardrails` are deterministic and can't be edited by the LLM at runtime. A claim ledger rejects numbers that aren't backed by the proof inventory or a cited source.
 - **Untrusted input isolation.** Extraction and classification jobs marked `toolless` run without tools or MCP access, and structured outputs are schema-validated (Zod v4). Other agents can read web content and workspace files; this is not a sandbox against every prompt-injection attack. Run the supplied container with only your intended workspace mounted and review public actions.
 - **Provider interfaces.** Modules depend on `packages/core/src/providers.ts`, never on vendor SDKs. Each vendor is its own adapter package.
-- **Outlier scoring.** Every post, yours or a competitor's, is scored as `x` against that account's rolling median. Remixes record their source; structure is reused, wording isn't.
+- **Outlier scoring.** Every one of your posts is scored as `x` against your own rolling median. Your breakouts are torn down and remade; remixes record their source.
 - **Autonomy.** Each agent runs at `review_all`, `review_key` or `autopilot`. Nothing public ships above the configured level.
 - **Lessons.** A correction becomes a dated rule in `brand/lessons.md` that every agent loads.
 
@@ -51,7 +51,7 @@ Deeper: [docs/architecture.md](docs/architecture.md) · [ADRs](docs/adr/README.m
 | Host | macOS or Linux (Debian/Ubuntu tested). Windows via WSL 2 ([notes](docs/install.md#windows-wsl-2)). 4 GB RAM minimum, 8 GB recommended; ~10 GB disk |
 | Docker | Engine 24+ with Compose v2 (OrbStack or Docker Desktop on macOS) |
 | LLM | Claude Pro/Max plus a `claude setup-token` OAuth token (default), or `ANTHROPIC_API_KEY` with `runner.engine: "api"` |
-| Data providers | Apify (competitor/own-post scraping) and/or Zernio (publishing, inbox, first-party analytics). Optional at boot |
+| Data providers | Apify (own-post scraping, teardowns of pasted posts) and/or Zernio (publishing, inbox, first-party analytics). Optional at boot |
 | Optional | Telegram or Discord bot (notifications, approvals, chat) |
 
 ## Install
@@ -89,7 +89,7 @@ docker compose up -d --remove-orphans --wait --wait-timeout 900
 ./aos claude-login
 ```
 
-Then open <http://localhost:4747>. Studio starts on onboarding: your website and handles, provider keys (Apify, Zernio), competitors. It drafts your Brand Kit from your site and transcribed videos for you to approve. Nothing about your business ships with the repo; it all comes from your own setup.
+Then open <http://localhost:4747>. Studio starts on onboarding: your website and handles, provider keys (Apify, Zernio) and the scraping notice. It drafts your Brand Kit from your site and transcribed videos for you to approve. Nothing about your business ships with the repo; it all comes from your own setup.
 
 Stuck? `./aos doctor` checks the setup and says how to fix what's off, and [docs/install.md#troubleshooting](docs/install.md#troubleshooting) covers the common errors.
 
@@ -124,7 +124,7 @@ From the stack dir:
 
 | Agent | Modules | Output |
 |---|---|---|
-| Analyst | `research`, `learn`, `knowledge` | Competitor outliers, trend radar, teardowns, post-mortems, weekly report |
+| Analyst | `research`, `learn`, `knowledge` | Your breakouts, trend radar, teardowns, post-mortems, weekly report |
 | Strategist | `strategy` | Daily "Film today" brief, batch plans, lane/funnel balance |
 | Copywriter | `scripting` | Scripts, hooks, per-platform captions, lead-magnet guides |
 | Art Director | `production`, `editing`, `carousels` (planned) | Cuts, captions, QC, thumbnails; carousels in v0.4 |
@@ -193,7 +193,7 @@ Adapters in `packages/providers/<kind>-<vendor>`. Guides: [docs/providers/README
 |---|---|---|
 | Publishing and inbox | Zernio | Blotato, manual (export and notify) |
 | Own analytics | Zernio | Blotato, Instagram Graph API, CSV import |
-| Competitor research | Apify | Instagram Graph API, yt-dlp |
+| Reading public posts | Apify | Instagram Graph API, yt-dlp |
 | Trends | RSS, Google News, Hacker News, Reddit, GitHub | X via Apify (planned) |
 | ASR | whisper.cpp | Parakeet (planned), cloud Whisper (planned) |
 | Rendering | Cut engine | Motion engine with Remotion (planned; opt-in, Remotion license required for companies over 3 people) |

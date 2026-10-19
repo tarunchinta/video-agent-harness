@@ -4,7 +4,8 @@ import { CircleCheck, CircleDashed, ExternalLink, RefreshCw, TriangleAlert } fro
 import type { AccountMatch } from "@attentionos/module-onboarding/handles";
 import { Badge, Button, Input } from "@/components/ui";
 import { PlatformGlyph } from "@/motion";
-import { checkConnectionAction, completeStepAction, saveConnectionKeyAction } from "@/server/actions/onboarding";
+import { NOTICES } from "@/components/settings/notices";
+import { checkConnectionAction, completeKeysAction, saveConnectionKeyAction } from "@/server/actions/onboarding";
 import { StepFooter, StepHeader, useSetupAction } from "./parts";
 import type { StepProps } from "./wizard";
 
@@ -26,7 +27,7 @@ const SERVICES: Service[] = [
     id: "apify",
     key: "APIFY_TOKEN",
     name: "Apify",
-    unlocks: "Reads public posts: yours (views, captions and the video files your voice is learned from) and your competitors' (to find their outliers).",
+    unlocks: "Reads your public posts: views, captions and the video files your voice is learned from. Also fetches any post you paste in for a teardown.",
     cost: "About $0 to $29 a month. The free plan's monthly credit covers a small setup; AttentionOS stops at your scraping budget.",
     steps: ["Create a free account at apify.com.", "Open Settings, then API & Integrations.", "Copy your personal API token and paste it here."],
     link: { href: "https://console.apify.com/settings/integrations", label: "Open Apify" },
@@ -159,14 +160,16 @@ function ServiceCard({ s, view }: { s: Service; view: StepProps["view"] }) {
   );
 }
 
-/** Step 3: the two keys that let the team work without the owner copying anything. Both optional. */
+/** Step 3: the two keys that let the team work without the owner copying anything (both optional), and the scraping notice. */
 export function KeysStep({ view, nav }: StepProps) {
   const none = !view.keys.APIFY_TOKEN && !view.keys.ZERNIO_API_KEY;
+  const needsAck = (view.scraper === "apify" || view.scraper === "ytdlp") && !view.scrapingAcknowledged;
+  const [ack, setAck] = useState(!needsAck);
   return (
     <div className="flex flex-1 flex-col">
       <StepHeader
         title="Two keys, and the team does the rest"
-        lede="With these, your agents pull your posts and your competitors' on their own. Both are optional and you can add them later in Settings. Keys stay in your workspace's private settings file on this computer."
+        lede="With these, your agents pull your posts on their own. Both are optional and you can add them later in Settings. Keys stay in your workspace's private settings file on this computer."
       />
       <ul className="mt-10 grid gap-4 md:grid-cols-2">
         {SERVICES.map((s) => (
@@ -175,14 +178,27 @@ export function KeysStep({ view, nav }: StepProps) {
       </ul>
       {none ? (
         <p className="mt-4 text-small text-fg-2">
-          Without either key the team can't read any posts yet: your voice and competitor research wait until you add one.
+          Without either key the team can't read any posts yet: learning your voice waits until you add one.
         </p>
+      ) : null}
+      {needsAck ? (
+        <section className="mt-6 rounded-lg border border-border bg-surface-1 p-4 md:p-5" aria-labelledby="notice-title">
+          <h2 id="notice-title" className="text-body font-medium text-fg">
+            {NOTICES.scrapingTerms!.title}
+          </h2>
+          <p className="mt-1 text-small text-fg-2">{NOTICES.scrapingTerms!.body}</p>
+          <label className="mt-3 flex min-h-11 items-center gap-3 text-small text-fg">
+            <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="size-4 accent-brand" />
+            I understand, read my public posts for me
+          </label>
+          {!ack ? <p className="text-caption text-fg-3">Without this, your posts come from Zernio only (if connected).</p> : null}
+        </section>
       ) : null}
       <StepFooter
         busy={nav.busy}
         onBack={nav.back}
         onSkip={none ? nav.skip : undefined}
-        primary={{ label: "Continue", onClick: () => void nav.finish(() => completeStepAction("keys")) }}
+        primary={{ label: "Continue", onClick: () => void nav.finish(() => completeKeysAction({ acknowledge: needsAck && ack })) }}
       />
     </div>
   );

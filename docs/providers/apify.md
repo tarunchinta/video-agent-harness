@@ -1,6 +1,6 @@
 # Apify
 
-[Apify](https://apify.com) runs ready-made scrapers ("actors") in the cloud. AttentionOS uses it by default to read public competitor posts on Instagram and TikTok, and optionally posts on X for the trend radar.
+[Apify](https://apify.com) runs ready-made scrapers ("actors") in the cloud. AttentionOS uses it by default to read your own public posts on Instagram and TikTok (setup imports them so your voice and numbers are there from day one), to fetch any post you paste in for a teardown, and optionally posts on X for the trend radar.
 
 | | |
 |---|---|
@@ -24,21 +24,20 @@
 
 ## How AttentionOS keeps cost down
 
-- **Budget guard.** Before every scan, AttentionOS estimates the cost and checks it against `budgets.scrapingMonthlyUsd` (default $29). If the scan would go over, you get an alert instead of a bill.
-- **Daily rotation.** Only a slice of your tracked creators is scanned each day, so cost stays flat whether you track 5 creators or 50.
-- **Small pulls.** Only recent posts are fetched for each creator; older history is kept in your database.
+- **Budget guard.** Before reading posts, AttentionOS checks your spend against `budgets.scrapingMonthlyUsd` (default $29). If a read would go over, you get an alert instead of a bill.
+- **Small pulls.** Setup reads your recent posts once (30 per handle); a teardown fetches one post.
 
 You can see what you've spent in the weekly cost watch.
 
 ## Platform terms
 
-Reading public posts through a third-party service may conflict with a platform's terms of use. Before the first scan, AttentionOS shows a notice and asks you to acknowledge it (`acknowledgements.scrapingTerms`). AttentionOS never logs in as you, never automates a browser, and only reads public posts from accounts you list in `brand/competitors.yaml`.
+Reading public posts through a third-party service may conflict with a platform's terms of use. Before the first read, AttentionOS shows a notice and asks you to acknowledge it (`acknowledgements.scrapingTerms`). AttentionOS never logs in as you, never automates a browser, and only reads your own accounts and posts you paste in for a teardown.
 
 ## Troubleshooting
 
 **"Budget reached"** · Your monthly scraping cap is protecting you. Raise `budgets.scrapingMonthlyUsd` or wait for the new month.
 
-**A creator returns no posts** · Check the handle in `brand/competitors.yaml` (no `@`, exact spelling) and that the account is public.
+**Your account returns no posts** · Check the handle in `brand/brand.yaml` (exact spelling) and that the account is public.
 
 **"Bad key"** · Recopy the token; tokens can be regenerated in Apify, which invalidates the old one.
 

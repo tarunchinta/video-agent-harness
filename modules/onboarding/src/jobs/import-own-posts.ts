@@ -99,7 +99,7 @@ export async function importOwnPosts(ws: WorkspaceContext, opts: { kickoff: stri
 
   const scraper = ws.providers.scraper;
   const scraperOk = Boolean(scraper) && (!NEEDS_TERMS_ACK.has(scraper!.id) || ws.config.acknowledgements.scrapingTerms);
-  if (scraper && !scraperOk) out.notes.push("Reading public posts is paused until you accept the scraping notice (Competitors step).");
+  if (scraper && !scraperOk) out.notes.push("Reading public posts is paused until you accept the scraping notice (Keys step).");
 
   let accounts: SocialAccount[] = [];
   if (ws.providers.publisher && ws.providers.ownAnalytics) {
@@ -172,7 +172,7 @@ export async function importOwnPosts(ws: WorkspaceContext, opts: { kickoff: stri
   const editingOn = ws.config.modules["editing"]?.enabled !== false;
   const pick = editingOn ? pickForTranscription(await listOwnPosts(ws.sql, ws.id), OWN_TRANSCRIBE_LIMIT, { canDownload: typeof scraper?.downloadMedia === "function" }) : [];
   if (!editingOn && out.pulled) out.notes.push("The editing module is off, so videos aren't transcribed; your voice is learned from captions.");
-  const jobId = researchSettings(ws).competitorScan.transcribeJobId;
+  const jobId = researchSettings(ws).transcribeJobId;
   for (const p of pick) {
     const input = transcriptionRequestSchema.parse({
       kind: "external_post",

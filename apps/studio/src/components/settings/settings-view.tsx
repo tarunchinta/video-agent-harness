@@ -356,7 +356,7 @@ function BudgetsSection({ data }: { data: SettingsData }) {
   const fields = [
     ["dailyUsd", "Each day, AI", "No new AI work starts once this is spent that day."],
     ["perRunUsd", "Each task, AI", "A single task stops when it reaches this."],
-    ["scrapingMonthlyUsd", "Each month, research", "Checked before every competitor scan."],
+    ["scrapingMonthlyUsd", "Each month, research", "Checked before reading public posts."],
     ["imagesDailyUsd", "Each day, images", "Generated images only."],
   ] as const;
   const [values, setValues] = useState<Record<string, string>>(Object.fromEntries(fields.map(([k]) => [k, String(data.budgets[k])])));

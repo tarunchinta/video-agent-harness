@@ -16,7 +16,7 @@ export const MOVED: Record<string, string> = {
   "/edits": "/edit",
   "/approvals": "/",
   "/command": "/agents?view=command",
-  "/research": "/analytics/competitors",
+  "/research": "/analytics",
   "/insights": "/analytics",
   "/content": "/calendar",
 };

@@ -27,7 +27,7 @@ export const ingestTranscriptJob = defineNativeJob({
   kind: "native",
   id: "research.ingest-transcript",
   agent: "analyst",
-  description: "Stores a competitor post's transcript and its spoken hook.",
+  description: "Stores a post's transcript and its spoken hook.",
   input: ingestTranscriptInputSchema,
   async run(ctx) {
     const r = await ingestTranscript(ctx.ws, ctx.input, ctx.runId);

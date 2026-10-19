@@ -20,12 +20,12 @@ import {
 export const BEAT_ROLES = ["hook", "turn", "proof", "rehook", "play", "close"] as const;
 export type BeatRole = (typeof BEAT_ROLES)[number];
 
-export const HOOK_ORIGINS = ["own", "competitor", "manual", "fresh"] as const;
+export const HOOK_ORIGINS = ["own", "remix", "manual", "fresh"] as const;
 
 export const beatSchema = z.object({ role: z.enum(BEAT_ROLES), text: z.string().min(1) });
 
 export const hookSourceSchema = z.object({
-  /** `hooks.id` of the bank entry this hook adapts. Required for own and competitor origins (or `ref`). */
+  /** `hooks.id` of the bank entry this hook adapts. Required for the own origin (or `ref`); a remix needs `ref`. */
   hookId: z.string().nullable().optional(),
   /** Pattern id from the hook taxonomy. */
   pattern: z.string().min(1),
@@ -453,8 +453,8 @@ export function validateScript(input: unknown, rules: ScriptRules = {}): Validat
 
   // hook_source provenance.
   const hs = pkg.hookSource;
-  if ((hs.origin === "own" || hs.origin === "competitor") && !hs.hookId && !hs.ref) {
-    c.error("hook_source.missing_ref", `hook_source says the hook adapts a ${hs.origin} bank entry but doesn't say which one.`, { path: "hookSource", fix: "Set hookSource.hookId to the bank entry's id (or ref to its source)." });
+  if ((hs.origin === "own" || hs.origin === "remix") && !hs.hookId && !hs.ref) {
+    c.error("hook_source.missing_ref", `hook_source says the hook adapts ${hs.origin === "own" ? "an own bank entry" : "the remix source's hook"} but doesn't say which one.`, { path: "hookSource", fix: "Set hookSource.hookId to the bank entry's id (or ref to its source)." });
   }
   if (rules.knownPatterns && !rules.knownPatterns.includes(hs.pattern)) {
     c.warn("hook_source.unknown_pattern", `Hook pattern "${hs.pattern}" isn't in the pattern taxonomy.`, { path: "hookSource.pattern", fix: `Use one of: ${rules.knownPatterns.join(", ")}.` });

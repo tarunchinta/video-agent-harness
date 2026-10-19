@@ -1,5 +1,5 @@
 import { stringify } from "yaml";
-import type { Competitor, ProofItem, TrendSourceConfig } from "@attentionos/core";
+import type { ProofItem, TrendSourceConfig } from "@attentionos/core";
 import { patchYaml, readSection, slugify, upsertSection } from "./brand-files.ts";
 import type { BusinessDraft, InterviewAnswer, VoiceDraft } from "./state.ts";
 
@@ -165,33 +165,6 @@ export function voiceMd(current: string, draft: VoiceDraft): string {
   );
   md = upsertSection(md, "Examples", draft.examples.length ? draft.examples.map((e) => `> ${e.trim().replace(/\n+/g, " ")}`).join("\n\n") : TODO("3 to 5 short passages from your own transcripts"));
   return `${md.trimEnd()}\n`;
-}
-
-const COMPETITOR_HEADER = [
-  "# Creators the Analyst watches for outliers: posts that did far better than that creator's usual.",
-  "# AttentionOS studies the structure of what works (hooks, formats, angles), never copies the words.",
-  "#",
-  "# platform: instagram, tiktok, youtube, facebook, linkedin, x, threads",
-  "# tier: core | adjacent | aspirational | remake",
-  "",
-].join("\n");
-
-export function normalizeHandle(handle: string): string {
-  const h = handle.trim().replace(/^https?:\/\/(www\.)?[^/]+\/(@)?/i, "").replace(/[/?#].*$/, "");
-  return h.startsWith("@") ? h : `@${h}`;
-}
-
-export function competitorsYaml(creators: Competitor[]): string {
-  const seen = new Set<string>();
-  const clean = creators
-    .map((c) => ({ handle: normalizeHandle(c.handle), platform: c.platform, tier: c.tier, ...(c.notes?.trim() ? { notes: c.notes.trim() } : {}) }))
-    .filter((c) => {
-      const k = `${c.platform}:${c.handle.toLowerCase()}`;
-      if (seen.has(k) || c.handle.length < 2) return false;
-      seen.add(k);
-      return true;
-    });
-  return `${COMPETITOR_HEADER}${stringify({ creators: clean }, { lineWidth: 0 })}`;
 }
 
 const SOURCES_HEADER = [

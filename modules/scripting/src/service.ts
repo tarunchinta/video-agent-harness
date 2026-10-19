@@ -437,8 +437,8 @@ export type HookView = {
   score: number | null;
   uses: number;
   wins: number;
-  /** Own and manual hooks only. Competitor hooks are untrusted text and are shown as structure only. */
-  text?: string;
+  /** The hook's words (the owner's own, or saved by hand). */
+  text: string;
   /** Structure with [placeholders]. */
   structure: string;
   lastUsedAt: string | null;
@@ -446,8 +446,8 @@ export type HookView = {
 
 export function hookView(row: HookRow): HookView {
   const pattern = getPattern(row.pattern);
-  const structure = row.abstract ?? pattern?.template ?? "[unclassified structure]";
-  const view: HookView = {
+  const structure = pattern?.template ?? "[unclassified structure]";
+  return {
     id: row.id,
     origin: row.origin,
     pattern: row.pattern,
@@ -455,22 +455,21 @@ export function hookView(row: HookRow): HookView {
     score: row.score === null ? null : Number(row.score),
     uses: row.uses,
     wins: row.wins,
+    text: row.text,
     structure,
     lastUsedAt: row.last_used_at?.toISOString() ?? null,
   };
-  if (row.origin !== "competitor") view.text = row.text;
-  return view;
 }
 
 export async function listHooks(
   ws: WorkspaceContext,
-  opts: { origin?: "own" | "competitor" | "manual" | "all"; pattern?: string; limit?: number; includeRetired?: boolean; excludeCoolingDown?: boolean },
+  opts: { origin?: "own" | "manual" | "all"; pattern?: string; limit?: number; includeRetired?: boolean; excludeCoolingDown?: boolean },
 ): Promise<HookRow[]> {
   const settings = scriptingSettings(ws);
   const origin = !opts.origin || opts.origin === "all" ? null : opts.origin;
   const cutoff = opts.excludeCoolingDown ? new Date(ws.now().getTime() - settings.hookCooldownDays * 86_400_000) : null;
   return ws.sql<HookRow[]>`
-    select id, text, pattern, origin, source_ref, uses, wins, score, status, abstract, last_used_at, created_at
+    select id, text, pattern, origin, source_ref, uses, wins, score, status, last_used_at, created_at
       from hooks
      where workspace_id = ${ws.id}
        and (${origin}::text is null or origin = ${origin})
@@ -478,7 +477,7 @@ export async function listHooks(
        and (${opts.includeRetired === true} or status = 'active')
        and (${cutoff}::timestamptz is null or last_used_at is null or last_used_at < ${cutoff})
        and pattern <> ${UNCLASSIFIED}
-     order by case origin when 'own' then 0 when 'manual' then 1 else 2 end, score desc nulls last, created_at desc
+     order by case origin when 'own' then 0 else 1 end, score desc nulls last, created_at desc
      limit ${opts.limit ?? 50}`;
 }
 

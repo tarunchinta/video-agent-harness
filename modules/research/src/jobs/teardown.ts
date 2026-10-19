@@ -176,7 +176,7 @@ export async function prepareTeardown(
     }
   }
   const queued = await enqueueRun(ws, {
-    jobId: researchSettings(ws).competitorScan.transcribeJobId,
+    jobId: researchSettings(ws).transcribeJobId,
     agent: "art_director",
     input: transcriptionRequest({ ...post, mediaPath }, teardown),
     dedupeKey: `transcribe:external_post:${post.id}`,
@@ -184,7 +184,7 @@ export async function prepareTeardown(
     createdBy: "agent:analyst",
   });
   if (!queued) {
-    // A transcription is already on its way (e.g. from the daily scan) without our continuation: wait for it,
+    // A transcription is already on its way (e.g. from the own-posts import) without our continuation: wait for it,
     // then tear down. The teardown run carries `then`.
     await enqueueRun(ws, { ...teardown, dedupeKey: `teardown:${post.id}`, parentRunId: runId ?? null, createdBy: "agent:analyst", runAfter: new Date(ws.now().getTime() + 10 * 60_000) });
     return { externalPostId: post.id, next: "teardown" };
@@ -208,9 +208,6 @@ export const teardownPrepJob = defineNativeJob({
 });
 
 export async function buildTeardownPrompt(ws: WorkspaceContext, post: StoredExternalPost): Promise<string> {
-  const [creator] = post.trackedCreatorId
-    ? await ws.sql`select baseline, tier from tracked_creators where workspace_id = ${ws.id} and id = ${post.trackedCreatorId}`
-    : [];
   const facts = {
     platform: post.platform,
     url: post.url,
@@ -220,12 +217,11 @@ export async function buildTeardownPrompt(ws: WorkspaceContext, post: StoredExte
     likes: post.likes,
     comments: post.comments,
     shares: post.shares,
-    x: post.xScore,
-    creatorBaseline: creator?.baseline ?? null,
     visionTags: post.tags,
   };
   const comments = (post.topComments ?? []).slice(0, 10).map((c) => `- (${c.likes ?? 0} likes) ${fenceUntrusted(c.text, 200)}`).join("\n");
-  const own = Boolean(creator?.tier === "own");
+  // Only the owner's own accounts are tracked creators; anything else was pasted in by hand.
+  const own = post.trackedCreatorId !== null;
   return [
     own
       ? "Tear down this short-form video, one of the business owner's own posts that did well, so they can make it again with a new angle."
@@ -267,7 +263,7 @@ export const teardownJob = defineLlmJob({
   kind: "llm",
   id: "research.teardown",
   agent: "analyst",
-  description: "Writes a teardown of a competitor post: hook frame by frame, pacing, caption style, signature move and what not to copy.",
+  description: "Writes a teardown of a post: hook frame by frame, pacing, caption style, signature move and what not to copy.",
   input: teardownInput,
   skill: "teardown",
   toolless: true,

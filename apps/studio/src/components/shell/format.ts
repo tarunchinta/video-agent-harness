@@ -80,7 +80,6 @@ export function plural(n: number, one: string, many = `${one}s`): string {
 }
 
 const JOB_LABELS: Record<string, string> = {
-  "research.competitor-scan": "Competitor scan",
   "research.trend-radar": "Trend radar",
   "research.own-sync": "Sync your posts",
   "research.teardown": "Teardown",
@@ -101,7 +100,7 @@ const JOB_LABELS: Record<string, string> = {
   "ops.poll-inbound": "Read your replies",
 };
 
-/** "research.competitor-scan" → "Competitor scan". */
+/** "research.trend-radar" → "Trend radar". */
 export function jobLabel(jobId: string): string {
   const known = JOB_LABELS[jobId];
   if (known) return known;

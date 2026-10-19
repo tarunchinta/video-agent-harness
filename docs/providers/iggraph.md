@@ -3,7 +3,7 @@
 Meta's official API for Instagram professional accounts. AttentionOS can use it for two things:
 
 - **Your own analytics**, including a full-history backfill of your posts.
-- **Competitor research** through business discovery, which reads public business and creator accounts.
+- **Reading public posts** through business discovery (your own account, and teardowns of business and creator posts you paste in).
 
 | | |
 |---|---|
@@ -37,10 +37,10 @@ Meta's official API for Instagram professional accounts. AttentionOS can use it 
 ## Limits
 
 - Business discovery only reads **business and creator** accounts. Personal accounts can't be read.
-- It returns likes, comments and captions, but **not views** for other accounts' reels, so outlier scores lean on comments.
+- It returns likes, comments and captions, but **not views** for other accounts' reels.
 - Tokens expire. Doctor warns you a week before; repeat step 3 to renew.
 - Meta applies hourly rate limits. AttentionOS spaces requests to stay well under them.
 
 ## Platform terms
 
-This is Meta's official API, used within its documented limits. AttentionOS still shows the scraping notice once, because competitor research reads accounts other than yours.
+This is Meta's official API, used within its documented limits. AttentionOS still shows the scraping notice once, because a teardown can read accounts other than yours.

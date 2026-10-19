@@ -18,7 +18,7 @@ async function safe<T>(ws: WorkspaceContext, part: string, fn: () => Promise<T>,
   }
 }
 
-/** "research.competitor-scan" → "competitor scan". */
+/** "research.trend-radar" → "trend radar". */
 export function jobLabel(jobId: string): string {
   const name = jobId.includes(".") ? jobId.slice(jobId.indexOf(".") + 1) : jobId;
   return name.replace(/[-_]+/g, " ");

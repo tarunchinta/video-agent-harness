@@ -47,7 +47,7 @@ export interface FeedCard {
   views: number | null;
   title: string;
   platform: string;
-  /** Whose post this is, for a competitor's post. Null for the workspace's own posts. */
+  /** Whose post this is when it isn't the workspace's own. Null for the workspace's own posts. */
   handle?: string | null;
 }
 
@@ -56,9 +56,6 @@ export interface WallFeedData {
   handle: string | null;
   totalViews: number;
   totalPosts: number;
-  /** Tracked competitors' scraped posts, shown on the right wall. */
-  rivals?: FeedCard[];
-  rivalCreators?: number;
 }
 
 export type Desks = Record<RobotId, DeskLive>;

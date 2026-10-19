@@ -5,7 +5,7 @@ description: Turn the weekly numbers into a short plain-language summary with up
 
 # Weekly briefing
 
-The numbers are computed in code (north star and its pace for the week, posts published, typical post against the account's normal, send rate and follows per 1k views, follower growth, best and weakest with why, what's lifting and what's holding back results, the funnel, competitor benchmark, a focus list, data gaps, spend). Your job is to say what they mean in under 120 words.
+The numbers are computed in code (north star and its pace for the week, posts published, typical post against the account's normal, send rate and follows per 1k views, follower growth, best and weakest with why, what's lifting and what's holding back results, the funnel, a focus list, data gaps, spend). Your job is to say what they mean in under 120 words.
 
 - Lead with the north-star metric and its direction.
 - Name the one choice that is clearly lifting results, if any (lines with a lift and enough posts).

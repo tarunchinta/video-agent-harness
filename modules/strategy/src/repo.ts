@@ -1,7 +1,7 @@
 import { jsonb, nextRef, type FunnelStage, type WorkspaceContext } from "@attentionos/core";
-import { iso, listOutliers, listTrends, num, periodStart } from "@attentionos/module-research";
+import { iso, listTrends, num, periodStart } from "@attentionos/module-research";
 import { localDay, zonedParts } from "@attentionos/scoring";
-import type { OutlierCandidate, ProofCandidate, RecentPiece, SlateItem, TrendCandidate } from "./planner.ts";
+import type { ProofCandidate, RecentPiece, SlateItem, TrendCandidate } from "./planner.ts";
 import { sameVideoKeys, type RemixPoolItem } from "./remix.ts";
 
 const D = 86_400_000;
@@ -90,51 +90,35 @@ export const usedAsRemixSql = (ws: WorkspaceContext) => ws.sql`
                  or exists (select 1 from scripts sc where sc.workspace_id = c.workspace_id and sc.content_id = c.id and sc.status = 'approved')))`;
 
 /**
- * Proven posts to remake: competitor outliers and the owner's own posts (tier own, times their median views), with
- * whether each has a checked blueprint and whether it was already remade. `matchText` (caption, spoken hook,
- * blueprint) is for niche matching in code only.
+ * The owner's own posts to remake (tier own, times their median views), with whether each has a checked blueprint
+ * and whether it was already remade. `matchText` (caption, spoken hook, blueprint) is for niche matching in code only.
  */
-export async function remixPool(ws: WorkspaceContext, opts: { maxAgeDays: number; ownMaxAgeDays: number; bigViews?: number; provenMaxAgeDays?: number }): Promise<RemixPoolItem[]> {
-  const now = ws.now().getTime();
-  const since = new Date(now - opts.maxAgeDays * 86_400_000);
-  const ownSince = new Date(now - opts.ownMaxAgeDays * 86_400_000);
-  // Proven beyond doubt: a competitor's pinned post or one past `bigViews`. The scan leaves pinned posts out of its
-  // outlier scoring (they'd skew the baseline), but a pinned reel is usually that creator's best: worth remaking.
-  const provenSince = new Date(now - (opts.provenMaxAgeDays ?? 365) * 86_400_000);
-  const bigViews = opts.bigViews ?? 500_000;
+export async function remixPool(ws: WorkspaceContext, opts: { ownMaxAgeDays: number }): Promise<RemixPoolItem[]> {
+  const ownSince = new Date(ws.now().getTime() - opts.ownMaxAgeDays * 86_400_000);
   const rows = await ws.sql`
     with own_median as (
       select percentile_cont(0.5) within group (order by p.views)::float8 as med
         from external_posts p join tracked_creators c on c.id = p.tracked_creator_id and c.workspace_id = p.workspace_id
        where p.workspace_id = ${ws.id} and c.tier = 'own' and p.views > 0
     )
-    select ep.id, ep.url, ep.platform, ep.author_handle, ep.views, ep.x_score, ep.published_at, ep.caption, ep.spoken_hook, ep.tags, ep.duration_s,
-           ep.transcript is not null as has_transcript, tc.tier,
-           case when tc.tier = 'own' then ep.views / nullif((select med from own_median), 0)
-                else coalesce(ep.x_score, ep.views / nullif(coalesce((tc.baseline ->> 'views')::float8, cm.med), 0)) end as x,
+    select ep.id, ep.url, ep.platform, ep.author_handle, ep.views, ep.published_at, ep.caption, ep.spoken_hook, ep.tags, ep.duration_s,
+           ep.transcript is not null as has_transcript,
+           ep.views / nullif((select med from own_median), 0) as x,
            bp.blueprint,
-           (coalesce(tc.tier, '') <> 'own' and (ep.is_pinned or ep.views >= ${bigViews})) as proven,
            ${usedAsRemixSql(ws)} as used
       from external_posts ep
-      left join tracked_creators tc on tc.id = ep.tracked_creator_id and tc.workspace_id = ep.workspace_id
+      join tracked_creators tc on tc.id = ep.tracked_creator_id and tc.workspace_id = ep.workspace_id
       left join lateral (
         select t.fingerprint -> 'facets' -> 'blueprint' as blueprint from teardowns t
          where t.workspace_id = ep.workspace_id and t.external_post_id = ep.id and t.fingerprint -> 'facets' ? 'blueprint'
          order by t.created_at desc limit 1
       ) bp on true
-      left join lateral (
-        select percentile_cont(0.5) within group (order by o.views)::float8 as med from external_posts o
-         where o.workspace_id = ep.workspace_id and o.tracked_creator_id = ep.tracked_creator_id and not o.is_pinned and o.views > 0
-      ) cm on true
-     where ep.workspace_id = ${ws.id} and not ep.is_meme
-       and ((coalesce(tc.tier, '') <> 'own' and ep.is_outlier and ep.published_at >= ${since})
-         or (coalesce(tc.tier, '') <> 'own' and (ep.is_pinned or ep.views >= ${bigViews}) and (ep.published_at is null or ep.published_at >= ${provenSince}))
-         or (tc.tier = 'own' and ep.views > 0 and (ep.published_at is null or ep.published_at >= ${ownSince})))
+     where ep.workspace_id = ${ws.id} and tc.tier = 'own' and ep.views > 0
+       and (ep.published_at is null or ep.published_at >= ${ownSince})
      order by x desc nulls last
      limit 200`;
   return rows.flatMap((r): RemixPoolItem[] => {
-    // A proven post (pinned or past bigViews) qualifies without a times-normal (0 = unknown).
-    const x = num(r.x) ?? (r.proven ? 0 : null);
+    const x = num(r.x);
     if (x === null) return [];
     const bp = (r.blueprint ?? null) as { topic?: string; hookLine?: string; hookPattern?: string; format?: string; beats?: { says?: string }[] } | null;
     const tags = (r.tags ?? {}) as Record<string, unknown>;
@@ -146,8 +130,6 @@ export async function remixPool(ws: WorkspaceContext, opts: { maxAgeDays: number
       x: Math.round(x * 100) / 100,
       views: num(r.views),
       publishedAt: iso(r.published_at),
-      own: r.tier === "own",
-      tier: (r.tier as string | null) ?? null,
       hasBlueprint: Boolean(bp),
       hasTranscript: Boolean(r.has_transcript),
       topic: typeof bp?.topic === "string" ? bp.topic : null,
@@ -155,23 +137,9 @@ export async function remixPool(ws: WorkspaceContext, opts: { maxAgeDays: number
       format: bp?.format ?? (typeof tags.format === "string" ? tags.format : null),
       matchText: [r.caption, r.spoken_hook, bp?.topic, bp?.hookLine, ...(bp?.beats ?? []).map((b) => b.says)].filter(Boolean).join(" "),
       used: Boolean(r.used),
-      proven: Boolean(r.proven),
       sameVideo: sameVideoKeys(String(r.author_handle), (r.spoken_hook as string | null) ?? bp?.hookLine ?? null, num(r.duration_s)),
     }];
   });
-}
-
-export async function outlierCandidates(ws: WorkspaceContext): Promise<OutlierCandidate[]> {
-  const rows = await listOutliers(ws, { sinceDays: 14, limit: 30 });
-  return rows.filter((o) => o.xScore !== null).map((o) => ({
-    id: o.id,
-    url: o.url,
-    creator: `@${o.authorHandle.replace(/^@+/, "")}`,
-    platform: o.platform,
-    x: o.xScore!,
-    hookPattern: typeof o.tags?.hook_pattern === "string" ? o.tags.hook_pattern : null,
-    format: typeof o.tags?.format === "string" ? o.tags.format : null,
-  }));
 }
 
 export type BriefRow = {

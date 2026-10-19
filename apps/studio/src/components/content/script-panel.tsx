@@ -93,7 +93,7 @@ export function ScriptPanel({ scripts }: { scripts: ScriptVersion[] }) {
         <p className="text-small text-fg-2">
           <span className="text-fg-3">Hook provenance: </span>
           {humanize(s.hookSource.pattern ?? "")}
-          {s.hookSource.origin ? ` · ${s.hookSource.origin === "own" ? "your own bank" : s.hookSource.origin === "competitor" ? "competitor bank (structure only)" : "written by hand"}` : ""}
+          {s.hookSource.origin ? ` · ${s.hookSource.origin === "own" ? "your own bank" : s.hookSource.origin === "remix" ? "from the remixed post" : "written by hand"}` : ""}
           {s.hookSource.ref && s.hookSource.ref !== "own bank" ? ` · ${s.hookSource.ref}` : ""}
         </p>
       ) : null}

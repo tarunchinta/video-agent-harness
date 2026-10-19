@@ -17,7 +17,6 @@ export const BRAND_FILES = {
   pillars: "pillars.md",
   proofInventory: "proof-inventory.yaml",
   houseStyle: "house-style.md",
-  competitors: "competitors.yaml",
   sources: "sources.yaml",
   lessons: "lessons.md",
 } as const;
@@ -69,16 +68,6 @@ export const proofItemSchema = z.object({
 export const proofInventorySchema = z.object({ items: z.array(proofItemSchema).default([]) });
 export type ProofItem = z.output<typeof proofItemSchema>;
 
-export const competitorSchema = z.object({
-  handle: z.string(),
-  platform: z.enum(PLATFORMS),
-  /** Tier drives rotation frequency and weighting. */
-  tier: z.enum(["core", "adjacent", "aspirational", "remake"]).default("core"),
-  notes: z.string().optional(),
-});
-export const competitorsSchema = z.object({ creators: z.array(competitorSchema).default([]) });
-export type Competitor = z.output<typeof competitorSchema>;
-
 export const trendSourceSchema = z.object({
   id: z.string(),
   kind: z.enum(["rss", "google_news", "hn", "reddit", "github", "x_apify"]),
@@ -104,7 +93,6 @@ export type BrandKit = {
   dir: string;
   brand: Brand;
   proofInventory: z.output<typeof proofInventorySchema>;
-  competitors: z.output<typeof competitorsSchema>;
   sources: z.output<typeof sourcesSchema>;
   /** Markdown docs, keyed by file name without extension (icp, voice, offers, pillars, house-style, lessons, knowledge/*). */
   docs: Record<string, string>;
@@ -147,7 +135,6 @@ export function loadBrandKit(brandDir: string): BrandKit {
     dir: brandDir,
     brand: readYaml(brandDir, BRAND_FILES.brand, brandSchema, true),
     proofInventory: readYaml(brandDir, BRAND_FILES.proofInventory, proofInventorySchema, false),
-    competitors: readYaml(brandDir, BRAND_FILES.competitors, competitorsSchema, false),
     sources: readYaml(brandDir, BRAND_FILES.sources, sourcesSchema, false),
     docs,
   };

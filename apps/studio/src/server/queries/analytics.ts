@@ -1,18 +1,16 @@
 import "server-only";
 import {
-  bestSlotsFrom, competitorBenchmarks, learnSettings, overview, postDetail, postFacts,
-  type BestSlots, type Overview, type PlatformBenchmark, type PostFact,
+  bestSlotsFrom, learnSettings, overview, postDetail, postFacts,
+  type BestSlots, type Overview, type PostFact,
 } from "@attentionos/module-learn/analytics";
 import { featureAttribution, median } from "@attentionos/scoring";
 import { insightsCtx, RANGES, type InsightRange } from "@/server/queries/insights";
-import { getCreators, getOutliers, getTrends, type Creator, type Outlier, type Trend } from "@/server/queries/research";
 import { workspace } from "@/server/workspace";
 
 /**
  * Read models for /analytics (Research + Insights in one place). Own-post numbers come from
  * `@attentionos/module-learn/analytics` with `includeScanned`, so the posts setup read off the owner's public
- * account count from the first day, next to anything published and measured since. Competitor numbers come
- * from the research tables the daily scan fills. Nothing here writes.
+ * account count from the first day, next to anything published and measured since. Nothing here writes.
  */
 
 export const parseDays = (v: string | undefined, fallback: InsightRange = 30): InsightRange =>
@@ -31,9 +29,6 @@ export type Sources = {
   scan: { at: string; posts: number; accounts: { platform: string; handle: string; posts: number }[] } | null;
   /** Posts published or imported through the publishing service, with captured numbers. */
   measured: { posts: number; lastCapturedAt: string | null };
-  /** The last competitor scan. */
-  competitorsAt: string | null;
-  competitors: number;
 };
 
 export async function getSources(): Promise<Sources> {
@@ -43,18 +38,14 @@ export async function getSources(): Promise<Sources> {
       from tracked_creators tc join external_posts e on e.tracked_creator_id = tc.id and e.workspace_id = tc.workspace_id
      where tc.workspace_id = ${ws.id} and tc.tier = 'own'
      group by tc.platform, tc.handle order by posts desc`;
-  const [m] = await ws.sql<{ posts: number; last: Date | null; comp_at: Date | null; comps: number }[]>`
+  const [m] = await ws.sql<{ posts: number; last: Date | null }[]>`
     select (select count(distinct p.id)::int from posts p join post_metrics pm on pm.post_id = p.id and pm.workspace_id = p.workspace_id
              where p.workspace_id = ${ws.id} and p.status = 'published') as posts,
-           (select max(captured_at) from post_metrics where workspace_id = ${ws.id}) as last,
-           (select max(last_scanned_at) from tracked_creators where workspace_id = ${ws.id} and tier <> 'own') as comp_at,
-           (select count(*)::int from tracked_creators where workspace_id = ${ws.id} and tier <> 'own' and active) as comps`;
+           (select max(captured_at) from post_metrics where workspace_id = ${ws.id}) as last`;
   const at = scan.reduce<Date | null>((a, r) => (r.at && (!a || r.at > a) ? r.at : a), null);
   return {
     scan: scan.length && at ? { at: at.toISOString(), posts: scan.reduce((s, r) => s + r.posts, 0), accounts: scan.map((r) => ({ platform: r.platform, handle: r.handle, posts: r.posts })) } : null,
     measured: { posts: m?.posts ?? 0, lastCapturedAt: m?.last?.toISOString() ?? null },
-    competitorsAt: m?.comp_at?.toISOString() ?? null,
-    competitors: m?.comps ?? 0,
   };
 }
 
@@ -236,35 +227,6 @@ export async function getWorking(): Promise<Working> {
     topPosts: settled.filter((p) => p.x! >= ABOVE).sort((a, b) => b.x! - a.x!).slice(0, 6).map(toAnalyticsPost),
     slots: bestSlotsFrom(ctx, posts.filter((p) => Date.parse(p.publishedAt) >= since)),
     needMore: Math.max(0, minN * 2 - settled.length),
-  };
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// Competitors
-// ---------------------------------------------------------------------------------------------------------------
-
-export type CompetitorsView = {
-  benches: PlatformBenchmark[];
-  creators: Creator[];
-  outliers: Outlier[];
-  trends: Trend[];
-};
-
-export async function getCompetitorsView(days: InsightRange): Promise<CompetitorsView> {
-  const ctx = insightsCtx();
-  const { posts } = await getFacts();
-  const window = days === 7 ? "7d" : days === 30 ? "30d" : "90d";
-  const [benches, creators, outliers, trends] = await Promise.all([
-    competitorBenchmarks(ctx, posts, { days: Math.max(days, 30), outlierDays: Math.max(days, 30) }),
-    getCreators(),
-    getOutliers({ window }),
-    getTrends(),
-  ]);
-  return {
-    benches,
-    creators: creators.filter((c) => c.active),
-    outliers: outliers.items.slice(0, 12),
-    trends: trends.filter((t) => ["new", "shortlisted", "kit"].includes(t.status)).slice(0, 5),
   };
 }
 

@@ -1,7 +1,7 @@
 import { basedOnLine, formatViews, type Sql, type WorkspaceContext } from "@attentionos/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  classifyHooksJob, findRemixSources, getClaimSources, getContentBrief, provenScore, REMIX_RULES, remixRulesFor, remixView, runWriteScript,
+  findRemixSources, getClaimSources, getContentBrief, provenScore, REMIX_RULES, remixRulesFor, remixView, runWriteScript,
   startWaitingScript, topicMatch, useRemixSource, validateForContent, writeScriptAgentPrompt, writeScriptPrompt, type RemixSource, type ScriptModel,
 } from "../src/index.ts";
 import { getContent } from "../src/db.ts";
@@ -38,7 +38,7 @@ const BLUEPRINT = {
 
 const source = (over: Partial<RemixSource> = {}): RemixSource => ({
   externalPostId: "00000000-0000-4000-8000-0000000000e1", url: "https://www.instagram.com/reel/c1/", platform: "instagram", handle: "demo_creator_a", own: false,
-  views: 1_200_000, x: 14, publishedAt: "2026-10-10T10:00:00Z", durationS: 24, format: "talking_head", blueprint: BLUEPRINT, transcript: TRANSCRIPT, ...over,
+  views: 1_200_000, x: null, publishedAt: "2026-10-10T10:00:00Z", durationS: 24, format: "talking_head", blueprint: BLUEPRINT, transcript: TRANSCRIPT, ...over,
 });
 
 describe("remix provenance and views (no database)", () => {
@@ -52,7 +52,7 @@ describe("remix provenance and views (no database)", () => {
   it("never shows the transcript to the Copywriter, only the checked blueprint and facts", () => {
     const v = remixView(source());
     expect(JSON.stringify(v)).not.toContain("Rowan from Maple");
-    expect(v).toMatchObject({ basedOn: "Based on @demo_creator_a's reel, 1.2M views, 14x their normal", blueprint: { sourceHookLine: BLUEPRINT.hookLine, spokenWords: 60 } });
+    expect(v).toMatchObject({ basedOn: "Based on @demo_creator_a's reel, 1.2M views", blueprint: { sourceHookLine: BLUEPRINT.hookLine, spokenWords: 60 } });
     expect(v.neverUse).toEqual(["@demo_creator_a", "Rowan", "Maple and Oak"]);
     expect(v.blueprint!.theirSpecifics).toEqual([]);
     const bare = remixView(source({ blueprint: null }));
@@ -135,7 +135,8 @@ afterAll(async () => {
   await db?.drop();
 });
 
-async function seedSource(ws: WorkspaceContext, opts: { blueprint?: boolean; id?: string; own?: boolean; views?: number; x?: number } = {}): Promise<string> {
+/** A post in the research library: one of the owner's own (`own`), or one pasted in for a teardown. */
+async function seedSource(ws: WorkspaceContext, opts: { blueprint?: boolean; id?: string; own?: boolean; views?: number } = {}): Promise<string> {
   let creatorId: string | null = null;
   if (opts.own) {
     const [c] = await ws.sql<{ id: string }[]>`insert into tracked_creators (workspace_id, platform, handle, tier, active) values (${ws.id}, 'instagram', 'examplebrand', 'own', true)
@@ -144,9 +145,9 @@ async function seedSource(ws: WorkspaceContext, opts: { blueprint?: boolean; id?
   }
   const pid = opts.id ?? `p${Math.random().toString(36).slice(2, 8)}`;
   const [p] = await ws.sql<{ id: string }[]>`
-    insert into external_posts (workspace_id, tracked_creator_id, platform, platform_post_id, author_handle, url, published_at, views, x_score, is_outlier, transcript, spoken_hook, caption)
+    insert into external_posts (workspace_id, tracked_creator_id, platform, platform_post_id, author_handle, url, published_at, views, transcript, spoken_hook, caption)
     values (${ws.id}, ${creatorId}, 'instagram', ${pid}, ${opts.own ? "examplebrand" : "demo_creator_a"}, ${`https://www.instagram.com/reel/${pid}/`}, ${new Date(NOW.getTime() - 3 * 86_400_000)},
-            ${opts.views ?? 1_200_000}, ${opts.own ? null : (opts.x ?? 14)}, ${!opts.own}, ${TRANSCRIPT}, ${BLUEPRINT.hookLine}, 'Cabinet quote checklist')
+            ${opts.views ?? 1_200_000}, ${TRANSCRIPT}, ${BLUEPRINT.hookLine}, 'Cabinet quote checklist')
     returning id`;
   if (opts.blueprint !== false) {
     await ws.sql`insert into teardowns (workspace_id, external_post_id, platform, author_handle, url, analysis_md, fingerprint)
@@ -168,7 +169,7 @@ function remixPackage(postUrl: string, beats = [
     body: beats.map((b) => b.text).join(" "),
     beats,
     hookText: HOOK,
-    hookSource: { hookId: null, pattern: "cost-of-mistake", origin: "competitor", ref: postUrl },
+    hookSource: { hookId: null, pattern: "cost-of-mistake", origin: "remix", ref: postUrl },
     cta: { type: "comment_keyword", keyword: "blueprint" },
     claimLedger: [
       { id: "c1", claim: "We tracked 42 projects last year", verdict: "PASS", source: "proof:project-tracker" },
@@ -192,7 +193,7 @@ describe.skipIf(!HAS_DB)(`remix scripts with a database${NEEDS_DB}`, () => {
 
     const brief = await getContentBrief(ws, contentId);
     expect(brief.mode).toBe("remix");
-    expect(brief.remix).toMatchObject({ basedOn: "Based on @demo_creator_a's reel, 1.2M views, 14x their normal", blueprint: { sourceHookLine: BLUEPRINT.hookLine } });
+    expect(brief.remix).toMatchObject({ basedOn: "Based on @demo_creator_a's reel, 1.2M views", blueprint: { sourceHookLine: BLUEPRINT.hookLine } });
     expect(brief.ownWinners.posts[0]).toMatchObject({ hook: "Plan it once.", script: "Plan it once. Build it once.", timesYourNormal: 4.5 });
     expect(JSON.stringify(brief)).not.toContain("Rowan from Maple");
 
@@ -236,20 +237,21 @@ describe.skipIf(!HAS_DB)(`remix scripts with a database${NEEDS_DB}`, () => {
     expect(prompts[0]).not.toContain("Rowan from Maple");
   });
 
-  it("finds proven posts for a topic, attaches one, and starts a waiting script when its teardown lands", async () => {
+  it("finds the owner's breakouts for a topic, attaches one, and starts a waiting script when its teardown lands", async () => {
     const ws = await makeWorkspace(sql);
-    const ready = await seedSource(ws, { id: "ready" });
-    const raw = await seedSource(ws, { id: "raw", blueprint: false, views: 30_000, x: 3 });
-    // Own posts: median 1,000; one breakout on the same topic.
+    // Own posts: median 1,100; two breakouts on the same topic, one already torn down.
     for (const [i, v] of [900, 1000, 1100].entries()) await seedSource(ws, { id: `own${i}`, own: true, views: v, blueprint: false });
-    const ownHit = await seedSource(ws, { id: "own-hit", own: true, views: 5000, blueprint: false });
+    const ready = await seedSource(ws, { id: "ready", own: true, views: 5000 });
+    const raw = await seedSource(ws, { id: "raw", own: true, views: 4000, blueprint: false });
+    // A post pasted in for a teardown is never offered as a source.
+    const pasted = await seedSource(ws, { id: "pasted" });
 
     const found = await findRemixSources(ws, { topic: "cheapest cabinet quote" });
-    expect(found.map((f) => f.externalPostId)).toEqual(expect.arrayContaining([ready, raw, ownHit]));
-    expect(found[0]).toMatchObject({ externalPostId: ready, ready: true, topic: "What a cheap quote leaves out", basedOn: "Based on @demo_creator_a's reel, 1.2M views, 14x their normal" });
-    expect(found.find((f) => f.externalPostId === ownHit)).toMatchObject({ own: true, timesTheirNormal: 4.8, basedOn: "Based on your own reel, 5K views, 4.8x your normal" });
+    expect(found.map((f) => f.externalPostId).sort()).toEqual([ready, raw].sort());
+    expect(found[0]).toMatchObject({ externalPostId: ready, own: true, ready: true, topic: "What a cheap quote leaves out", timesTheirNormal: 4.5, basedOn: "Based on your own reel, 5K views, 4.5x your normal" });
+    expect(found.some((f) => f.externalPostId === pasted)).toBe(false);
     // Own posts that didn't beat the owner's normal aren't proven.
-    expect(found.some((f) => f.basedOn.includes("1K views"))).toBe(false);
+    expect(found.some((f) => f.basedOn.includes("1.1K views"))).toBe(false);
     expect(await findRemixSources(ws, { topic: "tile grout colours" })).toEqual([]);
 
     const contentId = await makeContent(ws, { title: "A script about cheap quotes" });
@@ -263,7 +265,7 @@ describe.skipIf(!HAS_DB)(`remix scripts with a database${NEEDS_DB}`, () => {
     expect(used.teardownQueued).toBe(true);
     const content = (await getContent(ws, contentId))!;
     expect(content.source_refs![0]).toMatchObject({ type: "external_post", id: raw });
-    expect(content.brief).toMatchObject({ kind: "remix", remixOf: { externalPostId: raw, line: "Based on @demo_creator_a's reel, 30K views, 3x their normal" } });
+    expect(content.brief).toMatchObject({ kind: "remix", remixOf: { externalPostId: raw, line: "Based on your own reel, 4K views, 3.6x your normal" } });
     const [prep] = await ws.sql<{ job_id: string; input: unknown }[]>`select job_id, input from agent_runs where workspace_id = ${ws.id} and job_id = 'research.teardown-prep'`;
     expect(prep).toEqual({ job_id: "research.teardown-prep", input: { externalPostId: raw, reuseBlueprint: true, then: { jobId: "scripting.remix-ready", agent: "copywriter", input: { contentId } } } });
     // Already remixed: not offered again unless asked.
@@ -323,7 +325,8 @@ describe.skipIf(!HAS_DB)(`never a remix without its blueprint${NEEDS_DB}`, () =>
 
   it("a script for an older idea that only cited a post doesn't block a proper remix of it", async () => {
     const ws = await makeWorkspace(sql);
-    const post = await seedSource(ws, { id: "cited-only" });
+    for (const [i, v] of [900, 1000, 1100].entries()) await seedSource(ws, { id: `cited-own${i}`, own: true, views: v, blueprint: false });
+    const post = await seedSource(ws, { id: "cited-only", own: true, views: 5000 });
     const url = "https://www.instagram.com/reel/cited-only/";
     const old = await makeContent(ws, { title: "Use its structure", source_refs: [{ type: "external_post", id: post, url }] });
     await ws.sql`update content set status = 'scripted' where id = ${old}`;
@@ -331,18 +334,6 @@ describe.skipIf(!HAS_DB)(`never a remix without its blueprint${NEEDS_DB}`, () =>
     // Filmed: it's taken.
     await ws.sql`update content set status = 'filming' where id = ${old}`;
     expect((await findRemixSources(ws, { topic: "cheapest cabinet quote" })).some((f) => f.externalPostId === post)).toBe(false);
-  });
-});
-
-describe.skipIf(!HAS_DB)(`hook classifier output${NEEDS_DB}`, () => {
-  it("is stored through onOutput, the hook the runner calls for toolless jobs", async () => {
-    const ws = await makeWorkspace(sql);
-    const id = await makeHook(ws, { origin: "competitor", pattern: "unclassified", text: "Kitchens are fun to plan with friends." });
-    const ctx = { ws, input: { limit: 40 }, runId: "run-1", progress: async () => {} } as never;
-    await classifyHooksJob.prompt(ctx);
-    await classifyHooksJob.onOutput!(ctx, { items: [{ id, pattern: "pov-identity", abstract: "[Activity] is better with [people]." }] });
-    const [h] = await ws.sql<{ pattern: string; abstract: string }[]>`select pattern, abstract from hooks where id = ${id}`;
-    expect(h).toEqual({ pattern: "pov-identity", abstract: "[Activity] is better with [people]." });
   });
 });
 

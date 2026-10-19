@@ -1,95 +1,13 @@
 import Link from "next/link";
-import { ArrowUpRight, Heart, MessageCircle, Play } from "lucide-react";
+import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { Badge, Card, cn } from "@/components/ui";
 import { Sparkline } from "@/components/charts";
-import { PlatformIcon, ThumbPlaceholder, StatusDot, type StatusTone } from "@/components/content/shared";
-import { fmtCompact, fmtDate, fmtDuration, fmtRelative, fmtX, handle, humanize, platformLabel } from "@/components/content/format";
-import type { Creator, Outlier, Teardown, Trend } from "@/server/queries/research";
-import { RemixButton, RemoveCreator, TierSelect, TrendActions } from "./controls";
+import { PlatformIcon, StatusDot, type StatusTone } from "@/components/content/shared";
+import { fmtCompact, fmtDate, fmtRelative, handle, humanize, platformLabel } from "@/components/content/format";
+import type { Teardown, Trend } from "@/server/queries/research";
+import { TrendActions } from "./controls";
 import { Markdown, mdTitle } from "./markdown";
 
-// ---------------------------------------------------------------------------------------------------------------
-// Outliers
-// ---------------------------------------------------------------------------------------------------------------
-
-export function XBadge({ x, className, strong = false }: { x: number; className?: string; strong?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-7 items-center rounded-sm px-2 text-[14px] font-medium tabular",
-        strong ? "bg-brand-tint text-on-tint" : "bg-surface-3 text-fg",
-        className,
-      )}
-      title={`${fmtX(x)} their usual`}
-    >
-      {fmtX(x)}
-    </span>
-  );
-}
-
-export function OutlierCard({ o, now, top = false }: { o: Outlier; now: Date; top?: boolean }) {
-  const basis =
-    o.xMethod === "views" || o.platform === "tiktok"
-      ? o.baselineViews
-        ? `${fmtCompact(o.views)} views vs their usual ${fmtCompact(o.baselineViews)}`
-        : null
-      : o.baselineComments
-        ? `${fmtCompact(o.comments)} comments vs their usual ${fmtCompact(o.baselineComments)}`
-        : null;
-  return (
-    <article className="flex flex-col rounded-lg border border-border bg-surface-1 p-5 transition-colors duration-[120ms] hover:border-border-strong">
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2 text-small">
-          <PlatformIcon platform={o.platform} />
-          <span className="truncate font-medium text-fg">{handle(o.author)}</span>
-          {o.tier ? <span className="shrink-0 text-fg-3">{humanize(o.tier)}</span> : null}
-        </div>
-        <XBadge x={o.xScore} strong={top} />
-      </header>
-
-      <div className="mt-4 flex gap-4">
-        <a href={o.url} target="_blank" rel="noreferrer" className="group relative w-[72px] shrink-0 self-start" aria-label={`Open the post by ${handle(o.author)}`}>
-          {o.thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={o.thumbnailUrl} alt="" className="aspect-[9/16] w-full rounded-md object-cover" />
-          ) : (
-            <ThumbPlaceholder className="aspect-[9/16] w-full rounded-md" />
-          )}
-          <span className="absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 text-[11px] font-medium text-fg tabular">
-            <Play className="size-3 fill-current" />
-            {fmtDuration(o.durationS)}
-          </span>
-        </a>
-        <div className="min-w-0 flex-1">
-          <p className="text-caption text-fg-3">Spoken hook</p>
-          <blockquote className="mt-1 line-clamp-4 text-[15px] leading-6 text-fg">{o.spokenHook ? `“${o.spokenHook}”` : (o.caption ?? "No transcript yet")}</blockquote>
-          {o.format ? <p className="mt-2 text-caption text-fg-3">{humanize(o.format)}</p> : null}
-        </div>
-      </div>
-
-      {o.topComment ? (
-        <div className="mt-4 rounded-md bg-surface-2 px-3.5 py-3">
-          <div className="flex items-center justify-between text-caption text-fg-3">
-            <span>Top comment</span>
-            <span className="inline-flex items-center gap-1 tabular">
-              <Heart className="size-3" />
-              {fmtCompact(o.topComment.likes)}
-            </span>
-          </div>
-          <p className="mt-1 line-clamp-2 text-small text-fg-2">{o.topComment.text}</p>
-        </div>
-      ) : null}
-
-      <footer className="mt-auto flex items-end justify-between gap-3 pt-4">
-        <div className="min-w-0 text-caption text-fg-3">
-          {basis ? <p className="text-fg-2">{basis}</p> : null}
-          <p className="mt-0.5">Posted {fmtRelative(o.publishedAt, now)}</p>
-        </div>
-        <RemixButton id={o.id} remixedAs={o.remixedAs} />
-      </footer>
-    </article>
-  );
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Trend radar
@@ -214,75 +132,6 @@ function TrendKitPanel({ t, tz }: { t: Trend; tz: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// Tracked creators
-// ---------------------------------------------------------------------------------------------------------------
-
-export function CreatorsTable({ creators, now }: { creators: Creator[]; now: Date }) {
-  return (
-    <Card padded={false} className="overflow-hidden">
-      <div className="hidden grid-cols-[minmax(0,2.4fr)_1fr_1.3fr_1.3fr_1fr_88px] gap-4 border-b border-border px-5 py-3 text-caption text-fg-3 lg:grid">
-        <span>Creator</span>
-        <span>Tier</span>
-        <span>Their usual</span>
-        <span>Last 30 days</span>
-        <span>Last scanned</span>
-        <span className="sr-only">Actions</span>
-      </div>
-      <ul>
-        {creators.map((c) => (
-          <li
-            key={c.id}
-            className={cn(
-              "grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 border-b border-border px-5 py-4 last:border-b-0 lg:grid-cols-[minmax(0,2.4fr)_1fr_1.3fr_1.3fr_1fr_88px] lg:items-center",
-              !c.active && "opacity-60",
-            )}
-          >
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <PlatformIcon platform={c.platform} />
-                <span className="truncate text-[14px] font-medium text-fg">{handle(c.handle)}</span>
-                {!c.active ? <Badge>Not tracked</Badge> : null}
-              </div>
-              {c.notes ? <p className="mt-0.5 truncate text-caption text-fg-3">{c.notes}</p> : null}
-            </div>
-            <div className="flex items-center justify-end gap-1 lg:justify-start">
-              <TierSelect handle={c.handle} platform={c.platform} tier={c.tier} disabled={!c.active} />
-            </div>
-            <div className="col-span-2 text-small tabular lg:col-span-1">
-              <span className="text-caption text-fg-3 lg:hidden">Their usual · </span>
-              {c.baselineViews != null ? (
-                <span className="lg:block">
-                  <span className="text-fg">{fmtCompact(c.baselineViews)} views</span>
-                  <span className="text-fg-3 lg:block"><span className="lg:hidden"> · </span>{fmtCompact(c.baselineComments)} comments</span>
-                </span>
-              ) : (
-                <span className="text-fg-3">After the first scan</span>
-              )}
-            </div>
-            <div className="col-span-2 text-small tabular lg:col-span-1">
-              <span className="text-caption text-fg-3 lg:hidden">Last 30 days · </span>
-              <span className="lg:block">
-                <span className="text-fg">{c.posts30d} posts</span>
-                <span className="text-fg-3 lg:block">
-                  <span className="lg:hidden"> · </span>
-                  {c.outliers30d ? `${c.outliers30d} outlier${c.outliers30d === 1 ? "" : "s"}${c.bestX ? `, best ${fmtX(c.bestX)}` : ""}` : "No outliers"}
-                </span>
-              </span>
-            </div>
-            <div className="self-center text-small text-fg-3">
-              <span className="text-caption lg:hidden">Scanned </span>
-              {c.lastScannedAt ? fmtRelative(c.lastScannedAt, now) : "Not yet"}
-            </div>
-            <div className="flex justify-end">
-              {c.active ? <RemoveCreator handle={c.handle} platform={c.platform} /> : null}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Teardowns
@@ -304,7 +153,6 @@ export function TeardownCard({ t, tz }: { t: Teardown; tz: string }) {
         <div className="flex items-center gap-2 text-small text-fg-2">
           {t.platform ? <PlatformIcon platform={t.platform} /> : null}
           <span className="font-medium text-fg">{handle(t.author)}</span>
-          {t.xScore ? <XBadge x={t.xScore} className="ml-auto lg:ml-0" /> : null}
         </div>
         <h3 className="mt-3 text-h3 font-medium text-fg">{title}</h3>
         <p className="mt-1 text-caption text-fg-3">

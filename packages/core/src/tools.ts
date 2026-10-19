@@ -10,7 +10,7 @@ import type { WorkspaceContext } from "./workspace.ts";
 export type ToolContext = { ws: WorkspaceContext; actor: Actor };
 
 export type ToolDefinition<I extends z.ZodObject = z.ZodObject> = {
-  /** snake_case, prefixed with the module id: `research_list_outliers`. */
+  /** snake_case, prefixed with the module id: `research_list_teardowns`. */
   name: string;
   /** What it does and when to use it, written for the model. */
   description: string;

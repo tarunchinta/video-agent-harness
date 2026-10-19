@@ -5,7 +5,7 @@ export const NOTICES: Record<string, { title: string; usedBy: string; body: stri
   scrapingTerms: {
     title: "Reading public posts through a third-party service",
     usedBy: "Research",
-    body: "Collecting public posts through a scraping service may conflict with a platform's terms, and platforms can change what they allow at any time. AttentionOS only reads the accounts you list in brand/competitors.yaml, never logs in as you, never automates a browser, and checks your research budget before every run.",
+    body: "Collecting public posts through a scraping service may conflict with a platform's terms, and platforms can change what they allow at any time. AttentionOS only reads your own accounts and posts you paste in for a teardown, never logs in as you, never automates a browser, and checks your research budget before every run.",
     alternative: "Alternative: the official Instagram Graph API (scraper: \"iggraph\") reads public business and creator accounts without this notice.",
     href: `${DOCS}#reading-public-posts-through-a-third-party-service-scrapingterms`,
   },

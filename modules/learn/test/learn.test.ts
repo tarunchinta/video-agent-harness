@@ -93,7 +93,7 @@ describe("own baseline, attribution and weights", () => {
     const w = await getWeights(ws);
     expect(w.ownPosts).toBe(13);
     expect(w.ownShare).toBe(0.65);
-    expect(w.source).toBe("blend");
+    expect(w.source).toBe("partial");
     expect(w.explore).toBe(0.2);
     expect(w.weights.lane!.proof).toBeGreaterThan(1);
     expect(w.weights.lane!.myth).toBeLessThan(1);
@@ -101,26 +101,24 @@ describe("own baseline, attribution and weights", () => {
 
     const fs = (await call(ws, "learn_get_feature_stats", { dimension: "lane" })) as { lines: string[]; weightSource: string };
     expect(fs.lines.some((l) => l.startsWith("GAP:"))).toBe(true);
-    expect(fs.weightSource).toBe("blend");
+    expect(fs.weightSource).toBe("partial");
     const summary = (await call(ws, "learn_get_performance_summary", { days: 30 })) as { posts: number; top: { title: string }[]; best: { title: string; why: string[] } };
     expect(summary.posts).toBe(13);
     expect(summary.top[0]!.title).toMatch(/^Post proof/);
     expect(summary.best.title).toMatch(/^Post proof/);
   });
 
-  it("falls back to competitor signals with no own data", async () => {
+  it("stays neutral with no own data, whatever else is in the research library", async () => {
     const ws = await createTestWorkspace({ now: () => NOW });
-    for (let i = 0; i < 6; i++) {
-      await ws.sql`insert into external_posts (workspace_id, platform, platform_post_id, author_handle, url, published_at, x_score, tags)
-        values (${ws.id}, 'instagram', ${`c${i}`}, 'demo_creator_a', ${`https://e.example/${i}`}, ${new Date(NOW.getTime() - (i + 1) * 86_400_000)}, ${i < 3 ? 4 : 1}, ${ws.sql.json({ format: i < 3 ? "green-screen" : "talking-head" })})`;
-    }
-    await runAttribution(ws);
+    // A post pasted in for a teardown never feeds the weights.
+    await ws.sql`insert into external_posts (workspace_id, platform, platform_post_id, author_handle, url, published_at, views, tags)
+      values (${ws.id}, 'instagram', 'c1', 'demo_creator_a', 'https://e.example/1', ${new Date(NOW.getTime() - 86_400_000)}, 900000, ${ws.sql.json({ format: "green-screen" })})`;
+    const run = await runAttribution(ws);
+    expect(Object.keys(run.windows).sort()).toEqual(["30d", "90d", "all"]);
     const w = await getWeights(ws);
-    expect(w.source).toBe("none"); // 3 per format is under min n
-    await ws.sql`update feature_stats set n = 6 where workspace_id = ${ws.id}`;
-    const w2 = await getWeights(ws);
-    expect(w2.source).toBe("competitor");
-    expect(w2.weights.format!["green-screen"]).toBeGreaterThan(1);
+    expect(w).toMatchObject({ source: "none", ownShare: 0, weights: {} });
+    const windows = await ws.sql`select distinct time_window from feature_stats where workspace_id = ${ws.id}`;
+    expect(windows.map((r) => r.time_window).filter((t) => !["30d", "90d", "all"].includes(t as string))).toEqual([]);
   });
 });
 

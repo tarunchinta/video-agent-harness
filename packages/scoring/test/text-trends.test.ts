@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalUrl, contentWords, detectCrossCreatorTrends, jaccard, spokenHook, topicKeysOf, transcriptFingerprint } from "../src/index.ts";
+import { canonicalUrl, contentWords, jaccard, spokenHook, transcriptFingerprint } from "../src/index.ts";
 
 describe("text helpers", () => {
   it("extracts stemmed content words without stop words, URLs or numbers", () => {
@@ -30,37 +30,5 @@ describe("text helpers", () => {
   it("canonicalises URLs", () => {
     expect(canonicalUrl("https://WWW.Example.com/a/b/?utm_source=x&id=3#frag")).toBe("example.com/a/b?id=3");
     expect(canonicalUrl("not a url ")).toBe("not a url");
-  });
-});
-
-describe("cross-creator trends", () => {
-  it("needs the same topic from at least two creators", () => {
-    const trends = detectCrossCreatorTrends([
-      { postId: "p1", creator: "ig:a", text: "Kitchen remodel budget mistakes" },
-      { postId: "p2", creator: "ig:a", text: "Another kitchen remodel story" },
-      { postId: "p3", creator: "ig:b", text: "Why your kitchen remodel runs late", keys: ["pattern:question"] },
-      { postId: "p4", creator: "ig:c", text: "Permit timelines explained", keys: ["pattern:question"] },
-    ]);
-    const keys = trends.map((t) => t.key);
-    expect(keys).toContain("topic:kitchen");
-    expect(keys).toContain("pattern:question");
-    expect(keys).not.toContain("topic:permit");
-    const kitchen = trends.find((t) => t.key === "topic:kitchen")!;
-    expect(kitchen.creators).toEqual(["ig:a", "ig:b"]);
-    expect(kitchen.postIds).toEqual(["p1", "p2", "p3"]);
-  });
-  it("drops topics that are in most posts once there are enough posts", () => {
-    const items = Array.from({ length: 6 }, (_, i) => ({ postId: `p${i}`, creator: `c${i}`, text: i < 4 ? "business owners growth" : "permit" }));
-    const keys = detectCrossCreatorTrends(items).map((t) => t.key);
-    expect(keys).not.toContain("topic:business");
-    expect(keys).toContain("topic:permit");
-  });
-  it("respects minCreators and keeps explicit keys", () => {
-    const items = [
-      { postId: "p1", creator: "a", keys: ["format:split"] },
-      { postId: "p2", creator: "b", keys: ["format:split"] },
-    ];
-    expect(detectCrossCreatorTrends(items, { minCreators: 3 })).toEqual([]);
-    expect(topicKeysOf({ postId: "x", creator: "a", keys: ["k"], text: "decks" })).toEqual(["k", "topic:deck"]);
   });
 });

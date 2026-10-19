@@ -1,39 +1,14 @@
 import { z } from "zod";
-import { moduleSettings, PLATFORMS, type WorkspaceContext } from "@attentionos/core";
-
-const ruleOverride = z.object({
-  weights: z.partialRecord(z.enum(["views", "likes", "comments", "shares"]), z.number().nonnegative()).optional(),
-  threshold: z.number().positive().optional(),
-  floors: z.partialRecord(z.enum(["views", "likes", "comments", "shares"]), z.number().nonnegative()).optional(),
-  memeMaxS: z.number().nonnegative().optional(),
-});
+import { moduleSettings, type WorkspaceContext } from "@attentionos/core";
 
 /** `config.modules.research.settings`. Every field has a safe default. */
 export const researchSettingsSchema = z.object({
-  competitorScan: z.object({
-    /** Creators scanned per day (the rotation window). */
-    creatorsPerDay: z.number().int().positive().default(15),
-    /** Posts pulled per creator per scan. */
-    postsPerCreator: z.number().int().positive().max(100).default(12),
-    /** Baseline: mature after this many hours, ignore posts older than maxAgeDays, need minPosts. */
-    matureHours: z.number().positive().default(48),
-    maxAgeDays: z.number().positive().default(120),
-    minBaselinePosts: z.number().int().positive().default(5),
-    /** Winners per scan sent to transcription. */
-    transcribeTopN: z.number().int().nonnegative().default(5),
-    /** After a winner is transcribed, write its teardown and remix blueprint so the Copywriter can remake it. */
-    autoTeardown: z.boolean().default(true),
-    /** Own best posts torn down per scan (their remix blueprints feed the Copywriter's voice and "do it again" remixes). */
-    ownTeardownsPerScan: z.number().int().nonnegative().max(10).default(2),
-    /** Window for cross-creator trend detection. */
-    crossCreatorDays: z.number().int().positive().default(14),
-    /** Job that transcribes a competitor post (the editing module's media-py ASR). */
-    transcribeJobId: z.string().default("editing.transcribe"),
-    rules: z.partialRecord(z.enum(PLATFORMS), ruleOverride).default({}),
-  }).default({
-    creatorsPerDay: 15, postsPerCreator: 12, matureHours: 48, maxAgeDays: 120, minBaselinePosts: 5, transcribeTopN: 5, autoTeardown: true, ownTeardownsPerScan: 2,
-    crossCreatorDays: 14, transcribeJobId: "editing.transcribe", rules: {},
-  }),
+  /** Job that transcribes a post in the research library (the editing module's media-py ASR). */
+  transcribeJobId: z.string().default("editing.transcribe"),
+  ownTeardowns: z.object({
+    /** Own best posts torn down per own sync (their remix blueprints feed the Copywriter's voice and "do it again" remixes). 0 = off. */
+    perSync: z.number().int().nonnegative().max(10).default(2),
+  }).default({ perSync: 2 }),
   trendRadar: z.object({
     dayCap: z.number().int().nonnegative().default(6),
     perRun: z.number().int().nonnegative().default(1),

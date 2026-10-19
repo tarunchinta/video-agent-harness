@@ -20,14 +20,6 @@ const active = (r: BoardRun | undefined) => r?.status === "queued" || r?.status 
 type Tone = "ok" | "work" | "wait" | "warn" | "off";
 type Row = { id: string; agent: AgentKey; title: string; headline: string; detail?: ReactNode; tone: Tone };
 
-/** Plain words for why a competitor scan didn't run. */
-const SCAN_SKIPPED: Record<string, string> = {
-  no_scraper: "No scraper is set up, so nothing was scanned. Add your Apify token in Keys.",
-  needs_acknowledgement: "Waiting for the scraping notice (Competitors step).",
-  budget: "Skipped: this month's scraping budget is used up.",
-  no_creators: "No creators to scan yet.",
-};
-
 function speechProblem(err: string | null): string | null {
   if (!err) return null;
   if (/speech|asr|whisper|model|doctor/i.test(err)) return "Speech-to-text isn't set up on this computer yet (run `attentionos doctor --fix`). Your voice is learned from captions for now.";
@@ -54,30 +46,12 @@ export function boardRows(view: StepProps["view"], b: StartBoard): Row[] {
   const problem = speechProblem(b.transcription.firstError);
   const txRow: Row =
     b.own.transcribing > 0
-      ? { id: "tx", agent: "art_director", title: "Transcripts", headline: `Transcribed ${b.own.transcribed} of ${queuedOwn} of your videos`, detail: problem ?? (b.competitors.transcribed ? `${plural(b.competitors.transcribed, "competitor outlier")} transcribed too` : undefined), tone: "work" }
+      ? { id: "tx", agent: "art_director", title: "Transcripts", headline: `Transcribed ${b.own.transcribed} of ${queuedOwn} of your videos`, detail: problem ?? undefined, tone: "work" }
       : b.own.transcribed
-        ? { id: "tx", agent: "art_director", title: "Transcripts", headline: `Transcribed ${b.own.transcribed} of your videos`, detail: [b.competitors.transcribed ? `${plural(b.competitors.transcribed, "competitor outlier")} too` : "", b.own.noTranscript ? `${b.own.noTranscript} had no usable audio` : ""].filter(Boolean).join(" · ") || undefined, tone: "ok" }
+        ? { id: "tx", agent: "art_director", title: "Transcripts", headline: `Transcribed ${b.own.transcribed} of your videos`, detail: b.own.noTranscript ? `${b.own.noTranscript} had no usable audio` : undefined, tone: "ok" }
         : queuedOwn
           ? { id: "tx", agent: "art_director", title: "Transcripts", headline: "No transcripts yet", detail: problem ?? "The videos couldn't be transcribed; your voice is learned from captions.", tone: "warn" }
           : { id: "tx", agent: "art_director", title: "Transcripts", headline: active(r.import) ? "Waiting for your posts" : "Nothing to transcribe", detail: active(r.import) ? undefined : "Transcripts need video links, which come with the Apify import.", tone: active(r.import) ? "wait" : "off" };
-
-  const scanSkipped = (r.scan?.output as { skipped?: string } | null)?.skipped;
-  const compRow: Row = active(r.scan)
-    ? { id: "comp", agent: "analyst", title: "Competitors", headline: r.scan?.progress ?? "Scanning the creators you picked", detail: b.competitors.posts ? `${plural(b.competitors.posts, "post")} read so far` : undefined, tone: "work" }
-    : r.scan?.status === "failed"
-      ? { id: "comp", agent: "analyst", title: "Competitors", headline: "The scan stopped", detail: r.scan.error ?? undefined, tone: "warn" }
-      : scanSkipped
-        ? { id: "comp", agent: "analyst", title: "Competitors", headline: "Not scanned", detail: SCAN_SKIPPED[scanSkipped] ?? scanSkipped, tone: "warn" }
-        : r.scan
-          ? {
-              id: "comp",
-              agent: "analyst",
-              title: "Competitors",
-              headline: b.competitors.outliers ? `Found ${plural(b.competitors.outliers, "outlier")} across ${plural(b.competitors.outlierCreators, "creator")}` : `Read ${plural(b.competitors.posts, "post")}; no outliers yet`,
-              detail: `${plural(b.competitors.creatorsScanned, "creator")} scanned`,
-              tone: "ok",
-            }
-          : { id: "comp", agent: "analyst", title: "Competitors", headline: d.strategy.competitors.length ? "Waiting for a scraper" : "No competitors picked", detail: notes.find((n) => /competitor|scan/i.test(n)), tone: "off" };
 
   const site = d.business.runId ? view.runs[d.business.runId] : r.site;
   const siteRow: Row = !d.business.url
@@ -115,7 +89,7 @@ export function boardRows(view: StepProps["view"], b: StartBoard): Row[] {
         ? { id: "index", agent: "analyst", title: "Search index", headline: "Indexing didn't finish", detail: idx.error ?? undefined, tone: "warn" }
         : { id: "index", agent: "analyst", title: "Search index", headline: "Runs once the posts are in", tone: "wait" };
 
-  return [ownRow, txRow, compRow, siteRow, voiceRow, indexRow];
+  return [ownRow, txRow, siteRow, voiceRow, indexRow];
 }
 
 function BoardCard({ row }: { row: Row }) {
@@ -163,7 +137,6 @@ export function StartStep({ view, nav }: StepProps) {
   );
 
   const handles = Object.keys(NAMES).filter((p) => (d.content.handles as Record<string, string | undefined>)[p]).map((p) => NAMES[p]!);
-  const comps = d.strategy.competitors.length;
   const keys = view.keys;
   const plan: { agent: AgentKey; text: string; note?: string }[] = [
     {
@@ -171,9 +144,8 @@ export function StartStep({ view, nav }: StepProps) {
       text: `Bring in your recent posts from ${list(handles) || "your accounts"}`,
       ...(!keys.APIFY_TOKEN && !keys.ZERNIO_API_KEY ? { note: "Needs an Apify token or a Zernio key (Keys step)" } : !keys.APIFY_TOKEN ? { note: "Through Zernio: captions and numbers, no video files" } : {}),
     },
-    { agent: "art_director", text: "Transcribe your best 15 videos and the top competitor outliers", ...(!keys.APIFY_TOKEN ? { note: "Video files come with the Apify import" } : {}) },
+    { agent: "art_director", text: "Transcribe your best 15 videos", ...(!keys.APIFY_TOKEN ? { note: "Video files come with the Apify import" } : {}) },
     { agent: "copywriter", text: "Learn your voice from those transcripts and your captions" },
-    { agent: "analyst", text: comps ? `Scan ${plural(comps, "creator")} for posts that beat their usual` : "Scan competitors (none picked yet)", ...(comps && !keys.APIFY_TOKEN ? { note: "Waits for your Apify token" } : {}) },
     { agent: "analyst", text: d.business.url ? "Finish reading your website (started already)" : "No website to read; you can fill in offers in Review" },
     { agent: "analyst", text: "Index everything so every agent can search it" },
   ];

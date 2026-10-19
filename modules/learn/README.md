@@ -10,7 +10,7 @@ Closes the loop: every post is measured against your own normal, and what works 
 | `learn.funnel-import` | native | hourly | Imports website clicks, leads, bookings and sales from CSVs in `imports/funnel/` (idempotent). |
 | `learn.webhook-site` | native | webhook | `POST /webhooks/site` (shared secret): website funnel events keyed on `utm_content`, validated and stored in `funnel_events`. |
 | `learn.capture-snapshots` | native | hourly | Finds posts with a 1h / 24h / 72h / 7d / 30d capture due (each label has a window; missed windows are skipped, never filled late), pulls fresh numbers once through `research`'s own sync, and writes labelled `post_metrics` rows. |
-| `learn.attribution` | native | daily | Scores own posts against per-platform own baselines, then writes `feature_stats` per dimension value (median x, lift, n, rank-based 90% range) for windows `30d`, `90d`, `all`, plus competitor signals (`competitor:90d`). Below min n a value gets a GAP line. |
+| `learn.attribution` | native | daily | Scores own posts against per-platform own baselines, then writes `feature_stats` per dimension value (median x, lift, n, rank-based 90% range) for windows `30d`, `90d` and `all`. Below min n a value gets a GAP line. |
 | `learn.post-mortem-scan` | native | daily | Finds settled breakouts (≥ 2x), flops (< 0.6x) and new bests without a post-mortem and queues `learn.post-mortem`. |
 | `learn.post-mortem` | llm | queued | Drafts the post-mortem through `learn_get_post_context` and saves it with `learn_save_post_mortem`. |
 | `learn.weekly-briefing` | native | Monday 08:00 | Sends the weekly numbers (north star, typical post vs normal, best/weakest, top lifts, GAP lines, spend). With `weeklyBriefing.prose` it also queues `learn.weekly-briefing-prose` (tool-less, sends its summary from `onOutput`). |
@@ -18,17 +18,17 @@ Closes the loop: every post is measured against your own normal, and what works 
 
 ## Weights API (consumed by strategy and scripting)
 
-- `getWeights(ws)` → `{ ownShare, ownPosts, explore, weights, source }`. `weights[dimension][value]` is a multiplier around 1, blended from competitor signals (dominant until about 20 own posts) and own data, clamped to [0.5, 2].
+- `getWeights(ws)` → `{ ownShare, ownPosts, explore, weights, source }`. `weights[dimension][value]` is a multiplier around 1, from own data, shrunk toward 1 until about 20 own posts, clamped to [0.5, 2]. `source` is `none`, `partial` or `own`.
 - `getFeatureWeights(ws, dimension)` → `Record<value, weight>` for one dimension (e.g. `"hook_pattern"`).
 - Neither includes exploration. Pick with `pickWeighted(options, rand, weights.explore)` from `@attentionos/scoring` (20% uniform exploration by default).
 
 ## MCP tools
 
-`learn_get_performance_summary`, `learn_get_post_detail`, `learn_get_feature_stats` (`metric`: x, send_rate, follows_per_1k), `learn_get_best_slots`, `learn_get_benchmarks`, `learn_get_goal_pacing`, `learn_get_funnel`, `learn_record_funnel_event`, `learn_list_post_mortems`, `learn_get_weekly_briefing`, `learn_get_post_context`, `learn_save_post_mortem`.
+`learn_get_performance_summary`, `learn_get_post_detail`, `learn_get_feature_stats` (`metric`: x, send_rate, follows_per_1k), `learn_get_best_slots`, `learn_get_goal_pacing`, `learn_get_funnel`, `learn_record_funnel_event`, `learn_list_post_mortems`, `learn_get_weekly_briefing`, `learn_get_post_context`, `learn_save_post_mortem`.
 
 ## Analytics read API
 
-`@attentionos/module-learn/analytics` (no jobs or provider wiring, safe for Studio): `postFacts`, `overview`, `postDetail`, `bestSlots`, `competitorBenchmarks`, `funnelReport`, `followerGrowth`, `goalPacingReport`, `weeklyReport`, `loadFeatureStats`. Studio's Insights and the MCP tools both call these. Formulas: [docs/analytics.md](../../docs/analytics.md).
+`@attentionos/module-learn/analytics` (no jobs or provider wiring, safe for Studio): `postFacts`, `overview`, `postDetail`, `bestSlots`, `funnelReport`, `followerGrowth`, `goalPacingReport`, `weeklyReport`, `loadFeatureStats`. Studio's Insights and the MCP tools both call these. Formulas: [docs/analytics.md](../../docs/analytics.md).
 
 ## Tables (migrations/)
 

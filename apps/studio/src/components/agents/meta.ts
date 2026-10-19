@@ -35,7 +35,7 @@ export const AGENT_INFO: Record<AgentKey, AgentInfo> = {
     role: "Plans what to make and when",
     about: "Reads your lanes, funnel mix and last week's results, then picks what to film today and slots it on the calendar.",
     owns: ["Film today", "Calendar slots", "Funnel and lane balance"],
-    jobs: [{ id: "strategy.daily-brief", label: "Plan today's filming", description: "News takes, outlier remixes and an offer piece, each with a deadline.", ai: false }],
+    jobs: [{ id: "strategy.daily-brief", label: "Plan today's filming", description: "News takes, remixes of your best posts and an offer piece, each with a deadline.", ai: false }],
   },
   copywriter: {
     key: "copywriter",
@@ -44,7 +44,7 @@ export const AGENT_INFO: Record<AgentKey, AgentInfo> = {
     role: "Writes scripts, hooks and captions",
     about: "Writes scripts in your voice, checks every claim, and drafts captions for each platform with the right keyword call to action.",
     owns: ["Scripts", "Hooks", "Captions per platform"],
-    jobs: [{ id: "scripting.harvest-hooks", label: "Refresh hook banks", description: "Pulls fresh hooks from your best posts and competitor outliers.", ai: false }],
+    jobs: [{ id: "scripting.harvest-hooks", label: "Refresh hook banks", description: "Pulls fresh hooks from your best posts.", ai: false }],
   },
   art_director: {
     key: "art_director",
@@ -79,10 +79,10 @@ export const AGENT_INFO: Record<AgentKey, AgentInfo> = {
     name: "Analyst",
     monogram: "An",
     role: "Researches and measures what works",
-    about: "Watches competitors and trends, measures every post against your own normal and feeds what it learns back to the team.",
-    owns: ["Competitor scans", "Trend radar", "Post-mortems", "Weekly briefing"],
+    about: "Watches trends, tears down your best posts, measures every post against your own normal and feeds what it learns back to the team.",
+    owns: ["Trend radar", "Teardowns", "Post-mortems", "Weekly briefing"],
     jobs: [
-      { id: "research.competitor-scan", label: "Scan competitors", description: "Today's rotation of tracked creators, scored against their normal.", ai: false },
+      { id: "research.own-sync", label: "Sync your posts", description: "Your latest numbers, and teardowns of your best posts.", ai: false },
       { id: "research.trend-radar", label: "Check trends", description: "Which stories are moving fast enough to film today.", ai: false },
       { id: "learn.weekly-briefing", label: "Send the weekly briefing", description: "Your numbers for the week, best and weakest posts.", ai: false },
     ],

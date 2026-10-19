@@ -8,7 +8,7 @@ import type { AgentKey } from "@attentionos/core";
 export type TeamId = "research" | "planning" | "scripting" | "editing" | "publishing" | "inbox";
 
 export type RobotId =
-  | "trend" | "rival" | "transcript"
+  | "trend" | "teardown" | "transcript"
   | "ideas" | "lanes" | "slate"
   | "hook" | "script" | "voice"
   | "cutter" | "captions" | "remix"
@@ -33,7 +33,7 @@ export const CHIEF_NAME = "Chief of Staff";
 export const CORE_NAME = "Brand Brain";
 
 export const TEAMS: readonly Team[] = [
-  { id: "research", agent: "analyst", name: "Research", line: "Research finds what is working.", tint: "#8b5cf6", ticket: "Research", robots: ["trend", "rival", "transcript"] },
+  { id: "research", agent: "analyst", name: "Research", line: "Research finds what is working.", tint: "#8b5cf6", ticket: "Research", robots: ["trend", "teardown", "transcript"] },
   { id: "planning", agent: "strategist", name: "Planning", line: "Planning picks what to film and when.", tint: "#b77dff", ticket: "Plan", robots: ["ideas", "lanes", "slate"] },
   { id: "scripting", agent: "copywriter", name: "Scripting", line: "Scripting writes it in your voice.", tint: "#d0a6ff", ticket: "Script", robots: ["hook", "script", "voice"] },
   { id: "editing", agent: "art_director", name: "Editing", line: "Editing cuts your takes into reels.", tint: "#8139fa", ticket: "Edit", robots: ["cutter", "captions", "remix"] },
@@ -43,7 +43,7 @@ export const TEAMS: readonly Team[] = [
 
 export const ROBOT_NAME: Record<RobotId, string> = {
   trend: "Trend Scout",
-  rival: "Competitor Watch",
+  teardown: "Teardowns",
   transcript: "Transcript Reader",
   ideas: "Idea Picker",
   lanes: "Lane Balance",

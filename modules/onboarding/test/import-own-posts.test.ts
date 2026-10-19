@@ -97,9 +97,6 @@ describe.skipIf(!HAS_DB)(`importing the owner's own posts${NEEDS_DB}`, () => {
     const state = await readState(ws.sql, ws.id);
     expect(state?.data.start.notes.some((n) => n.startsWith("LinkedIn"))).toBe(true);
 
-    // Research never scans the owner's own row as a competitor.
-    const { listTrackedCreators } = await import("@attentionos/module-research");
-    expect((await listTrackedCreators(ws)).some((c) => c.handle === "examplebrand")).toBe(false);
   });
 
   it("falls back to the connected account's analytics when scraping isn't allowed, and goes straight to the voice step", async () => {

@@ -64,7 +64,7 @@ type Row = FilmRow & {
   takes: number;
 };
 
-const KIND_LABEL: Record<string, string> = { news: "News reel", remix: "Outlier remix", talking_head: "Talking head", offer: "Offer piece" };
+const KIND_LABEL: Record<string, string> = { news: "News reel", remix: "Remix", talking_head: "Talking head", offer: "Offer piece" };
 
 function claimCounts(ledger: unknown): FilmScript["claims"] {
   const out = { pass: 0, fix: 0, cut: 0 };

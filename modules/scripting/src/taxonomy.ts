@@ -1,7 +1,7 @@
 /**
  * Named hook-pattern taxonomy. Generic and niche-free: each pattern has a definition, an abstract
  * template with [placeholders], and cheap regex cues for the pre-classifier. No real hooks are stored
- * here; banks hold the user's own openers and harvested competitor openers.
+ * here; banks hold the user's own openers and hooks saved by hand.
  */
 
 export type HookPattern = {

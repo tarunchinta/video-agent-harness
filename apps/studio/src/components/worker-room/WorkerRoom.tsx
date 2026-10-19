@@ -140,14 +140,10 @@ export function WorkerRoom({ feed, full, hold: startHeld = false, framed = false
   };
 
   const name = snapshot?.workspace.name ?? "";
-  // Wall tickers: the workspace's totals, and who the right wall is studying once competitors have been scraped.
+  // Wall tickers: the workspace's handle and its totals.
   const totals = feed.totalPosts ? `${grouped(feed.totalViews)} VIEWS   ${grouped(feed.totalPosts)} POSTS` : "";
   const own = (feed.handle ? `@${feed.handle}` : name).toUpperCase();
-  const rivalCount = feed.rivalCreators ?? 0;
-  const wallRight = feed.rivals?.length ? `STUDYING ${rivalCount} ${rivalCount === 1 ? "COMPETITOR" : "COMPETITORS"}` : totals;
-  const wallLeft = feed.rivals?.length && totals ? `${own}   ${totals}` : own;
-  const stopLine = stop.id === "feed" && feed.rivals?.length ? "Your best posts on the left. Your competitors' on the right." : stop.line;
-  const line = captionFor(stop.id, stopLine, room);
+  const line = captionFor(stop.id, stop.line, room);
   const [hx, hy] = iso(CHIEF.x, CHIEF.y, CHIEF.z + 0.55);
   const chiefText = statusText({ team: "research", state: room.chief.state, name: CHIEF_NAME, label: room.chief.label, pending: 0 });
 
@@ -168,9 +164,9 @@ export function WorkerRoom({ feed, full, hold: startHeld = false, framed = false
             <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} width={VIEW.w} height={VIEW.h} role="img" aria-label={roomLabel(room)}>
               <Defs />
               <Shell states={states} chief={room.chief.state} />
-              <Walls right={wallRight} left={wallLeft} />
+              <Walls right={totals} left={own} />
               <g onClick={pickFeed} className="wr-pick">
-                <WallFeed cards={feed.cards} rivals={feed.rivals} handle={feed.handle} shifts={room.wall.shifts} flashes={room.wall.flashes} />
+                <WallFeed cards={feed.cards} handle={feed.handle} shifts={room.wall.shifts} flashes={room.wall.flashes} />
               </g>
               {floor.map((f) => (
                 <g key={f.key}>{f.node}</g>

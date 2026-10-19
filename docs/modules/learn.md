@@ -34,13 +34,9 @@ Each value gets a verdict (clearly better, leaning better, about usual, leaning 
 
 A day × time-of-day heatmap in your timezone. Slots with few posts are pulled toward your normal so one lucky post can't crown a slot, and only slots with enough posts are named best.
 
-### Competitor benchmarks
-
-Your typical post against each tracked creator's, per platform (medians only), and their recent outliers to study.
-
 ### Weights
 
-What works feeds back into the Strategist's picks and the Copywriter's hook choice. A share of picks (20% by default) is always kept for exploration, so you keep finding new winners.
+What works feeds back into the Strategist's picks and the Copywriter's hook choice. With only a few posts the weights stay close to neutral; from about 20 posts your own data counts in full. A share of picks (20% by default) is always kept for exploration, so you keep finding new winners.
 
 ### Post-mortems
 
@@ -60,12 +56,12 @@ Your website sends clicks, leads, booked calls and sales to `POST /webhooks/site
 
 ### Weekly briefing and cost watch
 
-A weekly report: the headline, north-star pace, the week's numbers, best and weakest posts with why, what lifts and what holds results back, the funnel, your best slot, where you stand against tracked creators, a focus list where each item cites a number, gaps, and what you spent against your budgets.
+A weekly report: the headline, north-star pace, the week's numbers, best and weakest posts with why, what lifts and what holds results back, the funnel, your best slot, a focus list where each item cites a number, gaps, and what you spent against your budgets.
 
 ## What you'll see
 
-- **Studio → Analytics**: Overview, Your posts (with a full breakdown per post), What's working (including the best time to post) and Competitors. Overview links to the Weekly report and Leads and sales (the funnel) once there's data.
-- `/attention:learn` in Claude Code for the latest report, and MCP tools (`learn_get_performance_summary`, `learn_get_post_detail`, `learn_get_best_slots`, `learn_get_benchmarks`, `learn_get_goal_pacing`, `learn_get_funnel`) that give agents the same numbers.
+- **Studio → Analytics**: Overview, Your posts (with a full breakdown per post), What's working (including the best time to post). Overview links to the Weekly report and Leads and sales (the funnel) once there's data.
+- `/attention:learn` in Claude Code for the latest report, and MCP tools (`learn_get_performance_summary`, `learn_get_post_detail`, `learn_get_best_slots`, `learn_get_goal_pacing`, `learn_get_funnel`) that give agents the same numbers.
 - Post-mortems and the weekly briefing in the approvals queue and your notifier.
 - `brand/lessons.md` growing as you work.
 
@@ -79,5 +75,5 @@ Lessons you dictate are written immediately. Lessons the agents infer, and weekl
 
 ## Limits
 
-- Attribution, slots and benchmarks need enough posts. Expect `GAP:` lines for the first few weeks.
+- Attribution and slots need enough posts. Expect `GAP:` lines for the first few weeks.
 - Instagram skip rate and retention curves come from a CSV export; follower history needs Zernio's analytics add-on or a follower CSV; revenue needs sale events from your website.

@@ -7,7 +7,6 @@ export const ANALYTICS_TABS = [
   { href: "/analytics", label: "Overview" },
   { href: "/analytics/posts", label: "Your posts" },
   { href: "/analytics/working", label: "What's working" },
-  { href: "/analytics/competitors", label: "Competitors" },
 ] as const;
 
 /** Section tabs for Analytics. Keeps the chosen range (`?days=`) when moving between views. */

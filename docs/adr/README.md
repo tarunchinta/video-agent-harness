@@ -12,13 +12,14 @@ Each record explains one significant decision: the context, what we decided, wha
 | [ADR-6](0006-engine-workspace-split.md) | Engine and workspace split | Accepted |
 | [ADR-7](0007-cut-engine-default.md) | Cut engine by default, Remotion opt-in, one `EditPlan` schema | Accepted |
 | [ADR-8](0008-mit-license-new-repository.md) | MIT license, new repository | Accepted |
-| [ADR-9](0009-apify-default-scraper.md) | Apify default for competitor data, Instagram Graph API fallback, yt-dlp for TikTok and YouTube | Accepted |
+| [ADR-9](0009-apify-default-scraper.md) | Apify default for competitor data, Instagram Graph API fallback, yt-dlp for TikTok and YouTube | Accepted (competitor scanning removed by ADR-16) |
 | [ADR-10](0010-telegram-default-notifier.md) | Telegram default notifier, Discord adapter, email digest (planned) | Accepted |
 | [ADR-11](0011-workspace-id-and-rls.md) | `workspace_id` and RLS from day one; single-workspace UI until later | Accepted |
 | [ADR-12](0012-autopilot-local-first.md) | Autopilot runs locally by default; Docker for a VPS; webhooks through a tunnel | Accepted (Docker is now the standard way to run) |
 | [ADR-13](0013-instagram-feed-assist.md) | Instagram main feed defaults to "assist", with an autopost toggle | Accepted |
 | [ADR-14](0014-opt-in-risky-features.md) | Trial reels and scraping opt-in with notices; no browser automation | Accepted |
 | [ADR-15](0015-local-rag-pgvector.md) | Local knowledge store (RAG) in Postgres with pgvector; local embeddings by default, API embeddings optional | Accepted |
+| [ADR-16](0016-remove-competitor-tracking.md) | Remove competitor tracking; ideas come from the owner's own breakouts, teardowns and trends | Proposed |
 
 ## Writing a new record
 

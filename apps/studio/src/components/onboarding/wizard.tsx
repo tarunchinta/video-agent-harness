@@ -12,7 +12,6 @@ import { useSetupAction } from "./parts";
 import { WelcomeStep } from "./step-welcome";
 import { YouStep } from "./step-you";
 import { KeysStep } from "./step-keys";
-import { CompetitorsStep } from "./step-competitors";
 import { StartStep } from "./step-start";
 import { ReviewStep } from "./step-review";
 import { InterviewStep } from "./step-interview";
@@ -32,7 +31,6 @@ const STEPS: Record<StepId, (p: StepProps) => React.ReactNode> = {
   welcome: WelcomeStep,
   you: YouStep,
   keys: KeysStep,
-  competitors: CompetitorsStep,
   start: StartStep,
   review: ReviewStep,
   "go-live": GoLiveStep,

@@ -23,7 +23,7 @@ let db: Promise<{ sql: Sql; drop(): Promise<void> }> | undefined;
 
 /** One scratch database per test file run (`attentionos_test_knowledge`), with every core migration applied. */
 export function testDb(name = "attentionos_test_knowledge") {
-  // Module migrations too: seeds include module-owned tables (hooks.abstract, learn's history, ...).
+  // Module migrations too: seeds include module-owned tables (scripting's hook indexes, learn's history, ...).
   const modulesRoot = fileURLToPath(new URL("../../../modules", import.meta.url));
   const moduleDirs = readdirSync(modulesRoot)
     .map((m) => ({ dir: join(modulesRoot, m, "migrations"), source: m }))

@@ -33,6 +33,6 @@ Wire one in by importing it from a page, then remove its header comment and its 
 - `server/queries/production.ts` `getTodayStrip`: counts for the Home loop strip.
 - `server/queries/approvals.ts` `getRevisingVideos`: the videos being revised.
 
-Not used by anything yet (no page or unfinished component calls them): `getPostDetail` and `getCompetitors` in
-`server/queries/insights.ts`, `getTeardowns` and `getResearchSummary` in `server/queries/research.ts`, and
-`unreadyAction` in `server/actions/approvals.ts`.
+Not used by anything yet (no page or unfinished component calls them): `getPostDetail` in
+`server/queries/insights.ts`, `getTrends` and `getTeardowns` in `server/queries/research.ts` (with `TrendRow` and
+`TeardownCard` in `research/views.tsx`), and `unreadyAction` in `server/actions/approvals.ts`.

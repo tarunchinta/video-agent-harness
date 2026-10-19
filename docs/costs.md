@@ -9,7 +9,7 @@ AttentionOS itself is free and open source (MIT). You pay only for the services 
 | Claude plan (the default) **or** API use (optional API engine) | $20+ **or** about $15–40 |
 | Database (local Postgres with pgvector, on your machine) | $0 |
 | Zernio (publishing, DMs, analytics) | $0–24 |
-| Apify (competitor research) | $0–29 |
+| Apify (reading public posts) | $0–29 |
 | **Total** | **about $20–$120 a month** |
 
 Everything else in the default setup is free: the local database and knowledge store (with local embeddings), Telegram or Discord, whisper.cpp speech-to-text on your own machine, ffmpeg, the cut engine and the Instagram Graph API.
@@ -66,7 +66,7 @@ Set in `config/attentionos.config.ts`. Defaults:
 budgets: {
   perRunUsd: 2,           // hard ceiling for one agent run
   dailyUsd: 5,            // no new model runs once today's spend reaches this
-  scrapingMonthlyUsd: 29, // checked BEFORE every competitor scan
+  scrapingMonthlyUsd: 29, // checked BEFORE reading public posts
   imagesDailyUsd: 2,      // generated images for carousels
 },
 ```

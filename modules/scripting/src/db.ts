@@ -46,13 +46,12 @@ export type HookRow = {
   id: string;
   text: string;
   pattern: string;
-  origin: "own" | "competitor" | "manual";
+  origin: "own" | "manual";
   source_ref: Record<string, unknown> | null;
   uses: number;
   wins: number;
   score: string | number | null;
   status: string;
-  abstract: string | null;
   last_used_at: Date | null;
   created_at: Date;
 };

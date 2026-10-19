@@ -5,7 +5,7 @@ Core module, setup level 1. Turns a content idea into a script the owner can fil
 ## What it does
 
 - **Remix first.** A content item with an `external_post` source is a remix: the Copywriter remakes that proven post closely (same hook wording and pattern, beats, length, format and CTA mechanic; the owner's topic specifics, proof and words). It works from the source's remix blueprint (research teardown, tool-less and checked in code), never the transcript. The validator gets `rules.remix` (guardrails `checkRemix`): the source creator's handle and `swapOut` terms, their numbers without a `proof:` source, and long copied passages after the hook fail; drifting from the source's hook, length or beat count warns. `brief.remixOf.line` ("Based on @handle's reel, 1.2M views, 14x their normal") is what Studio shows. Without a source, the Copywriter looks for one first (`scripting_find_remix_sources`, `scripting_use_remix_source`). `scripting.remix-ready` starts a remix script that was waiting for its source's teardown. Every brief carries `ownWinners`, the owner's best posts against their own normal.
-- **Hook banks.** `scripting.harvest-hooks` (daily) adds the owner's openers that beat their own median by 3x or more (own bank) and the spoken hooks of competitor outliers (competitor bank, capped at 300, scores halve every 60 days). Competitor hooks are untrusted text: tool-using agents only see their structure, written by the tool-less `scripting.classify-hooks` job and validated in code.
+- **Hook banks.** `scripting.harvest-hooks` (daily) adds the owner's openers that beat their own median by 3x or more (own bank). Hooks saved by hand go in the manual bank.
 - **Pattern taxonomy.** 16 named, niche-free hook patterns with definitions and abstract templates (`src/taxonomy.ts`), plus a regex pre-classifier.
 - **Hook selection.** Weighted by the `learn` module's hook-pattern weights when it is installed (`getFeatureWeights(ws, "hook_pattern")`), uniform otherwise, with 20% exploration.
 - **Scripts.** `scripting.write-script` writes the 6-beat script (hook, turn, proof, rehook, play, close) with a claim ledger and per-platform captions, saves a new version with the validator report, revises from the exact fixes (at most 2 revisions) and asks for human approval. Only a person can approve, and never while a check fails.
@@ -19,9 +19,9 @@ Core module, setup level 1. Turns a content idea into a script the owner can fil
 | Tool | Purpose |
 |---|---|
 | `scripting_get_content_brief` | Brief, CTA type, keyword, length window, Brand Kit files to read; the remix source and blueprint; the owner's best posts |
-| `scripting_find_remix_sources` | Proven posts (competitor outliers, own breakouts) for a topic, ranked by match and times-normal; facts only |
+| `scripting_find_remix_sources` | The owner's breakouts for a topic, ranked by match and times-normal; facts only |
 | `scripting_use_remix_source` | Make a content item a remix of one proven post |
-| `scripting_list_hooks` | Hook banks by bank and pattern (competitor hooks as structure only) |
+| `scripting_list_hooks` | Hook banks (own, manual) by bank and pattern |
 | `scripting_pick_hooks` | Weighted picks with exploration |
 | `scripting_validate_script` | Dry-run the validator |
 | `scripting_save_script` | Save a version with its report; request approval when it passes |
@@ -37,7 +37,7 @@ Core module, setup level 1. Turns a content idea into a script the owner can fil
 
 ## Settings (`config.modules.scripting.settings`)
 
-`wpm` (160), `minSeconds` (15), `maxSeconds` (60), `hookMaxSeconds` (3), `maxRevisions` (2), `exploration` (0.2), `ownBankMultiplier` (3), `competitorBankCap` (300), `competitorHalfLifeDays` (60), `hookCooldownDays` (14), `spentStatWindow` (10), `allowedCaps`, `ctaLines` (per CTA type, `{word}` = keyword), `textPosts` counts.
+`wpm` (160), `minSeconds` (15), `maxSeconds` (60), `hookMaxSeconds` (3), `maxRevisions` (2), `exploration` (0.2), `ownBankMultiplier` (3), `hookCooldownDays` (14), `spentStatWindow` (10), `allowedCaps`, `ctaLines` (per CTA type, `{word}` = keyword), `textPosts` counts.
 
 ## Data
 

@@ -7,12 +7,12 @@ import { Captions, Cutter, Remix } from "./editing";
 import { CommentReplies, DmCloser, LeadLogger } from "./inbox";
 import { FilmList, IdeaPicker, LaneBalance } from "./planning";
 import { CrossPoster, Scheduler, Thumbnails } from "./publishing";
-import { CompetitorWatch, TranscriptReader, TrendScout } from "./research";
+import { Teardowns, TranscriptReader, TrendScout } from "./research";
 import { HookWriter, ScriptWriter, VoiceCheck } from "./scripting";
 
 export const SCENES: Record<RobotId, ComponentType<SceneProps>> = {
   trend: TrendScout,
-  rival: CompetitorWatch,
+  teardown: Teardowns,
   transcript: TranscriptReader,
   ideas: IdeaPicker,
   lanes: LaneBalance,

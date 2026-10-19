@@ -154,19 +154,17 @@ export function slotBucket(publishedAt: Date | null | undefined, timeZone = "UTC
 export type FeatureWeights = Record<string, Record<string, number>>;
 
 export type BlendedWeights = {
-  /** Share of the weight that comes from own data (0 = competitor only, 1 = own only). */
+  /** How far own data is trusted (0 = every weight neutral, 1 = own lifts in full). */
   ownShare: number;
   weights: FeatureWeights;
 };
 
 /**
- * Blends own and competitor attribution into picker weights: competitor signals dominate until
- * about `fullTrustAt` own posts exist, then own data does. Only sufficient stats move a weight; every weight
- * is clamped to [min, max] so one lucky post can't starve a lane.
+ * Turns own attribution into picker weights, shrunk toward neutral (1) until about `fullTrustAt` own posts exist.
+ * Only sufficient stats move a weight; every weight is clamped to [min, max] so one lucky post can't starve a lane.
  */
 export function blendWeights(opts: {
   own: readonly FeatureStat[];
-  competitor: readonly FeatureStat[];
   ownPosts: number;
   fullTrustAt?: number;
   min?: number;
@@ -176,18 +174,11 @@ export function blendWeights(opts: {
   const ownShare = clamp(opts.ownPosts / fullTrustAt, 0, 1);
   const lo = opts.min ?? 0.5;
   const hi = opts.max ?? 2;
-  const liftMap = (stats: readonly FeatureStat[]) => {
-    const m = new Map<string, number>();
-    for (const s of stats) if (s.sufficient && s.lift !== null) m.set(`${s.dimension}\u0000${s.value}`, s.lift);
-    return m;
-  };
-  const own = liftMap(opts.own);
-  const comp = liftMap(opts.competitor);
   const weights: FeatureWeights = {};
-  for (const key of new Set([...own.keys(), ...comp.keys()])) {
-    const [dim, value] = key.split("\u0000") as [string, string];
-    const w = ownShare * (own.get(key) ?? 1) + (1 - ownShare) * (comp.get(key) ?? 1);
-    (weights[dim] ??= {})[value] = round(clamp(w, lo, hi), 3);
+  for (const s of opts.own) {
+    if (!s.sufficient || s.lift === null) continue;
+    const w = ownShare * s.lift + (1 - ownShare);
+    (weights[s.dimension] ??= {})[s.value] = round(clamp(w, lo, hi), 3);
   }
   return { ownShare: round(ownShare, 3), weights };
 }

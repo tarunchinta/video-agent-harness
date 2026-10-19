@@ -3,7 +3,7 @@ import { bareHandle } from "./handles.ts";
 
 /**
  * The owner's own posts, as setup imports them: stored in `external_posts` under a `tracked_creators` row with tier
- * `own` (research never scans or scores that tier, and `syncTrackedCreators` leaves it alone). Transcripts arrive
+ * `own` (the only tier there is; research tears down the best of them). Transcripts arrive
  * through the research → editing hand-off and land on the same rows, which is where the voice profile reads them.
  */
 

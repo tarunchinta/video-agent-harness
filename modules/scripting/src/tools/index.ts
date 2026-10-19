@@ -23,9 +23,9 @@ export const getContentBriefTool = defineTool({
 
 export const listHooksTool = defineTool({
   name: "scripting_list_hooks",
-  description: "List hooks from the banks. Own and manual hooks include their words; competitor hooks show only their structure (a remix's own source hook comes with its blueprint instead). Filter by bank and pattern.",
+  description: "List hooks from the banks: the owner's own openers that beat their normal, and hooks saved by hand (a remix's source hook comes with its blueprint instead). Filter by bank and pattern.",
   input: z.object({
-    bank: z.enum(["own", "competitor", "manual", "all"]).default("all"),
+    bank: z.enum(["own", "manual", "all"]).default("all"),
     pattern: z.string().optional().describe(`One of: ${HOOK_PATTERN_IDS.join(", ")}`),
     limit: z.number().int().min(1).max(100).default(20),
     includeTaxonomy: z.boolean().default(false).describe("Also return the pattern taxonomy with definitions and templates."),
@@ -192,7 +192,7 @@ export const saveTextPostsTool = defineTool({
 export const findRemixSourcesTool = defineTool({
   name: "scripting_find_remix_sources",
   description:
-    "Find proven posts to remake for a topic: competitor outliers and the owner's own breakouts, ranked by how well they match the topic and how far they beat their creator's normal. " +
+    "Find proven posts to remake for a topic: the owner's own breakouts, ranked by how well they match the topic and how far they beat the owner's normal. " +
     "ready means a checked blueprint exists (hook line, beats, format, CTA mechanic), so the script can follow it beat for beat. Returns facts only, never the post's text.",
   input: z.object({
     topic: z.string().trim().min(3).max(200).describe("What the script is about, in a few words"),

@@ -1,7 +1,7 @@
 {
   "id": "research",
   "name": "Research",
-  "description": "Syncs your own post metrics, finds competitor outliers against each creator's own baseline, runs the trend radar and writes teardowns.",
+  "description": "Syncs your own post metrics, tears down your best posts (and any post you paste in), and runs the trend radar.",
   "agent": "analyst",
   "tier": "core",
   "level": 1,
@@ -10,7 +10,6 @@
   "optionalProviders": ["ownAnalytics", "scraper", "trendSources"],
   "schedules": {
     "research.own-sync": "15 */6 * * *",
-    "research.competitor-scan": "30 6 * * *",
     "research.trend-radar": "5 7-21 * * *"
   },
   "requiresAcknowledgement": []

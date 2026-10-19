@@ -4,7 +4,6 @@ import { join, relative, resolve, sep } from "node:path";
 import {
   BRAND_FILES,
   brandSchema,
-  competitorsSchema,
   pillarSchema,
   proofInventorySchema,
   sourcesSchema,
@@ -99,9 +98,6 @@ export function validateBrandFile(file: string, content: string): string {
       if (dup) throw new BrandFileError(`Proof item id "${dup}" is used twice.`);
       break;
     }
-    case BRAND_FILES.competitors:
-      check(competitorsSchema, parseYamlText(name, text));
-      break;
     case BRAND_FILES.sources: {
       const s = check(sourcesSchema, parseYamlText(name, text)) as z.output<typeof sourcesSchema>;
       const ids = s.sources.map((x) => x.id);

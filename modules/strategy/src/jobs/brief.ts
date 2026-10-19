@@ -24,7 +24,7 @@ export async function buildPlannerInput(ws: WorkspaceContext, mode: BriefMode, d
   const recent = await recentPieces(ws);
   const weights = await getWeights(ws);
 
-  // Remix-first: about `remixShare` of the slate remakes proven posts; the lanes keep their offer and news slots.
+  // Remix-first: about `remixShare` of the slate remakes the owner's breakouts; the lanes keep their offer and news slots.
   let slots: Record<IdeaKind, number> = remixSlots(s.daily, s.remixShare);
   if (mode === "batch") {
     const size = s.batchSize ?? preset.weeklyShortVideos ?? Math.max(1, pillars.lanes.reduce((n, l) => n + l.weeklyQuota, 0));
@@ -65,7 +65,7 @@ export async function buildPlannerInput(ws: WorkspaceContext, mode: BriefMode, d
     recent,
     rejected: pillars.rejected.map((r) => r.text),
     trends: mode === "batch" ? [] : await trendCandidates(ws),
-    outliers: remixes.map(toOutlier),
+    remixes: remixes.map(toRemixCandidate),
     proof: await proofCandidates(ws),
     offers: kit.brand.offers.map((o) => ({ id: o.id, name: o.name, cta: o.cta })),
     templates,
@@ -87,15 +87,15 @@ export async function buildPlannerInput(ws: WorkspaceContext, mode: BriefMode, d
   };
 }
 
-function toOutlier(r: RankedRemix): PlannerInput["outliers"][number] {
-  return { id: r.id, url: r.url, creator: r.creator, platform: r.platform, x: r.x, views: r.views, own: r.own, topic: r.topic, hookPattern: r.hookPattern, format: r.format, score: r.score };
+function toRemixCandidate(r: RankedRemix): PlannerInput["remixes"][number] {
+  return { id: r.id, url: r.url, creator: r.creator, platform: r.platform, x: r.x, views: r.views, topic: r.topic, hookPattern: r.hookPattern, format: r.format, score: r.score };
 }
 
 export type BriefResult = { date: string; mode: BriefMode; created: boolean; items: BriefRow[]; notes: string[]; approvalRef?: string; scripts?: ScriptHandoff };
 
 const KIND_LABEL: Record<string, [string, string]> = {
   news: ["news reel", "news reels"],
-  remix: ["outlier remix", "outlier remixes"],
+  remix: ["remix", "remixes"],
   talking_head: ["talking head", "talking heads"],
   offer: ["offer piece", "offer pieces"],
 };
@@ -167,7 +167,7 @@ export const dailyBriefJob = defineNativeJob({
   kind: "native",
   id: "strategy.daily-brief",
   agent: "strategist",
-  description: 'Plans today\'s "Film today" slate, led by remixes of proven posts (competitor outliers and your own breakouts), plus fresh news and the offer piece, each with a lane, format and deadline.',
+  description: 'Plans today\'s "Film today" slate, led by remixes of your own breakouts, plus fresh news and the offer piece, each with a lane, format and deadline.',
   input: briefInput,
   async run(ctx) {
     const r = await runBrief(ctx.ws, { mode: "daily", ...(ctx.input.date ? { date: ctx.input.date } : {}), replan: ctx.input.replan, runId: ctx.runId });

@@ -24,6 +24,7 @@ describe("collectMigrations", () => {
       "core:20261020000000_knowledge_chunks.sql",
       "core:20261023000000_queue_priority.sql",
       "core:20261024000000_drop_workspace_is_demo.sql",
+      "core:20261025000000_drop_competitor_tracking.sql",
     ]);
   });
 
@@ -52,12 +53,12 @@ describe("runMigrations", () => {
   it("applies core and module migrations in order, once", async () => {
     const moduleDirs = [{ dir: modA, source: "mod-a" }, { dir: join(fixtures, "mod-b"), source: "mod-b" }];
     const first = await runMigrations(db.sql, { moduleDirs });
-    expect(first.applied).toHaveLength(8);
+    expect(first.applied).toHaveLength(9);
     const cols = await db.sql`select column_name from information_schema.columns where table_name = 'mod_a_items' order by column_name`;
     expect(cols.map((c) => c.column_name)).toEqual(["id", "label", "note"]);
     const second = await runMigrations(db.sql, { moduleDirs });
     expect(second.applied).toEqual([]);
-    expect(second.alreadyApplied).toBe(8);
+    expect(second.alreadyApplied).toBe(9);
   });
 
   it("refuses to run when an applied file changed", async () => {

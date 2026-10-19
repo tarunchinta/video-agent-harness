@@ -179,10 +179,10 @@ describe("followers, overview and reports", () => {
     };
     let now = NOW;
     const ws = await createTestWorkspace({ now: () => now, providers: { scraper }, config: { acknowledgements: { scrapingTerms: true } } });
-    await ws.sql`insert into tracked_creators (workspace_id, platform, handle, tier) values (${ws.id}, 'instagram', 'demo_owner', 'own'), (${ws.id}, 'instagram', 'peer_b', 'core')`;
+    await ws.sql`insert into tracked_creators (workspace_id, platform, handle, tier) values (${ws.id}, 'instagram', 'demo_owner', 'own')`;
 
     expect(await refreshScanFollowers(ws)).toMatchObject({ checked: 1, recorded: 1 });
-    expect(reads).toEqual(["instagram:demo_owner"]); // competitors are never read here
+    expect(reads).toEqual(["instagram:demo_owner"]);
     // Fresh within the week: nothing to do.
     now = new Date(NOW.getTime() + 3 * D);
     expect(await refreshScanFollowers(ws)).toMatchObject({ checked: 0, recorded: 0 });
@@ -209,14 +209,9 @@ describe("followers, overview and reports", () => {
     expect(await refreshScanFollowers(off)).toMatchObject({ skipped: "terms" });
   });
 
-  it("builds the overview, post detail, slots, benchmarks and the weekly report from one set of numbers", async () => {
+  it("builds the overview, post detail, slots and the weekly report from one set of numbers", async () => {
     const ws = await createTestWorkspace({ now: () => NOW, config: { northStar: { metric: "leads_per_week", target: 4 } } });
     const ids = await seed(ws, [...history(), { key: "hit", hoursAgo: 80, views: 90_000, comments: 420, early: 40_000, label: "72h", saves: 2_000, shares: 1_500 }]);
-    const [tc] = await ws.sql`insert into tracked_creators (workspace_id, platform, handle) values (${ws.id}, 'instagram', 'peer_a') returning id`;
-    for (let i = 0; i < 6; i++) {
-      await ws.sql`insert into external_posts (workspace_id, tracked_creator_id, platform, platform_post_id, author_handle, url, published_at, views, likes, comments, x_score, is_outlier, spoken_hook)
-        values (${ws.id}, ${tc!.id}, 'instagram', ${`ext${i}`}, 'peer_a', ${`https://example.test/ext${i}`}, ${new Date(NOW.getTime() - (i + 3) * D)}, ${40_000 + i * 1000}, 2000, 150, ${i === 0 ? 3.2 : 1}, ${i === 0}, ${i === 0 ? "Nobody tells you this about walls" : null})`;
-    }
     await runAttribution(ws);
     const sendStats = await loadFeatureStats(ws, "90d", undefined, "send_rate");
     expect(sendStats.find((s) => s.dimension === "lane" && s.value === "proof")!.verdict).toBe("clear_win");
@@ -236,9 +231,6 @@ describe("followers, overview and reports", () => {
     const slots = (await call(ws, "learn_get_best_slots", {})) as { posts: number; byDay: unknown[] };
     expect(slots.posts).toBe(13);
     expect(slots.byDay).toHaveLength(7);
-    const bench = (await call(ws, "learn_get_benchmarks", {})) as { platform: string; peerMedianViews: number; recentOutliers: { hook: string }[] }[];
-    expect(bench[0]!.peerMedianViews).toBe(42_500);
-    expect(bench[0]!.recentOutliers[0]!.hook).toMatch(/walls/);
     const detail = (await call(ws, "learn_get_post_detail", { postId: ids.hit })) as { velocity: number; retention: string };
     expect(detail.velocity).toBeGreaterThan(3);
     expect(detail.retention).toMatch(/^GAP/);
@@ -250,7 +242,7 @@ describe("followers, overview and reports", () => {
     expect(r.focus.some((f) => /^Rework or pause lane "myth": 0\.\d+× over 6 posts\.$/.test(f))).toBe(true);
     expect(r.losses[0]!.verdict).toBe("clear_loss");
     expect(r.markdown).toContain("Focus next week:");
-    expect(r.markdown).toContain("Against tracked creators");
+    expect(r.markdown).not.toContain("tracked creators");
     const b = await buildWeeklyBriefing(ws);
     expect(b.headline).toBe(r.headline);
     expect(b.best!.why.length).toBeGreaterThan(0);

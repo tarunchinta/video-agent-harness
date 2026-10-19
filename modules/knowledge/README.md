@@ -11,9 +11,9 @@ A searchable memory of the workspace, kept in your own Postgres with pgvector ([
 | `lesson` | `brand/lessons.md` | own |
 | `own_caption`, `own_transcript` | published posts (caption, transcript in the post payload) | own |
 | `script` | the newest script per content item (approved first) | own |
-| `hook` | the hook banks; competitor hooks only as their validated structure | own |
+| `hook` | the hook banks (the owner's own openers and hooks saved by hand) | own |
 | `post_mortem` | post-mortems and their lessons | own |
-| `competitor_transcript`, `comment_gold` | competitor transcripts, captions and top comments | untrusted |
+| `library_transcript`, `comment_gold` | transcripts, captions and top comments of posts in the research library (your imported posts and posts pasted in for a teardown) | untrusted |
 | `teardown`, `trend_kit` | teardowns and trend kits (they quote other people) | untrusted |
 
 `dm` and `lead_note` are reserved source types; DMs are not indexed.

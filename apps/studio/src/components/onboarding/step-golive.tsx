@@ -77,7 +77,6 @@ export function GoLiveStep(props: StepProps) {
   const lines = [
     { step: "you", title: "You", detail: Object.keys(d.content.handles).length ? `${Object.keys(d.content.handles).length} account${Object.keys(d.content.handles).length === 1 ? "" : "s"}${d.business.url ? ` and ${d.business.url}` : ""}` : "No accounts yet" },
     { step: "keys", title: "Keys", detail: [view.keys.APIFY_TOKEN ? "Apify" : "", view.keys.ZERNIO_API_KEY ? "Zernio" : ""].filter(Boolean).join(" and ") || "None yet: add them in Settings" },
-    { step: "competitors", title: "Competitors", detail: d.strategy.competitors.length ? `${d.strategy.competitors.length} creators watched` : "None picked" },
     { step: "review", title: "Brand Kit", detail: [d.business.approvedAt ? "business approved" : "", d.voice.approvedAt ? "voice approved" : ""].filter(Boolean).join(", ") || "Drafts not approved yet" },
   ];
 

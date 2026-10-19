@@ -2,7 +2,7 @@ import type { Platform } from "@attentionos/core";
 
 /**
  * Social handles for setup: cleaning what the owner types or pastes (handles or profile links), matching them to the
- * accounts connected in the publishing service, and the competitor list rules. Pure functions, safe in Studio
+ * accounts connected in the publishing service. Pure functions, safe in Studio
  * (imported through `@attentionos/module-onboarding/handles`) and in jobs.
  */
 
@@ -116,41 +116,4 @@ export function matchAccounts(handles: Partial<Record<Platform, string>>, accoun
   });
   for (const a of accounts) if (!used.has(a)) out.push({ platform: a.platform, handle: "", state: "extra", account: a });
   return out;
-}
-
-/** Competitor handles are always "@name" (the form brand/competitors.yaml and the scrapers use). */
-export function competitorHandle(platform: Platform, raw: string): string {
-  const h = cleanHandle(platform, raw);
-  return h ? `@${bareHandle(h)}` : "";
-}
-
-export type CompetitorLike = { handle: string; platform: Platform };
-
-/**
- * Adds handles to the competitor list: cleaned, never the owner's own, no duplicates, at most `max` per platform.
- * Returns the new list and what was left out (with a reason the UI can show).
- */
-export function addCompetitors<T extends CompetitorLike>(
-  list: T[],
-  platform: Platform,
-  handles: string[],
-  opts: { own?: Partial<Record<Platform, string>>; max?: number; make: (c: CompetitorLike) => T },
-): { list: T[]; skipped: { handle: string; reason: "own" | "duplicate" | "full" | "invalid" }[] } {
-  const max = opts.max ?? 10;
-  const own = new Set(ownHandleList(opts.own ?? {}).map((h) => `${h.platform}:${bareHandle(h.handle)}`));
-  const next = [...list];
-  const skipped: { handle: string; reason: "own" | "duplicate" | "full" | "invalid" }[] = [];
-  for (const raw of handles) {
-    const handle = competitorHandle(platform, raw);
-    if (!handle) {
-      skipped.push({ handle: raw, reason: "invalid" });
-      continue;
-    }
-    const key = `${platform}:${bareHandle(handle)}`;
-    if (own.has(key)) skipped.push({ handle, reason: "own" });
-    else if (next.some((c) => `${c.platform}:${bareHandle(c.handle)}` === key)) skipped.push({ handle, reason: "duplicate" });
-    else if (next.filter((c) => c.platform === platform).length >= max) skipped.push({ handle, reason: "full" });
-    else next.push(opts.make({ handle, platform }));
-  }
-  return { list: next, skipped };
 }

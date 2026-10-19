@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCompetitors, bareHandle, cleanHandle, competitorHandle, matchAccounts, ownHandleList, parseHandleList } from "../src/lib/handles.ts";
+import { bareHandle, cleanHandle, matchAccounts, ownHandleList, parseHandleList } from "../src/lib/handles.ts";
 import { externalFromSnapshot, pickForTranscription, type OwnPostRow } from "../src/lib/own-posts.ts";
 
 describe("cleaning handles", () => {
@@ -28,7 +28,6 @@ describe("cleaning handles", () => {
   it("splits pasted lists and drops duplicates", () => {
     expect(parseHandleList("tiktok", "@a.one, @b_two\nhttps://www.tiktok.com/@a.one  c-three")).toEqual(["@a.one", "@b_two", "@c-three"]);
     expect(bareHandle("@Example")).toBe("example");
-    expect(competitorHandle("linkedin", "linkedin.com/in/Demo-Person-1")).toBe("@demo-person-1");
   });
 
   it("lists the owner's handles, skipping empty and unknown platforms", () => {
@@ -57,21 +56,6 @@ describe("matching handles to connected accounts", () => {
       ["linkedin", "missing"],
       ["facebook", "extra"],
     ]);
-  });
-});
-
-describe("competitor list", () => {
-  const make = (c: { handle: string; platform: "instagram" | "tiktok" | "youtube" | "linkedin" | "x" | "facebook" | "threads" }) => ({ ...c, tier: "core" as const });
-
-  it("adds cleaned handles, never the owner's own, no duplicates, up to the cap", () => {
-    const first = addCompetitors([], "instagram", ["@a", "https://instagram.com/b/", "@examplebrand", "@a", "bad handle"], { own: { instagram: "@ExampleBrand" }, max: 3, make });
-    expect(first.list.map((c) => c.handle)).toEqual(["@a", "@b"]);
-    expect(first.skipped.map((s) => s.reason)).toEqual(["own", "duplicate", "invalid"]);
-    const second = addCompetitors(first.list, "instagram", ["@c", "@d"], { max: 3, make });
-    expect(second.list).toHaveLength(3);
-    expect(second.skipped).toEqual([{ handle: "@d", reason: "full" }]);
-    // The cap is per platform.
-    expect(addCompetitors(second.list, "tiktok", ["@a"], { max: 3, make }).list).toHaveLength(4);
   });
 });
 

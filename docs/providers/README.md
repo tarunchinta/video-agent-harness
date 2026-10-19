@@ -9,7 +9,7 @@ AttentionOS talks to outside services through **providers**: small adapters that
 | Publisher | Posts and schedules | [Zernio](zernio.md) | [Blotato](blotato.md), `manual` (export and notify) | `publisher` |
 | Inbox | Comment-to-DM, conversations, comments | [Zernio](zernio.md) | [Blotato](blotato.md) (Instagram and Facebook), `none` | `inbox` |
 | Own analytics | Your posts' numbers | [Zernio](zernio.md) | [Instagram Graph API](iggraph.md), [Blotato](blotato.md), `csv` | `ownAnalytics` |
-| Scraper | Competitor posts | [Apify](apify.md) | [Instagram Graph API](iggraph.md), [yt-dlp](ytdlp.md), `none` | `scraper` |
+| Scraper | Your public posts, posts pasted in for a teardown | [Apify](apify.md) | [Instagram Graph API](iggraph.md), [yt-dlp](ytdlp.md), `none` | `scraper` |
 | Trend sources | News and trends | RSS, Google News, Hacker News, Reddit, GitHub | X through Apify (planned) | `brand/sources.yaml` |
 | Speech to text | Word-level transcripts | [whisper.cpp](whispercpp.md) | Parakeet (planned), OpenAI Whisper API (planned) | `asr` |
 | Renderer | Video rendering | Cut engine | Motion engine (Remotion, opt-in; planned, the interface ships but doesn't render yet) | `renderer` |

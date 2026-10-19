@@ -41,7 +41,7 @@ describe("which files may be written", () => {
 
 describe("validation against the Brand Kit schemas", () => {
   it("accepts every starter file in the workspace template", () => {
-    for (const f of ["brand.yaml", "competitors.yaml", "sources.yaml", "proof-inventory.yaml", "pillars.md", "voice.md", "icp.md"]) {
+    for (const f of ["brand.yaml", "sources.yaml", "proof-inventory.yaml", "pillars.md", "voice.md", "icp.md"]) {
       const text = readFileSync(join(TEMPLATE, f), "utf8").replace("{{WORKSPACE_NAME}}", "Examplebrand Studio").replace("{{TIMEZONE}}", "America/New_York");
       expect(() => validateBrandFile(f, text)).not.toThrow();
     }
@@ -60,8 +60,8 @@ describe("validation against the Brand Kit schemas", () => {
     expect(() => validateBrandFile("proof-inventory.yaml", `${ok}${ok.replace("items:\n", "")}`)).toThrow(/used twice/);
   });
 
-  it("checks competitors, sources and pillar lanes", () => {
-    expect(() => validateBrandFile("competitors.yaml", "creators:\n  - { handle: '@a', platform: myspace }\n")).toThrow();
+  it("checks sources and pillar lanes, and refuses files outside the Brand Kit", () => {
+    expect(() => validateBrandFile("competitors.yaml", "creators: []\n")).toThrow();
     expect(() => validateBrandFile("sources.yaml", "sources:\n  - { id: a, kind: rss, target: x }\n  - { id: a, kind: rss, target: y }\n")).toThrow(/used twice/);
     expect(() => validateBrandFile("pillars.md", "# no front matter\n")).toThrow(/front matter/);
     expect(() => validateBrandFile("pillars.md", "---\nlanes: []\n---\n# x\n")).toThrow(/at least one lane/);

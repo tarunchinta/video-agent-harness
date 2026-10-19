@@ -1,51 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  affordablePerDay, blendWeights, classifyForPostMortem, dailyRotation, dayOfYear, daysLeftInMonth, featureAttribution,
-  hookScore, isHookWin, lengthBucket, localDay, qualifiesForOwnBank, slotBucket, weightOf,
+  blendWeights, classifyForPostMortem, dayOfYear, featureAttribution, hookScore, isHookWin, lengthBucket, localDay, qualifiesForOwnBank, slotBucket, weightOf,
 } from "../src/index.ts";
-
-describe("dailyRotation", () => {
-  const FIXED = new Date("2026-03-15T12:00:00Z"); // a pinned day, so results never depend on when the suite runs
-  const list = Array.from({ length: 10 }, (_, i) => `c${i}`);
-  it("moves a window of perDay by day of year and wraps", () => {
-    const d1 = new Date("2026-01-01T12:00:00Z"); // doy 1
-    const d2 = new Date("2026-01-02T12:00:00Z"); // doy 2
-    expect(dailyRotation(list, { date: d1, perDay: 4 }).picked).toEqual(["c4", "c5", "c6", "c7"]);
-    expect(dailyRotation(list, { date: d2, perDay: 4 }).picked).toEqual(["c8", "c9", "c0", "c1"]);
-  });
-  it("covers every creator over consecutive days", () => {
-    const seen = new Set<string>();
-    for (let d = 0; d < 5; d++) {
-      for (const c of dailyRotation(list, { date: new Date(Date.UTC(2026, 2, 1 + d, 12)), perDay: 3 }).picked) seen.add(c);
-    }
-    expect(seen.size).toBe(10);
-  });
-  it("uses the workspace time zone for the day boundary", () => {
-    const lateUtc = new Date("2026-01-02T03:00:00Z"); // still Jan 1 in New York
-    expect(dayOfYear(lateUtc, "America/New_York")).toBe(1);
-    expect(dayOfYear(lateUtc, "UTC")).toBe(2);
-  });
-  it("never picks more than the list and handles empty input", () => {
-    expect(dailyRotation(["a", "b"], { date: FIXED, perDay: 5 }).picked.sort()).toEqual(["a", "b"]);
-    expect(dailyRotation([], { date: FIXED, perDay: 5 }).picked).toEqual([]);
-    expect(dailyRotation(["a"], { date: FIXED, perDay: 0 }).picked).toEqual([]);
-  });
-  it("shrinks today's window to what the budget can afford", () => {
-    const r = dailyRotation(list, { date: new Date("2026-01-01T12:00:00Z"), perDay: 4, budget: { remainingUsd: 3, costPerItemUsd: 0.05, daysLeft: 30 } });
-    // 3 / 30 / 0.05 = 2 per day
-    expect(r.count).toBe(2);
-    expect(r.limitedBy).toBe("budget");
-    expect(r.picked).toEqual(["c4", "c5"]);
-    expect(affordablePerDay({ remainingUsd: 0, costPerItemUsd: 0.05, daysLeft: 3 })).toBe(0);
-    expect(affordablePerDay({ remainingUsd: 0, costPerItemUsd: 0, daysLeft: 3 })).toBe(Number.POSITIVE_INFINITY);
-    expect(dailyRotation(list, { date: FIXED, perDay: 4, budget: { remainingUsd: 100, costPerItemUsd: 0.01, daysLeft: 1 } }).limitedBy).toBeUndefined();
-  });
-  it("date helpers", () => {
-    expect(localDay(new Date("2026-10-11T02:00:00Z"), "America/New_York")).toBe("2026-10-10");
-    expect(daysLeftInMonth(new Date("2026-10-30T12:00:00Z"))).toBe(2);
-    expect(daysLeftInMonth(new Date("2026-02-01T12:00:00Z"))).toBe(28);
-  });
-});
 
 describe("featureAttribution", () => {
   const rows = [
@@ -97,25 +53,23 @@ describe("featureAttribution", () => {
 describe("blendWeights", () => {
   const own = featureAttribution(Array.from({ length: 6 }, () => ({ x: 4, features: { lane: "proof" } })).concat(
     Array.from({ length: 6 }, () => ({ x: 1, features: { lane: "myth" } }))), { minN: 5 }).stats;
-  const comp = featureAttribution(Array.from({ length: 6 }, () => ({ x: 1, features: { lane: "proof" } })).concat(
-    Array.from({ length: 6 }, () => ({ x: 4, features: { lane: "myth" } }))), { minN: 5 }).stats;
 
-  it("trusts competitor data with no own posts", () => {
-    const w = blendWeights({ own, competitor: comp, ownPosts: 0 });
+  it("stays neutral with no own posts", () => {
+    const w = blendWeights({ own, ownPosts: 0 });
     expect(w.ownShare).toBe(0);
-    expect(w.weights.lane!.myth).toBe(1.6);
-    expect(w.weights.lane!.proof).toBe(0.5);
+    expect(w.weights.lane!.proof).toBe(1);
+    expect(w.weights.lane!.myth).toBe(1);
   });
   it("trusts own data from ~20 posts and clamps", () => {
-    const w = blendWeights({ own, competitor: comp, ownPosts: 25 });
+    const w = blendWeights({ own, ownPosts: 25 });
     expect(w.ownShare).toBe(1);
     expect(w.weights.lane!.proof).toBe(1.6);
     expect(w.weights.lane!.myth).toBe(0.5);
   });
-  it("blends halfway at 10 posts and defaults unknown values to 1", () => {
-    const w = blendWeights({ own, competitor: comp, ownPosts: 10 });
+  it("goes halfway at 10 posts and defaults unknown values to 1", () => {
+    const w = blendWeights({ own, ownPosts: 10 });
     expect(w.ownShare).toBe(0.5);
-    expect(w.weights.lane!.proof).toBeCloseTo(0.5 * 1.6 + 0.5 * 0.4, 3);
+    expect(w.weights.lane!.proof).toBeCloseTo(0.5 * 1.6 + 0.5, 3);
     expect(weightOf(w.weights, "lane", "unknown")).toBe(1);
     expect(weightOf(w.weights, "nope", "x")).toBe(1);
     expect(weightOf(w.weights, "lane", null)).toBe(1);
@@ -123,12 +77,9 @@ describe("blendWeights", () => {
 });
 
 describe("hook score", () => {
-  it("is Laplace-smoothed, evidence-weighted and decays for competitor hooks", () => {
+  it("is Laplace-smoothed and evidence-weighted", () => {
     expect(hookScore({ uses: 0, wins: 0, origin: "own" })).toBe(0.5);
     expect(hookScore({ uses: 4, wins: 3, originX: 3, origin: "own" })).toBeCloseTo((4 / 6) * 2, 4);
-    const fresh = hookScore({ uses: 0, wins: 0, originX: 7, origin: "competitor", ageDays: 0 });
-    const old = hookScore({ uses: 0, wins: 0, originX: 7, origin: "competitor", ageDays: 60 });
-    expect(old).toBeCloseTo(fresh / 2, 4);
     expect(hookScore({ uses: 2, wins: 5, origin: "manual" })).toBe(hookScore({ uses: 2, wins: 2, origin: "manual" }));
   });
   it("own bank and win thresholds", () => {

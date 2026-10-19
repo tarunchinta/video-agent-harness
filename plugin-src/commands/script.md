@@ -17,8 +17,8 @@ If that looks like a content id, load the piece with the `scripting_*` or `strat
 
 ## Method
 
-1. **Copy what works first.** Look for a proven post on this topic (`scripting_find_remix_sources`: competitor outliers and the owner's own breakouts). If one fits, attach it (`scripting_use_remix_source`) and remake it closely from its blueprint: same hook wording and pattern, beats, length, format and call-to-action mechanic; only the niche specifics, the owner's proof and voice change. Never the creator's name, @handle, brand, stories or numbers. Say which post it's based on.
-2. **Otherwise, hook first.** Pick a hook pattern from the hook banks (`scripting_*` tools: the owner's own winning openers first, then competitor patterns). Record where it came from (`hook_source`).
+1. **Copy what works first.** Look for a proven post on this topic (`scripting_find_remix_sources`: the owner's own breakouts). If one fits, attach it (`scripting_use_remix_source`) and remake it closely from its blueprint: same hook wording and pattern, beats, length, format and call-to-action mechanic; only the niche specifics, the owner's proof and voice change. Never the creator's name, @handle, brand, stories or numbers. Say which post it's based on.
+2. **Otherwise, hook first.** Pick a hook pattern from the hook banks (`scripting_*` tools: the owner's own winning openers first, then hooks saved by hand). Record where it came from (`hook_source`).
 3. **Six beats** (originals; a remix follows its source's beats): hook (the whole claim in 0–3 seconds) → turn → proof with a number → rehook at 25–40% → the play → close that calls back to the hook.
 4. **Numbers** come only from `brand/proof-inventory.yaml` or a cited source. Build a claim ledger: every factual claim is PASS, FIX or CUT, with its source. Single-source claims get "they say" framing.
 5. **CTA** matches the funnel stage and the CTA model in `brand/brand.yaml`. If it uses a comment keyword, reserve one through the keyword tools (the ledger enforces the rules).

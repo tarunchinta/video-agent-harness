@@ -1,7 +1,6 @@
 import { localDay, median, round } from "@attentionos/scoring";
 import { loadFeatureStats, type StoredFeatureStat } from "../attribution.ts";
 import { northStar, type GoalPacing, type NorthStarReading } from "../northStar.ts";
-import { competitorBenchmarks, type PlatformBenchmark } from "./benchmarks.ts";
 import { DAY_MS, type AnalyticsCtx } from "./ctx.ts";
 import { funnelReport, type FunnelReport } from "./funnel.ts";
 import { overview, type BestPost, type Kpi } from "./overview.ts";
@@ -29,7 +28,6 @@ export type WeeklyReport = {
   wins: StoredFeatureStat[];
   losses: StoredFeatureStat[];
   slots: BestSlots;
-  benchmark: PlatformBenchmark | null;
   funnel: FunnelReport;
   focus: string[];
   gaps: string[];
@@ -74,8 +72,6 @@ export async function weeklyReport(ctx: AnalyticsCtx): Promise<WeeklyReport> {
   const wins = stats.filter((s) => s.verdict === "clear_win" || s.verdict === "leaning_up").sort((a, b) => (b.lift ?? 0) - (a.lift ?? 0)).slice(0, 3);
   const losses = stats.filter((s) => s.verdict === "clear_loss" || s.verdict === "leaning_down").sort((a, b) => (a.lift ?? 9) - (b.lift ?? 9)).slice(0, 2);
   const slots = bestSlotsFrom(ctx, all.filter((p) => Date.parse(p.publishedAt) >= t - 90 * DAY_MS), { days: 90 });
-  const benches = await competitorBenchmarks(ctx, all);
-  const benchmark = benches[0] ?? null;
   const funnel = await funnelReport(ctx, all, 7);
   const spend = await spendSince(ctx, new Date(t - 7 * DAY_MS));
   const [pm] = await ctx.sql`select count(*)::int as n from post_mortems where workspace_id = ${ctx.id} and created_at >= ${new Date(t - 7 * DAY_MS)}`;
@@ -85,7 +81,6 @@ export async function weeklyReport(ctx: AnalyticsCtx): Promise<WeeklyReport> {
     ...(ns.gap ? [ns.gap] : []),
     ...stats.filter((s) => !s.sufficient).slice(0, 3).map((s) => s.line),
     ...slots.gaps.slice(0, 1),
-    ...(benchmark?.gaps.slice(0, 1) ?? []),
     ...funnel.gaps.slice(0, 2),
     ...(ov.followers.gap ? [ov.followers.gap] : []),
   ];
@@ -135,7 +130,6 @@ export async function weeklyReport(ctx: AnalyticsCtx): Promise<WeeklyReport> {
     ...(wins.length ? ["", "What's lifting results:", ...wins.map((s) => `- ${s.line}`)] : []),
     ...(losses.length ? ["What's holding results back:", ...losses.map((s) => `- ${s.line}`)] : []),
     ...(funnel.totals.leads || funnel.totals.bookings ? ["", `Funnel: ${plural(funnel.totals.views, "view")} → ${funnel.clicksSource === "none" ? "clicks n/a" : plural(funnel.totals.clicks, "click")} → ${plural(funnel.totals.leads, "lead")} → ${plural(funnel.totals.bookings, "booked call")}${funnel.totals.revenue ? ` → ${usd(funnel.totals.revenue)}` : ""}`] : []),
-    ...(benchmark && benchmark.viewsRatio !== null ? [`Against tracked creators: your typical post gets ${fx(benchmark.viewsRatio)} their median views`] : []),
     ...(focus.length ? ["", "Focus next week:", ...focus.map((f) => `- ${f}`)] : []),
     ...(gaps.length ? ["", "Not enough data yet:", ...gaps.slice(0, 6).map((g) => `- ${g}`)] : []),
     "",
@@ -146,6 +140,6 @@ export async function weeklyReport(ctx: AnalyticsCtx): Promise<WeeklyReport> {
   return {
     weekEnding: localDay(now, tz), headline, northStar: ns, pacing, kpis: ov.kpis, posts: thisWeek.length, previousPosts: lastWeek.length,
     medianX, previousMedianX, followers: { current: ov.followers.current, delta7: ov.followers.delta7, previous7: ov.followers.previous7 },
-    best: ov.best, worst: ov.worst, wins, losses, slots, benchmark, funnel, focus, gaps, spend, postMortems, markdown: lines.join("\n"),
+    best: ov.best, worst: ov.worst, wins, losses, slots, funnel, focus, gaps, spend, postMortems, markdown: lines.join("\n"),
   };
 }

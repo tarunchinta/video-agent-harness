@@ -14,10 +14,6 @@ export const scriptingSettingsSchema = z.object({
   exploration: z.number().min(0).max(1).default(0.2),
   /** Own openers that beat the median by this factor enter the own bank. */
   ownBankMultiplier: z.number().positive().default(3),
-  /** Competitor bank size cap; lowest decayed scores are retired first. */
-  competitorBankCap: z.number().int().positive().default(300),
-  /** Competitor hook scores halve every N days. */
-  competitorHalfLifeDays: z.number().positive().default(60),
   /** A bank hook used within this many days isn't offered again. */
   hookCooldownDays: z.number().int().nonnegative().default(14),
   /** Numbers said in the last N scripts count as spent stats. */

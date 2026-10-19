@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  attributeFunnel, bandPosition, benchmarks, biggestDrop, change, collapseVariants, evidenceFor, featureAttribution, funnelSteps,
+  attributeFunnel, bandPosition, biggestDrop, change, collapseVariants, evidenceFor, featureAttribution, funnelSteps,
   goalPacing, interactions, linearFit, localMonth, localWeek, niceStep, pooledRate, postRates, rankDrivers, rollingBand, shrink,
   slotHeatmap, strengthOf, sumKnown, utmResolver, velocity, verdictOf, zonedMidnight, zonedParts,
 } from "../src/index.ts";
@@ -304,33 +304,6 @@ describe("funnel attribution", () => {
     expect(steps[4]!.fromPrevious).toBeNull();
     expect(biggestDrop(steps)!.key).toBe("bookings");
     expect(funnelSteps([{ key: "a", label: "A", value: 0 }])[0]!.fromTop).toBeNull();
-  });
-});
-
-describe("benchmarks", () => {
-  const mk = (views: number[], x?: number[]) => views.map((v, i) => ({ views: v, likes: v * 0.05, comments: v * 0.01, x: x?.[i] ?? null }));
-
-  it("compares the account's medians with tracked creators", () => {
-    const b = benchmarks(mk([1000, 2000, 3000, 4000, 5000], [0.5, 1, 1, 2.5, 3]), [
-      { key: "a", label: "@a", posts: mk([10_000, 12_000, 14_000, 16_000, 18_000], [1, 1, 1, 1, 4]) },
-      { key: "b", label: "@b", posts: mk([1000, 1500, 2000, 2500, 2800], [1, 1, 1, 1, 1]) },
-      { key: "c", label: "@c", posts: mk([500, 600]) },
-    ]);
-    expect(b.own).toMatchObject({ medianViews: 3000, outlierShare: 0.4, bestX: 3, n: 5 });
-    expect(b.own.medianEngagement).toBeCloseTo(0.06, 5);
-    expect(b.peers.map((p) => p.key)).toEqual(["a", "b", "c"]);
-    expect(b.peerMedianViews).toBe(8000); // median of 14000 and 2000; @c is too thin
-    expect(b.viewsRatio).toBe(0.375);
-    expect(b.viewsPercentile).toBe(0.5);
-    expect(b.peerOutlierShare).toBe(0.1);
-    expect(b.gaps[0]).toMatch(/@c has fewer than 5/);
-  });
-
-  it("reports gaps with no peers", () => {
-    const b = benchmarks(mk([1, 2]), []);
-    expect(b.peerMedianViews).toBeNull();
-    expect(b.viewsRatio).toBeNull();
-    expect(b.gaps).toHaveLength(2);
   });
 });
 

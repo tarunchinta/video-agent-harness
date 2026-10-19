@@ -42,17 +42,17 @@ export type RecentPiece = {
 
 /** `header` is the validated kit header (LLM output that passed the kit checks), never the raw trend title. */
 export type TrendCandidate = { id: string; url: string; heat: number; header: string | null; filmBy?: string | null; hasKit: boolean };
-export type OutlierCandidate = {
+/** A proven post to remake: one of the owner's own breakouts, ranked in remix.ts. */
+export type RemixCandidate = {
   id: string;
   url: string;
   creator: string;
   platform: string;
+  /** Times the owner's normal. */
   x: number;
   hookPattern?: string | null;
   format?: string | null;
   views?: number | null;
-  /** The owner's own breakout rather than a competitor's outlier. */
-  own?: boolean;
   /** From the checked remix blueprint: what the post is about. */
   topic?: string | null;
   /** Remix ranking score (remix.ts); higher goes first. Falls back to x. */
@@ -79,7 +79,7 @@ export type PlannerInput = {
   recent: RecentPiece[];
   rejected: string[];
   trends: TrendCandidate[];
-  outliers: OutlierCandidate[];
+  remixes: RemixCandidate[];
   proof: ProofCandidate[];
   offers: { id: string; name: string; cta: CtaType }[];
   templates: Partial<Record<IdeaKind, string[]>>;
@@ -220,7 +220,7 @@ export function planSlate(input: PlannerInput): PlanResult {
   }
 
   // Proven posts first: the pool comes ranked (views, times-normal, recency, niche, blueprint ready).
-  const remixPool = [...input.outliers].sort((a, b) => (b.score ?? b.x) - (a.score ?? a.x) || b.x - a.x || a.id.localeCompare(b.id));
+  const remixPool = [...input.remixes].sort((a, b) => (b.score ?? b.x) - (a.score ?? a.x) || b.x - a.x || a.id.localeCompare(b.id));
   function addRemixes(want: number): number {
     let made = 0;
     for (const o of remixPool) {
@@ -230,11 +230,11 @@ export function planSlate(input: PlannerInput): PlanResult {
       // A remix is a talking-head-style piece too, so lanes built for talking heads can carry one.
       const lane = pickLane("remix") ?? pickLane("talking_head");
       if (!lane) break;
-      const remixOf = makeRemixOf({ externalPostId: o.id, url: o.url, handle: o.creator, platform: o.platform, own: Boolean(o.own), views: o.views ?? null, x: o.x });
+      const remixOf = makeRemixOf({ externalPostId: o.id, url: o.url, handle: o.creator, platform: o.platform, own: true, views: o.views ?? null, x: o.x });
       remixedSources.add(o.id);
       usedSources.add(o.id);
       add("remix", lane, {
-        title: remixTitle({ topic: o.topic, own: Boolean(o.own), handle: remixOf.handle, platform: o.platform, views: o.views ?? null }),
+        title: remixTitle({ topic: o.topic, own: true, handle: remixOf.handle, platform: o.platform, views: o.views ?? null }),
         angle: null,
         storyStructure: null,
         sourceRefs: [{ type: "external_post", id: o.id, url: o.url }],
@@ -318,7 +318,7 @@ export function planSlate(input: PlannerInput): PlanResult {
     }
 
     if (made < want) notes.push(`${want - made} ${kind.replace("_", " ")} slot${want - made === 1 ? "" : "s"} left open: ${
-      kind === "news" ? "no fresh story on the trend desk" : kind === "remix" ? "no new outliers to remix" : kind === "offer" ? "no offer lane" : "nothing outside the topic cooldown"}`);
+      kind === "news" ? "no fresh story on the trend desk" : kind === "remix" ? "no new breakouts of yours to remix" : kind === "offer" ? "no offer lane" : "nothing outside the topic cooldown"}`);
   }
 
   // Backfill empty slots with more proven posts first, then talking heads, so the slate keeps its size.

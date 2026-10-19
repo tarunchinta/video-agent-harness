@@ -2,10 +2,9 @@
 import { randomUUID } from "node:crypto";
 import { AGENT_KEYS, PLATFORMS, proofInventorySchema, type Platform, type ProofItem } from "@attentionos/core";
 import { parseYamlLoose, patchYaml, readLanes, setLanes } from "@attentionos/module-onboarding/brand-files";
-import { bareHandle, cleanHandle, competitorHandle, ownHandleList, PLATFORM_NAMES, SCRAPER_PLATFORMS } from "@attentionos/module-onboarding/handles";
+import { cleanHandle, ownHandleList, PLATFORM_NAMES } from "@attentionos/module-onboarding/handles";
 import {
   brandYamlFromBusiness,
-  competitorsYaml,
   icpMd,
   icpMdWithAnswers,
   offersMd,
@@ -15,11 +14,9 @@ import {
 } from "@attentionos/module-onboarding/render";
 import {
   businessDraftSchema,
-  competitorEntrySchema,
   completeStep,
   goTo,
   isStepId,
-  MAX_COMPETITORS_PER_PLATFORM,
   skipStep,
   voiceDraftSchema,
   type BusinessDraft,
@@ -55,8 +52,6 @@ const JOBS = {
   voiceReady: "onboarding.voice-ready",
   voiceProfile: "onboarding.voice-profile",
   interview: "onboarding.interview",
-  suggestCompetitors: "onboarding.suggest-competitors",
-  competitorScan: "research.competitor-scan",
   indexWorkspace: "knowledge.index-workspace",
   dailyBrief: "strategy.daily-brief",
   trendRadar: "research.trend-radar",
@@ -233,59 +228,28 @@ export async function telegramTestAction(): Promise<SetupResult> {
   });
 }
 
-// ───────────────────────────── 4 · Competitors ─────────────────────────────
+// ───────────────────────────── 3 · Keys ─────────────────────────────
 
-export async function suggestCompetitorsAction(note?: string): Promise<SetupResult> {
+/** Finishes the Keys step, turning on the scraping notice when the owner ticked it (reading public posts needs it). */
+export async function completeKeysAction(input: { acknowledge?: boolean } = {}): Promise<SetupResult> {
   await requireSession();
   return guarded(async () => {
-    const args = parse(z.object({ note: z.string().max(5000).optional() }), { note: note ?? undefined });
+    const args = parse(z.object({ acknowledge: z.boolean().default(false) }), input);
     if (!args) return { ok: false, error: BAD_REQUEST };
-    const runId = await enqueue(JOBS.suggestCompetitors, "analyst", args.note ? { note: args.note.slice(0, 500) } : {}, { message: "Asked Analyst to find creators in your niche" });
-    await mutateState((s) => ({ ...s, data: { ...s.data, strategy: { ...s.data.strategy, suggestRunId: runId } } }));
-    return { ok: true, runId };
-  });
-}
-
-const competitorsInput = z.object({
-  competitors: z.array(competitorEntrySchema).max(80),
-  acknowledge: z.boolean().default(false),
-});
-
-export async function saveCompetitorsAction(input: z.input<typeof competitorsInput>): Promise<SetupResult> {
-  await requireSession();
-  return guarded(async () => {
-    const parsed = competitorsInput.safeParse(input);
-    if (!parsed.success) return { ok: false, error: "Check the handles: use the name after the @." };
-    const s = await loadState();
-    const own = new Set(ownHandleList(s.data.content.handles).map((h) => `${h.platform}:${bareHandle(h.handle)}`));
-    const seen = new Set<string>();
-    const list = parsed.data.competitors
-      .map((c) => ({ ...c, handle: competitorHandle(c.platform, c.handle) }))
-      .filter((c) => {
-        const key = `${c.platform}:${bareHandle(c.handle)}`;
-        if (!c.handle || own.has(key) || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    for (const p of PLATFORMS) {
-      if (list.filter((c) => c.platform === p).length > MAX_COMPETITORS_PER_PLATFORM) {
-        return { ok: false, error: `Keep it to ${MAX_COMPETITORS_PER_PLATFORM} creators on ${PLATFORM_NAMES[p]}; the scan stays quick and cheap that way.` };
-      }
-    }
     const cfg = await readWorkspaceConfig(workspace().root);
     const acknowledged = cfg.ok ? cfg.config.acknowledgements.scrapingTerms : false;
-    if (parsed.data.acknowledge && !acknowledged) await editConfig([{ path: "acknowledgements.scrapingTerms", value: true }]);
-    await mutateState((st) => completeStep({ ...st, data: { ...st.data, strategy: { ...st.data.strategy, competitors: list, savedAt: new Date().toISOString() } } }, "competitors"));
-    return { ok: true, message: list.length ? `Saved ${plural(list.length, "creator")} to watch` : undefined };
+    if (args.acknowledge && !acknowledged) await editConfig([{ path: "acknowledgements.scrapingTerms", value: true }]);
+    await mutateState((st) => completeStep(st, "keys"));
+    return { ok: true };
   });
 }
 
-// ───────────────────────────── 5 · Start ─────────────────────────────
+// ───────────────────────────── 4 · Start ─────────────────────────────
 
 /**
- * Writes what the owner gave (competitors.yaml, handles), then queues the team's first work in order: import the
- * owner's own posts (which queues transcription of the best videos and then the voice profile), scan the competitors,
- * index the workspace for search, and a safety check that starts the voice profile even if a transcription stalls.
+ * Writes what the owner gave (their handles), then queues the team's first work in order: import the owner's own
+ * posts (which queues transcription of the best videos and then the voice profile), index the workspace for search,
+ * and a safety check that starts the voice profile even if a transcription stalls.
  */
 export async function startAction(): Promise<SetupResult> {
   await requireSession();
@@ -298,12 +262,9 @@ export async function startAction(): Promise<SetupResult> {
     const cfg = await readWorkspaceConfig(ws.root);
     const config = cfg.ok ? cfg.config : ws.config;
 
-    // 1. The Brand Kit: who to watch, and the owner's handles.
-    const files: { file: string; content: string }[] = [];
-    if (s.data.strategy.competitors.length) files.push({ file: "competitors.yaml", content: competitorsYaml(s.data.strategy.competitors) });
+    // 1. The Brand Kit: the owner's handles.
     const brand = brandFile("brand.yaml");
-    if (brand.trim()) files.push({ file: "brand.yaml", content: patchYaml(brand, { handles }) });
-    if (files.length) await saveBrandFiles(files, `Brand Kit updated: your handles and ${plural(s.data.strategy.competitors.length, "creator")} to watch`);
+    if (brand.trim()) await saveBrandFiles([{ file: "brand.yaml", content: patchYaml(brand, { handles }) }], "Brand Kit updated: your handles");
 
     // 2. Modules the first run needs (editing transcribes; research and knowledge are core). Only touch the config
     //    when something is off: saving it restarts the worker.
@@ -322,21 +283,10 @@ export async function startAction(): Promise<SetupResult> {
     };
     const apify = config.providers.scraper === "apify" ? keySet("APIFY_TOKEN") : config.providers.scraper !== "none";
     const zernio = config.providers.ownAnalytics === "zernio" && keySet("ZERNIO_API_KEY");
-    const scrapable = SCRAPER_PLATFORMS[config.providers.scraper] ?? [];
     if (!apify && !zernio) notes.push("Without an Apify token or a Zernio key there's no way to read your posts yet. Add one in Keys, then press Start again.");
     else if (!apify) notes.push("No Apify token: your posts come from Zernio, which doesn't share video files, so your voice is learned from captions.");
-    if (apify && !config.acknowledgements.scrapingTerms) notes.push("Reading public posts waits for the scraping notice (Competitors step).");
+    if (apify && !config.acknowledgements.scrapingTerms) notes.push("Reading public posts waits for the scraping notice (Keys step).");
     await add(JOBS.importOwnPosts, "analyst", { kickoff }, `Asked Analyst to bring in your posts from ${ownHandleList(handles).map((h) => PLATFORM_NAMES[h.platform]).join(", ")}`, afterReload);
-
-    const creators = s.data.strategy.competitors;
-    const scannable = creators.filter((c) => scrapable.includes(c.platform));
-    if (creators.length && apify && config.acknowledgements.scrapingTerms && scannable.length) {
-      await add(JOBS.competitorScan, "analyst", { handles: scannable.map((c) => c.handle) }, `Asked Analyst to scan ${plural(scannable.length, "creator")} for outliers`);
-    } else if (creators.length && !apify) {
-      notes.push(`The competitor scan waits for your Apify token; ${plural(creators.length, "creator is", "creators are")} saved.`);
-    }
-    const unscannable = [...new Set(creators.filter((c) => !scrapable.includes(c.platform)).map((c) => PLATFORM_NAMES[c.platform]))];
-    if (unscannable.length && apify) notes.push(`${unscannable.join(" and ")} creators are saved for the Strategist; the scraper can't read those platforms yet.`);
 
     await add(JOBS.indexWorkspace, "analyst", {}, "Asked Analyst to index your workspace for search", { runAfter: new Date(Date.now() + 4 * 60_000) });
     // Safety net: if a transcription never reports back, the voice profile still starts from what's in.
@@ -350,7 +300,7 @@ export async function startAction(): Promise<SetupResult> {
   });
 }
 
-// ───────────────────────────── 6 · Review ─────────────────────────────
+// ───────────────────────────── 5 · Review ─────────────────────────────
 
 async function saveBusiness(draft: BusinessDraft): Promise<string[]> {
   const written = await saveBrandFiles(

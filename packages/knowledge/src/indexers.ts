@@ -9,7 +9,7 @@ import { deleteSource, deleteStaleSources, indexSources, type IndexResult, type 
 /**
  * Workspace indexers: everything worth recalling, gathered from the Brand Kit files and the database.
  * Trust: the owner's own words and our validated outputs are "own"; anything written by other people
- * (competitor captions, transcripts, comments, and analyses that quote them) is "untrusted".
+ * (captions, transcripts and comments of posts in the research library, and analyses that quote them) is "untrusted".
  */
 
 const MAX_FILE_BYTES = 1_000_000;
@@ -129,22 +129,23 @@ const scriptsCollector: Collector = {
   },
 };
 
-const competitorCollector: Collector = {
-  types: ["competitor_transcript", "comment_gold"],
+/** Posts in the research library: the owner's imported posts and posts pasted in for a teardown. */
+const libraryCollector: Collector = {
+  types: ["library_transcript", "comment_gold"],
   async collect(ws) {
-    const rows = await ws.sql<{ id: string; platform: string; author_handle: string; url: string; caption: string | null; transcript: string | null; spoken_hook: string | null; top_comments: { text?: string; likes?: number }[] | null; x_score: string | null; is_outlier: boolean; published_at: Date | null }[]>`
-      select id, platform, author_handle, url, caption, transcript, spoken_hook, top_comments, x_score, is_outlier, published_at
+    const rows = await ws.sql<{ id: string; platform: string; author_handle: string; url: string; caption: string | null; transcript: string | null; spoken_hook: string | null; top_comments: { text?: string; likes?: number }[] | null; published_at: Date | null }[]>`
+      select id, platform, author_handle, url, caption, transcript, spoken_hook, top_comments, published_at
         from external_posts
        where workspace_id = ${ws.id} and (transcript is not null or top_comments is not null)
        order by published_at desc nulls last
        limit 3000`;
     const docs: SourceDoc[] = [];
     for (const r of rows) {
-      const metadata = { externalPostId: r.id, platform: r.platform, creator: `@${r.author_handle}`, url: r.url, x: r.x_score === null ? undefined : Number(r.x_score), outlier: r.is_outlier };
+      const metadata = { externalPostId: r.id, platform: r.platform, creator: `@${r.author_handle}`, url: r.url };
       const title = `@${fence(r.author_handle)} on ${r.platform}${r.published_at ? ` (${iso(r.published_at)!.slice(0, 10)})` : ""}`;
       if (r.transcript?.trim()) {
         const parts = [r.spoken_hook ? `Spoken hook: ${fence(r.spoken_hook)}` : "", r.caption ? `Caption: ${fence(r.caption)}` : "", `Transcript: ${fence(r.transcript)}`].filter(Boolean);
-        docs.push({ sourceType: "competitor_transcript", sourceId: r.id, title, text: parts.join("\n\n"), trust: "untrusted", metadata, sourceDate: r.published_at, format: "text" });
+        docs.push({ sourceType: "library_transcript", sourceId: r.id, title, text: parts.join("\n\n"), trust: "untrusted", metadata, sourceDate: r.published_at, format: "text" });
       }
       const comments = (r.top_comments ?? []).filter((c) => c?.text?.trim()).slice(0, 25);
       if (comments.length) {
@@ -159,20 +160,18 @@ const competitorCollector: Collector = {
 const hooksCollector: Collector = {
   types: ["hook"],
   async collect(ws) {
-    // Competitor hooks are indexed only as their validated abstract (structure with [placeholders]), never their words.
-    const hasAbstract = await ws.sql`select 1 from information_schema.columns where table_name = 'hooks' and column_name = 'abstract' and table_schema = current_schema()`;
-    const rows = await ws.sql<{ id: string; text: string; abstract: string | null; pattern: string; origin: string; score: string | null; wins: number; uses: number; created_at: Date }[]>`
-      select id, text, ${hasAbstract.length ? ws.sql`abstract` : ws.sql`null::text as abstract`}, pattern, origin, score, wins, uses, created_at
+    const rows = await ws.sql<{ id: string; text: string; pattern: string; origin: string; score: string | null; wins: number; uses: number; created_at: Date }[]>`
+      select id, text, pattern, origin, score, wins, uses, created_at
         from hooks where workspace_id = ${ws.id} and status = 'active'
        order by created_at desc limit 5000`;
     const docs: SourceDoc[] = [];
     for (const r of rows) {
-      const text = r.origin === "competitor" ? r.abstract : r.text;
+      const text = r.text;
       if (!text?.trim()) continue;
       docs.push({
         sourceType: "hook",
         sourceId: r.id,
-        title: `${r.origin === "competitor" ? "Competitor hook structure" : "Own hook"} (${r.pattern})`,
+        title: `${r.origin === "manual" ? "Saved hook" : "Own hook"} (${r.pattern})`,
         text,
         trust: "own",
         metadata: { hookId: r.id, pattern: r.pattern, origin: r.origin, score: r.score === null ? undefined : Number(r.score), wins: r.wins, uses: r.uses },
@@ -259,7 +258,7 @@ const trendKitCollector: Collector = {
   },
 };
 
-export const COLLECTORS: Collector[] = [brandCollector, ownPostsCollector, scriptsCollector, competitorCollector, hooksCollector, postMortemCollector, teardownCollector, trendKitCollector];
+export const COLLECTORS: Collector[] = [brandCollector, ownPostsCollector, scriptsCollector, libraryCollector, hooksCollector, postMortemCollector, teardownCollector, trendKitCollector];
 
 /** Source types the workspace indexers produce (dm and lead_note are reserved for later, opt-in indexers). */
 export const INDEXED_SOURCE_TYPES: SourceType[] = COLLECTORS.flatMap((c) => c.types);

@@ -44,10 +44,10 @@ export async function makeContent(ws: WorkspaceContext, over: { title?: string; 
   return rows[0]!.id;
 }
 
-export async function makeHook(ws: WorkspaceContext, over: { text?: string; pattern?: string; origin?: "own" | "competitor" | "manual"; score?: number; abstract?: string | null } = {}): Promise<string> {
+export async function makeHook(ws: WorkspaceContext, over: { text?: string; pattern?: string; origin?: "own" | "manual"; score?: number } = {}): Promise<string> {
   const rows = await ws.sql<{ id: string }[]>`
-    insert into hooks (workspace_id, text, pattern, origin, score, abstract)
-    values (${ws.id}, ${over.text ?? "Your remodel budget breaks before demolition."}, ${over.pattern ?? "cost-of-mistake"}, ${over.origin ?? "own"}, ${over.score ?? 3.5}, ${over.abstract ?? null})
+    insert into hooks (workspace_id, text, pattern, origin, score)
+    values (${ws.id}, ${over.text ?? "Your remodel budget breaks before demolition."}, ${over.pattern ?? "cost-of-mistake"}, ${over.origin ?? "own"}, ${over.score ?? 3.5})
     returning id`;
   return rows[0]!.id;
 }

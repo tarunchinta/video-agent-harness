@@ -1,4 +1,4 @@
-// Research screens: a feed being scanned, a rival video being measured, a video being read.
+// Research screens: a feed being scanned, a video being torn down, a video being read.
 
 import { at, from, Check, EDGE, CELL, Lines, LILAC, PINK, Star, Thumb, VIOLET, Wave, WAVE_A, type SceneProps } from "./bits";
 
@@ -34,7 +34,7 @@ export function TrendScout({ tint }: SceneProps) {
 
 const METRICS = [30, 18, 26, 12] as const;
 
-export function CompetitorWatch({ tint }: SceneProps) {
+export function Teardowns({ tint }: SceneProps) {
   return (
     <g>
       <Thumb x={5} y={6} w={22} h={39} n={1} />

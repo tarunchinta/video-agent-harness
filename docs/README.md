@@ -8,7 +8,7 @@ Start with the setup guide for the level you want. Each level builds on the one 
 
 | Level | What you get | Time | Guide |
 |---|---|---|---|
-| 1 · Install, set up and first scripts | Docker Compose install ([Install](install.md)), Claude token, guided setup in Studio (your website, posts, voice and competitors read for you), the "Film today" brief and your first scripts | 60–90 min, mostly waiting | [Level 1](setup/level-1.md) |
+| 1 · Install, set up and first scripts | Docker Compose install ([Install](install.md)), Claude token, guided setup in Studio (your website, posts and voice read for you), the "Film today" brief and your first scripts | 60–90 min, mostly waiting | [Level 1](setup/level-1.md) |
 | 2 · Edit | Film, upload, and your takes become finished, captioned videos with quality checks; notes on the timeline for v2 | +20 min | [Level 2](setup/level-2.md) |
 | 3 · Publish and engage | Approve a video and it's scheduled; comment keyword → DM → guide; tracked links | +20 min | [Level 3](setup/level-3.md) |
 | 4 · Autopilot, your phone and 24/7 | Work on a schedule, Telegram on your phone, a server, backups | +10 min, or about 45 min with a server | [Level 4](setup/level-4.md) |
@@ -35,7 +35,7 @@ Each stage of the loop is a module you can turn on or off.
 | Module | Agent | Tier | What it does |
 |---|---|---|---|
 | [onboarding](modules/onboarding.md) | Chief of Staff | Core | Setup in Studio: reads your site and posts, learns your voice, drafts your Brand Kit |
-| [research](modules/research.md) | Analyst | Core | Your own posts, competitor outliers, trend radar, teardowns |
+| [research](modules/research.md) | Analyst | Core | Your own posts, trend radar, teardowns |
 | [strategy](modules/strategy.md) | Strategist | Core | Lanes, funnel mix, the daily "Film today" brief |
 | [scripting](modules/scripting.md) | Copywriter | Core | Hooks, scripts, claim checks, captions per platform |
 | [production](modules/production.md) | Art Director | Default | The daily loop: scripts to film, bulk upload matched to scripts, the edit queue, video review, scheduling |

@@ -3,7 +3,6 @@ import manifestJson from "../module.json" with { type: "json" };
 import { analyzeSiteJob } from "./jobs/analyze-site.ts";
 import { importOwnPostsJob } from "./jobs/import-own-posts.ts";
 import { interviewJob } from "./jobs/interview.ts";
-import { suggestCompetitorsJob } from "./jobs/suggest-competitors.ts";
 import { voiceProfileJob } from "./jobs/voice-profile.ts";
 import { voiceReadyJob } from "./jobs/voice-ready.ts";
 import { SKILLS_DIR } from "./lib/context.ts";
@@ -25,12 +24,11 @@ export const ONBOARDING_JOBS = {
   voiceReady: voiceReadyJob.id,
   voiceProfile: voiceProfileJob.id,
   interview: interviewJob.id,
-  suggestCompetitors: suggestCompetitorsJob.id,
 } as const;
 
 export default defineModule({
   manifest: moduleManifestSchema.parse(manifestJson),
-  jobs: [analyzeSiteJob, importOwnPostsJob, voiceReadyJob, voiceProfileJob, interviewJob, suggestCompetitorsJob],
+  jobs: [analyzeSiteJob, importOwnPostsJob, voiceReadyJob, voiceProfileJob, interviewJob],
   tools: onboardingTools,
   skillsDir: SKILLS_DIR,
 });

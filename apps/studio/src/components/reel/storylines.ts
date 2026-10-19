@@ -14,17 +14,17 @@ export type ReelStory = { id: string; agent: string; job: string; duration: numb
 
 export const STORYLINES: ReelStory[] = [
   {
-    id: "outliers",
+    id: "breakouts",
     agent: "analyst",
-    job: "research.competitor-scan",
+    job: "research.own-sync",
     duration: 20,
     steps: [
-      { at: 1.5, kind: "progress", agent: "analyst", message: "Scanning 6 creators for outliers" },
-      { at: 6, kind: "progress", agent: "analyst", message: "Found 2 posts at 3.4× their usual" },
-      { at: 10, kind: "progress", agent: "analyst", message: "Pulled the hook and first 3 seconds of each" },
+      { at: 1.5, kind: "progress", agent: "analyst", message: "Updated numbers for 24 of your posts" },
+      { at: 6, kind: "progress", agent: "analyst", message: "Found 2 of your posts at 3.4× your usual" },
+      { at: 10, kind: "progress", agent: "analyst", message: "Tore down the hook and first 3 seconds of each" },
       { at: 12, kind: "cost", agent: "analyst", usd: 0.12, message: "Spent $0.12 on research" },
-      { at: 13.5, kind: "handoff", agent: "analyst", to: "strategist", job: "strategy.daily-brief", message: "Analyst → Strategist: 2 outliers worth a remix" },
-      { at: 16.5, kind: "progress", agent: "strategist", message: "Checking both outliers against this month's lanes" },
+      { at: 13.5, kind: "handoff", agent: "analyst", to: "strategist", job: "strategy.daily-brief", message: "Analyst → Strategist: 2 of your posts worth a remix" },
+      { at: 16.5, kind: "progress", agent: "strategist", message: "Checking both against this month's lanes" },
     ],
   },
   {

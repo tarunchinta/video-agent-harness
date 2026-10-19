@@ -1,6 +1,6 @@
 /**
  * Reel mode / demo mode: when it's on, names, handles, emails and phone numbers of OTHER people
- * (leads, commenters, tracked creators) are replaced with consistent fictional ones, so the owner can film the
+ * (leads, commenters, creators of posts pasted in for a teardown) are replaced with consistent fictional ones, so the owner can film the
  * product without exposing anyone. Numbers (views, x-scores, revenue) are never changed.
  *
  * Masking is deterministic per real value, so the same person keeps the same stand-in across messages.

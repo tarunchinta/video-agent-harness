@@ -15,9 +15,9 @@ Everything else keeps working while a feature waits for your acknowledgement. `.
 
 ## Reading public posts through a third-party service (`scrapingTerms`)
 
-**Used by:** competitor scans through Apify or yt-dlp (Research).
+**Used by:** reading your own public posts during setup, and teardowns of posts you paste in, through Apify or yt-dlp (Research, Onboarding).
 
-Collecting public posts through a third-party scraping service may conflict with a platform's terms of use, and platforms can change what they allow at any time. AttentionOS only reads the accounts you list in `brand/competitors.yaml`, never logs in as you, never automates a browser, and checks your scraping budget before every run.
+Collecting public posts through a third-party scraping service may conflict with a platform's terms of use, and platforms can change what they allow at any time. AttentionOS only reads your own accounts and posts you paste in for a teardown, never logs in as you, never automates a browser, and checks your scraping budget before every run.
 
 **Alternative:** the official Instagram Graph API (`scraper: "iggraph"`) reads public business and creator accounts without this notice.
 

@@ -16,7 +16,7 @@ export const SOURCE_TYPES = [
   "knowledge_doc",
   "own_transcript",
   "own_caption",
-  "competitor_transcript",
+  "library_transcript",
   "comment_gold",
   "hook",
   "script",

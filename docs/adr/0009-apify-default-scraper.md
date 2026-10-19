@@ -1,6 +1,6 @@
 # ADR-9: Apify for competitor data, Instagram Graph API fallback, yt-dlp for TikTok and YouTube
 
-- **Status:** Accepted
+- **Status:** Accepted (competitor scanning removed by [ADR-16](0016-remove-competitor-tracking.md); Apify and the fallbacks still read the owner's own posts and pasted URLs)
 - **Date:** 2026-10-11
 - **Deciders:** Maintainers
 

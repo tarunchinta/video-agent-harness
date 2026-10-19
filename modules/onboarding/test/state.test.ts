@@ -29,7 +29,7 @@ describe("onboarding state machine", () => {
   });
 
   it("walks forward and back through every step", () => {
-    expect(STEP_IDS).toEqual(["welcome", "you", "keys", "competitors", "start", "review", "go-live"]);
+    expect(STEP_IDS).toEqual(["welcome", "you", "keys", "start", "review", "go-live"]);
     expect(nextStep("welcome")).toBe("you");
     expect(nextStep("go-live")).toBe("go-live");
     expect(prevStep("welcome")).toBe("welcome");
@@ -64,7 +64,7 @@ describe("onboarding state machine", () => {
 
   it("skipping keeps defaults and is undone by completing the step later", () => {
     let s = skipStep(goTo(initialState(NOW), "keys"), "keys", NOW);
-    expect(s.step).toBe("competitors");
+    expect(s.step).toBe("start");
     expect(s.data.skipped).toEqual(["keys"]);
     expect(stepStatus(s, "keys")).toBe("skipped");
     s = completeStep(goTo(s, "keys"), "keys", NOW);
@@ -75,10 +75,10 @@ describe("onboarding state machine", () => {
 
   it("never double-counts and keeps completed steps in order", () => {
     let s = initialState(NOW);
-    s = completeStep(s, "competitors", NOW);
+    s = completeStep(s, "keys", NOW);
     s = completeStep(s, "you", NOW);
     s = completeStep(s, "you", NOW);
-    expect(s.completed).toEqual(["you", "competitors"]);
+    expect(s.completed).toEqual(["you", "keys"]);
     // Skipping a step that's already done doesn't mark it skipped.
     s = skipStep(goTo(s, "you"), "you", NOW);
     expect(s.data.skipped).toEqual([]);
@@ -109,12 +109,20 @@ describe("onboarding state machine", () => {
   it("resumes a setup saved by the first wizard on the matching new step", () => {
     const old = { step: "strategy", completed: ["welcome", "business", "content", "interview"], data: { skipped: ["formats", "connect"], business: { url: "examplebrand.example" } } };
     const s = parseState(old, NOW);
-    expect(s.step).toBe("competitors");
+    expect(s.step).toBe("keys");
     expect(s.completed).toEqual(["welcome", "you", "interview"]);
     expect(s.data.skipped).toEqual(["review", "keys"]);
     expect(s.data.business.url).toBe("examplebrand.example");
     expect(s.data.start.runIds).toEqual([]);
-    expect(s.data.strategy.competitors).toEqual([]);
+  });
+
+  it("resumes a setup that was on the removed competitors step at Keys, and drops its saved creators", () => {
+    const old = { step: "competitors", completed: ["welcome", "you", "competitors"], data: { skipped: ["competitors"], strategy: { competitors: [{ handle: "@peer", platform: "instagram" }] } } };
+    const s = parseState(old, NOW);
+    expect(s.step).toBe("keys");
+    expect(s.completed).toEqual(["welcome", "you", "keys"]);
+    expect(s.data.skipped).toEqual(["keys"]);
+    expect("strategy" in s.data).toBe(false);
   });
 
   it("validates the stored shape { step, completed, data }", () => {
