@@ -5,3 +5,6 @@ packages:
   - "modules/*"
 allowBuilds:
   esbuild: true
+overrides:
+  # TypeScript 7 has no compiler API; tsup's declaration build needs it.
+  "tsup>typescript": "npm:@typescript/typescript6@^6.0.2"
