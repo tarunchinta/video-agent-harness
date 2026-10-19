@@ -16,7 +16,7 @@ AttentionOS must never contain personal or client data. Please confirm every ite
 - [ ] Examples, fixtures and docs use only obvious placeholders (`Examplebrand Studio`, `@demo_creator_a`, `*.example` domains).
 - [ ] No local paths like `/Users/<name>/…` or `C:\Users\<name>\…`.
 - [ ] No secrets, tokens or `.env` files (gitleaks passes).
-- [ ] No third-party media (posts, transcripts, screenshots, footage, logos, music, sound effects) without a license that allows it.
+- [ ] No third-party media (posts, transcripts, screenshots, footage, logos, music, sound effects) without a license that allows it. Vendored projects in `third-party/` keep their upstream license and attribution.
 - [ ] Ported code was rewritten, not copied. Source of the idea (if any): <!-- path or link -->
 - [ ] No brand literals in engine code, prompts or skills (they reference Brand Kit files by path).
 

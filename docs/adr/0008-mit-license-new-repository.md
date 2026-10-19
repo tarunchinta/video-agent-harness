@@ -13,6 +13,7 @@ AttentionOS wants broad adoption, including commercial use. The public repositor
 - License the project under **MIT**.
 - Start a **fresh repository** with no imported history. All code is written new for this project.
 - Adapted MIT-licensed method files are credited in `NOTICE`. Third-party skills without a license are not vendored.
+- **Amended:** whole MIT-compatible projects may be vendored unchanged into `third-party/<name>/` with their upstream LICENSE and attribution, credited in `NOTICE`. Their bundled assets keep the upstream rights notes. The rest of the repository still follows the rules above.
 
 ## Consequences
 

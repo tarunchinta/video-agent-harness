@@ -273,7 +273,7 @@ Contributions are welcome: providers, presets, format templates, skills, docs an
 - **`main` is protected.** Nobody pushes to it directly; every change goes through a pull request.
 - **Only the maintainer approves and merges PRs** ([CODEOWNERS](.github/CODEOWNERS)). CI must pass: typecheck, brand-literal guard, tests, media-py checks, gitleaks and DCO.
 - **Sign off every commit** (`git commit -s`, [DCO](https://developercertificate.org/)).
-- **No personal, client or third-party data**, no real brand or creator names, and no copied third-party media. Use obvious placeholders (`Examplebrand Studio`, `@demo_creator_a`, `*.example`).
+- **No personal, client or third-party data**, no real brand or creator names, and no copied third-party media in engine code, skills, docs or fixtures. Use obvious placeholders (`Examplebrand Studio`, `@demo_creator_a`, `*.example`). Vendored projects in `third-party/` keep their upstream license and attribution.
 - **No brand words in engine code or skills.** Reference Brand Kit files by path. Deterministic validators stay code, never prompts.
 - **Open an issue first** for anything bigger than a fix, so we can agree on the approach before you build it.
 

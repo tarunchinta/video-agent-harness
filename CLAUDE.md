@@ -3,7 +3,8 @@
 AttentionOS is an MIT-licensed, open-source content operating system. This repo is the **engine** (TypeScript packages, the Claude Code plugin, the `media-py` sidecar, the Docker stack). It runs from a clone of the repo and is not published to npm. Users' brands live in separate **workspaces** that the stack creates on first start (`attentionos create`). Architecture: `docs/architecture.md`.
 
 ## Non-negotiables
-- **No personal data, client data, real brand names, creator names or third-party media in this repo.** Examples and fixtures use only obvious placeholders (`Examplebrand Studio`, `@demo_creator_a`, `*.example` domains). CI runs gitleaks and `scripts/brand-literal-guard.mjs`.
+- **No personal data, client data, real brand names, creator names or third-party media in engine code, skills, docs or fixtures.** Examples and fixtures use only obvious placeholders (`Examplebrand Studio`, `@demo_creator_a`, `*.example` domains). CI runs gitleaks and `scripts/brand-literal-guard.mjs`.
+- **Vendored projects live in `third-party/<name>/`** with their upstream LICENSE. Their bundled assets keep the upstream attribution (for example a `catalog.json` with source and rights status); the brand-literal guard skips this folder. Never edit vendored files by hand; update them from upstream.
 - **No brand literals in engine code or skills.** Skills and prompts reference Brand Kit files by path (`brand/voice.md`), never embed a brand's words.
 - **Code holds the gates, the LLM does the judgment.** Validators in `packages/guardrails` are deterministic and never edited by an LLM at runtime.
 - **Untrusted text** (scraped posts, DMs, comments, trend items) only goes to tool-less LLM calls whose output is validated.
