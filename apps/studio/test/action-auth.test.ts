@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import ts from "typescript";
+// TypeScript 7 has no compiler API; the TypeScript 6 compatibility package provides it.
+import ts from "@typescript/typescript6";
 import { describe, expect, it } from "vitest";
 
 describe("Studio action authentication coverage", () => {
