@@ -51,6 +51,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+Vendored projects
+
+The following projects are included unchanged under third-party/, each with its upstream LICENSE file.
+
+| Path | Source | License |
+|---|---|---|
+| `third-party/cstack/` | https://github.com/goodnight000/cstack, Copyright (c) 2026 Charles Zheng | MIT |
+
+cstack bundles sound effects in `third-party/cstack/skills/video-edit/assets/sfx/`. Their sources,
+creators and rights status are listed per file in that folder's `catalog.json`; some are CC0 and
+others are marked by upstream as having an unverified underlying license.
+
 -------------------------------------------------------------------------------
 Not included, installed separately
 -------------------------------------------------------------------------------

@@ -5,8 +5,8 @@ Thanks for helping. The people who use AttentionOS day to day are business owner
 ## Ground rules
 
 1. **No personal or client data, ever.** No real names, business names, handles, emails, phone numbers, chat ids, account ids, tokens or local paths like `/Users/<name>/…`. Examples, fixtures and docs use obvious placeholders only: brand `Examplebrand Studio`, owner `Pat Example`, handles like `@examplebrand.studio` and `@demo_creator_a`, sites and emails on `example.com`, `example.org` or a `*.example` domain.
-2. **No third-party media.** No scraped posts, transcripts, screenshots, footage, logos, music or sound effects you don't have the rights to share. Sound effects must be CC0 or synthesized; fonts must be OFL.
-3. **Rewrite, never copy.** When porting an idea from another project, re-implement it from a description of the method. Never paste whole files or folders. In the PR, cite where the idea came from and confirm you went through the scrub checklist in the PR template.
+2. **No third-party media.** No scraped posts, transcripts, screenshots, footage, logos, music or sound effects you don't have the rights to share. Sound effects must be CC0 or synthesized; fonts must be OFL. The exception is a vendored project in `third-party/` (see rule 3), whose bundled assets keep their upstream attribution.
+3. **Rewrite, never copy.** When porting an idea from another project, re-implement it from a description of the method. Never paste whole files or folders. In the PR, cite where the idea came from and confirm you went through the scrub checklist in the PR template. The exception is a whole MIT-compatible project vendored unchanged into `third-party/<name>/` (for example with `git subtree`), with its upstream LICENSE kept and the project credited in `NOTICE`. Only the maintainer approves new vendored projects.
 4. **No brand literals in engine code or skills.** Skills and prompts reference Brand Kit files by path (`brand/voice.md`), never a brand's actual words.
 5. **Code holds the gates.** Validators in `packages/guardrails` are deterministic code. Prompts never replace a check that code can do.
 6. **Untrusted text** (scraped posts, DMs, comments, trend items) only goes to tool-less LLM calls whose output is validated.
@@ -91,7 +91,7 @@ The public deny-list `scripts/brand-literals.deny` holds only generic patterns. 
 ATTENTIONOS_DENYLIST=/path/to/private.deny node scripts/brand-literal-guard.mjs
 ```
 
-If the guard flags something legitimate, change the example to use placeholders rather than weakening the guard.
+If the guard flags something legitimate, change the example to use placeholders rather than weakening the guard. Vendored projects in `third-party/` are skipped, since their files come unchanged from upstream.
 
 ## How changes get merged
 
