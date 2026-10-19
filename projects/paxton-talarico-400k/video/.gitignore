@@ -1,2 +1,8 @@
-out/
 node_modules/
+# Render byproducts; out/film.mp4 (the finished film) is committed.
+out/film-silent.mp4
+out/stills/
+out/render-sheet.png
+out/render.log
+out/segments.txt
+out/events.json
