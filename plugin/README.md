@@ -49,6 +49,7 @@ Install it from Claude Code:
 | `edit-notes` | editing | How the owner gives edit notes and how the Art Director applies them. Covers spoken notes while filming ("cut that", "editor, cut"), cut-li… |
 | `media-hunt` | editing | Find license-clean B-roll, screenshots and stills for an edit, with a provenance log and hard budgets (at most 8 stills and 6 loops per vid… |
 | `reel-editor` | editing | Plan a vertical short (Reels, TikTok, Shorts) from an approved cut list. The Art Director writes an EditPlan from a format template, the tr… |
+| `sound-effects` | editing | Choose, source, generate, place and check sound effects for a video. Use whenever a reel, explainer or code-made film needs whooshes, pops,… |
 | `post-mortem` | learn | Write a post-mortem for one post (breakout, flop or new best) with wins and losses at the same depth. Used by the learn.post-mortem job and… |
 | `weekly-briefing` | learn | Turn the weekly numbers into a short plain-language summary with up to three things to focus on next week. Used by the learn.weekly-briefin… |
 | `onboarding-interview` | onboarding | Run the live onboarding interview in Studio's setup wizard - one question at a time about the owner's customers (pains in their words), off… |

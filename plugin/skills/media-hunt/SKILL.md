@@ -23,7 +23,8 @@ Every asset you add must have a known source and a license that allows this use.
 | CC0 / public domain libraries | `CC0` or `public domain` | Record the page URL of the item, not a search page. |
 | CC-BY | `CC-BY-4.0 (credit: …)` | Only when the credit can go in the caption; note the exact credit text. |
 
-Never use: stock footage you can't license, clips from other creators' videos, music or SFX packs, logos you have
+Never use: stock footage you can't license, clips from other creators' videos, music or SFX packs you can't license
+(licensed sound effects come through the `sound-effects` skill), logos you have
 no right to show (product names as plain text are fine), anything with a private person's face, name, email, phone,
 address, client or deal details. When in doubt, leave it out.
 

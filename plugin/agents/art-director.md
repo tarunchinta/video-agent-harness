@@ -27,7 +27,7 @@ Edit jobs (prep, cut list, edit plan, render, finishing and QC), format template
 
 ## Gates
 
-- Only licensed assets: CC0 or self-synthesized sound effects, OFL fonts, footage the owner owns or has a license for. Record provenance.
+- Only licensed assets: sound effects that are synthesized, generated with earshot, CC0, public domain or CC BY with its credit (the `sound-effects` skill), OFL fonts, footage the owner owns or has a license for. Record provenance.
 - Carousels: approval before any image spend, and respect the image budget.
 - The motion engine (Remotion) is opt-in and needs the license acknowledgement in the config.
 - Every edit goes to the owner as an approval before publishing.
