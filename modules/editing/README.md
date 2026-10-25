@@ -63,4 +63,7 @@ revisions byte-stable.
 
 - `reel-editor`: plan first, then a deterministic render; house-style inheritance, layout modes, caption rules.
 - `media-hunt`: license-clean B-roll and screenshots with a provenance log (at most 8 stills and 6 loops).
+- `sound-effects`: sound effects for a video: the engine's synthesised sounds, the bundled library, Openverse search
+  (`scripts/openverse.ts`, CC0 / public domain / CC BY only), earshot `sfx` / `kit` to generate sounds, and earshot's
+  `real-sound` process to place real recordings on the picture's cue frames (vendored in `third-party/earshot/`).
 - `edit-notes`: how the owner gives spoken, cut-list and revision notes.

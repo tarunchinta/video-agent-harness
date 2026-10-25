@@ -58,10 +58,14 @@ The following projects are included unchanged under third-party/, each with its 
 | Path | Source | License |
 |---|---|---|
 | `third-party/cstack/` | https://github.com/goodnight000/cstack, Copyright (c) 2026 Charles Zheng | MIT |
+| `third-party/earshot/` | https://github.com/Leonxlnx/earshot (v0.4.0), Copyright (c) 2026 Leon Lin | MIT |
 
 cstack bundles sound effects in `third-party/cstack/skills/video-edit/assets/sfx/`. Their sources,
 creators and rights status are listed per file in that folder's `catalog.json`; some are CC0 and
 others are marked by upstream as having an unverified underlying license.
+
+From earshot, only its agent skills (`earshot`, `real-sound`), README, LICENSE and the docs those skills
+link to are included; it ships no audio. The earshot Python package is installed separately.
 
 -------------------------------------------------------------------------------
 Not included, installed separately

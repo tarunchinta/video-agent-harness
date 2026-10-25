@@ -79,7 +79,8 @@ Change engine fields only for a reason you can name:
 
 - Sound effects are synthesised (whoosh, swipe, pop, riser, click, hit, ding, zoom, impact, glitch, soft, tick). Follow the format: `none`, `sparse`
   (layout changes only) or `beats`. Never the same kind twice in a row, at most one every 1.2 s, never on a cut
-  inside a sentence. A riser's `at` is when it lands.
+  inside a sentence. A riser's `at` is when it lands. For films that mix sound files (code-made films, real
+  recordings, earshot kits), use the `sound-effects` skill.
 - No baked-in music unless the format allows it and an attached asset has a license; trending sounds are added in
   the app.
 - Camera: `zoom` punch-ins (1.06 to 1.15) only where the format allows, mostly at jump cuts; `push` for slow emphasis.
