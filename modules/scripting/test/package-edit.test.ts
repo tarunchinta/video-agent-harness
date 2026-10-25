@@ -32,6 +32,10 @@ describe("package completion and patches", () => {
     expect(later.hookText).toBe(base.hookText);
     expect((later.beats as { text: string }[])[4]!.text).toBe("Short play.");
     expect((later.beats as unknown[]).length).toBe((base.beats as unknown[]).length);
+    // A visual-only edit keeps the words and the body.
+    const shot = applyPatch(base, { beatEdits: [{ index: 2, visual: "Screen recording of the tracker." }] });
+    expect((shot.beats as { text: string; visual: string }[])[2]).toEqual({ ...(base.beats as object[])[2], visual: "Screen recording of the tracker." });
+    expect(shot.body).toBe(base.body);
     // Top-level fields replace.
     expect(applyPatch(base, { claimLedger: [] }).claimLedger).toEqual([]);
   });

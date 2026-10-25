@@ -52,14 +52,17 @@ function ScriptBody({ body }: { body: string }) {
 const BEAT_LABEL: Record<string, string> = { hook: "Hook", turn: "Turn", proof: "Proof", rehook: "Rehook", play: "The play", close: "Close" };
 
 /** The full script as the owner will say it, beat by beat, so it reads in one pass. */
-function ScriptBeats({ beats, body }: { beats: { role: string; text: string }[]; body: string }) {
+function ScriptBeats({ beats, body }: { beats: { role: string; text: string; visual?: string }[]; body: string }) {
   if (!beats.length) return <ScriptBody body={body} />;
   return (
     <ol className="flex flex-col gap-2.5">
       {beats.map((b, i) => (
         <li key={i} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 max-sm:grid-cols-1 max-sm:gap-0.5">
           <span className="pt-[3px] text-caption text-fg-3">{BEAT_LABEL[b.role] ?? b.role}</span>
-          <p className={cn("text-[15px] leading-6 text-fg", b.role === "hook" && "font-medium")}>{b.text}</p>
+          <div>
+            <p className={cn("text-[15px] leading-6 text-fg", b.role === "hook" && "font-medium")}>{b.text}</p>
+            {b.visual ? <p className="mt-0.5 text-caption text-fg-3">On screen: {b.visual}</p> : null}
+          </div>
         </li>
       ))}
     </ol>

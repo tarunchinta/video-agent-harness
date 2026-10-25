@@ -27,7 +27,7 @@ export type PreviewModel =
       title: string | null;
       hook: string | null;
       body: string;
-      beats: { role: string; text: string }[];
+      beats: { role: string; text: string; visual?: string }[];
       captions: CaptionPreview[];
       keyword: string | null;
       claims: { claim: string; verdict: string; note: string | null; source: string | null }[];
@@ -196,7 +196,7 @@ async function enrich(r: ApprovalRow): Promise<ApprovalView> {
         title: s.title,
         hook: s.hook_text ?? str(p.hook),
         body: s.body,
-        beats: Array.isArray(s.beats) ? (s.beats as { role?: unknown; text?: unknown }[]).flatMap((b) => (typeof b.text === "string" ? [{ role: String(b.role ?? ""), text: b.text }] : [])) : [],
+        beats: Array.isArray(s.beats) ? (s.beats as { role?: unknown; text?: unknown; visual?: unknown }[]).flatMap((b) => (typeof b.text === "string" ? [{ role: String(b.role ?? ""), text: b.text, ...(typeof b.visual === "string" && b.visual.trim() ? { visual: b.visual } : {}) }] : [])) : [],
         captions,
         keyword: (s.keyword ?? str(p.keyword))?.toUpperCase() ?? null,
         claims: Array.isArray(s.claim_ledger)

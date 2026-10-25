@@ -6,7 +6,7 @@ import { sentences } from "@attentionos/guardrails";
  * the beats, and accepts a `patch` against the last package sent for the same content in this run.
  */
 
-type Beat = { role?: unknown; text?: unknown };
+type Beat = { role?: unknown; text?: unknown; visual?: unknown };
 type Pkg = Record<string, unknown>;
 
 const beatsOf = (p: Pkg): Beat[] | null => (Array.isArray(p.beats) ? (p.beats as Beat[]) : null);
@@ -24,7 +24,7 @@ export function completePackage(raw: Pkg): Pkg {
 
 export type PackagePatch = Pkg & {
   /** Replace single beats by position (0-based) instead of resending them all. */
-  beatEdits?: { index: number; text: string; role?: string }[];
+  beatEdits?: { index: number; text?: string; visual?: string; role?: string }[];
 };
 
 /**
@@ -41,12 +41,17 @@ export function applyPatch(base: Pkg, patch: PackagePatch): Pkg {
   if (beatEdits?.length && beats) {
     for (const e of beatEdits) {
       if (!Number.isInteger(e.index) || e.index < 0 || e.index >= beats.length) continue;
-      beats[e.index] = { ...beats[e.index], text: e.text, ...(e.role ? { role: e.role } : {}) };
+      beats[e.index] = {
+        ...beats[e.index],
+        ...(typeof e.text === "string" ? { text: e.text } : {}),
+        ...(typeof e.visual === "string" ? { visual: e.visual } : {}),
+        ...(e.role ? { role: e.role } : {}),
+      };
     }
     out.beats = beats;
   }
   beats = beatsOf(out);
-  const beatsChanged = Boolean(beatEdits?.length) || "beats" in fields;
+  const beatsChanged = Boolean(beatEdits?.some((e) => typeof e.text === "string" || e.role)) || "beats" in fields;
   if (beatsChanged && !("body" in fields)) delete out.body;
   if (beatsChanged && !("hookText" in fields) && JSON.stringify(hookOf(beats)) !== JSON.stringify(hookOf(beatsOf(base)))) delete out.hookText;
   return completePackage(out);

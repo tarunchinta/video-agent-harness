@@ -22,7 +22,12 @@ export type BeatRole = (typeof BEAT_ROLES)[number];
 
 export const HOOK_ORIGINS = ["own", "remix", "manual", "fresh"] as const;
 
-export const beatSchema = z.object({ role: z.enum(BEAT_ROLES), text: z.string().min(1) });
+export const beatSchema = z.object({
+  role: z.enum(BEAT_ROLES),
+  text: z.string().min(1),
+  /** What's on screen while this beat is said, in a sentence or two. Never spoken, so never part of the body. */
+  visual: z.string().trim().min(1).max(400).optional(),
+});
 
 export const hookSourceSchema = z.object({
   /** `hooks.id` of the bank entry this hook adapts. Required for the own origin (or `ref`); a remix needs `ref`. */
@@ -355,6 +360,13 @@ export function validateScript(input: unknown, rules: ScriptRules = {}): Validat
     } else {
       c.error("beats.missing", `The script has no ${role} beat.`, { path: "beats", fix: BEAT_FIX[role] });
     }
+  }
+  const noVisual = beats.flatMap((b, i) => (b.visual ? [] : [i]));
+  if (noVisual.length) {
+    c.warn("beats.no_visual", `${noVisual.length === 1 ? "Beat" : "Beats"} ${noVisual.map((i) => i + 1).join(", ")} ${noVisual.length === 1 ? "has" : "have"} no visual.`, {
+      path: `beats[${noVisual[0]}].visual`,
+      fix: "Add a short visual to each beat: what the viewer sees while it's said (shot, graphic, screen recording, on-screen text).",
+    });
   }
   if (beats[0] && beats[0].role !== "hook") c.error("beats.order", `The first beat is "${beats[0].role}"; the script must open with the hook.`, { path: "beats[0]", fix: "Put the hook first." });
   const last = beats[beats.length - 1];

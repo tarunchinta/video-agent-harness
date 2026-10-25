@@ -120,7 +120,7 @@ export async function laneOptions(): Promise<string[]> {
 // Detail
 // ---------------------------------------------------------------------------------------------------------------
 
-export type Beat = { role: string; text: string };
+export type Beat = { role: string; text: string; visual?: string };
 export type Claim = { claim: string; verdict: "PASS" | "FIX" | "CUT" | string; source?: string | null; note?: string | null };
 export type ValidatorCheck = { rule: string; ok: boolean; detail?: string | null };
 export type CaptionSet = Record<string, Record<string, unknown>>;

@@ -1,6 +1,6 @@
 ---
 name: write-script
-description: Write one short-form video script for a content item in the owner's own voice. Remix first (closely remake a proven post, usually one of the owner's own breakouts, from its checked blueprint, changing only the topic specifics, the proof and the words), otherwise write an original on the 6-beat skeleton. Includes a claim ledger and per-platform captions, saved through the validator for human review. Use for "script this", "write today's script", or the scripting.write-script job.
+description: Write one short-form video script for a content item in the owner's own voice. Remix first (closely remake a proven post, usually one of the owner's own breakouts, from its checked blueprint, changing only the topic specifics, the proof and the words), otherwise write an original on the 6-beat skeleton. Every beat carries a short visual (what's on screen while it's said). Includes a claim ledger and per-platform captions, saved through the validator for human review. Use for "script this", "write today's script", or the scripting.write-script job.
 ---
 
 # Write a script
@@ -40,7 +40,7 @@ A post that already pulled 10x its creator's normal is a better bet than anythin
 | The hook pattern and near-same hook wording (`sourceHookLine`), swapping only the topic words | The topic specifics, moved to the owner's offer and audience (`brand/offers.md`, `brand/icp.md`); a topic already in the owner's niche stays |
 | The beats in the same order, one script beat per source beat, each doing the same job (`beats[].does`) | The proof: the owner's own example or build; numbers only from the claim sources, cited `proof:<id>` (with none to cite, the example is the proof) |
 | The length and pacing (`spokenWords`, `durationS`) | The words: the owner's voice (`brand/voice.md`, `brand/lessons.md`, `ownWinners`) |
-| The format and visual (talking head, green screen, split screen) | |
+| The format and visual (talking head, green screen, split screen), carried into each beat's `visual` | |
 | The CTA mechanic (`ctaMechanic`), said with the brief's CTA type and keyword | |
 
 - Map each source beat to the script beat with the same job (`hook`, `turn`, `proof`, `rehook`, `play`, `close`). A remix may skip a beat the source didn't have, and keep the source's order.
@@ -59,14 +59,39 @@ If the task includes the owner's change request, the brief's `latestScript` hold
 
 | Beat | Job | Where |
 |---|---|---|
-| hook | The whole claim in one sentence. The viewer knows the topic and wants the answer. | First 3 seconds (about 8 words at 160 words a minute) |
+| hook | The whole claim in one sentence. The viewer knows the topic and wants the answer. A visual that stops the scroll. | First 3 seconds (about 8 words at 160 words a minute) |
 | turn | Name the real problem, or flip the expectation the hook set. | Next line or two |
 | proof | One concrete number from the proof inventory or a cited source (with none to cite, a concrete example of the owner's). | Before the rehook |
 | rehook | Raise the stakes or tease a bigger reveal so viewers stay for the second half. | 25 to 40% of the way in |
 | the play | The concrete thing to do, in order, specific enough to act on tonight. | The middle |
 | close | Call back to the hook's words or image, then the CTA. | Last line |
 
-The `beats` array holds these roles in this order, and `body` is exactly the beat texts joined. Nothing else goes in the body: no labels, brackets, directions, emoji, links, hashtags or markdown.
+The `beats` array holds these roles in this order, and `body` is exactly the beat texts joined. Nothing else goes in the body: no labels, brackets, directions, emoji, links, hashtags or markdown. Directions for the screen go in each beat's `visual`.
+
+## Visuals (every beat)
+
+Each beat has a `visual`: one or two plain sentences on what the viewer sees while that beat is said. It gives the owner and the editor a shot list to film and cut against. It is never spoken and never part of the body.
+
+```json
+{"role": "hook", "text": "...", "visual": "Talking head, tight crop. The big number slams in on screen as it's said."}
+```
+
+- **Start from the format.** The brief's format (or a remix's `blueprint.format` and `blueprint.visual`) sets the base layer: talking head, green screen, split screen, screen recording. Say what changes on top of it for this beat.
+- **Concrete and filmable.** Name the shot, graphic, chart, screenshot or on-screen text. "A calendar flips from March to May" helps. "Engaging B-roll" doesn't.
+- **Show what's being said.** A number gets a callout or a chart, a named thing gets its screenshot or a still, a process gets a simple diagram or screen recording, a step in the play gets its on-screen label.
+- **Say where it syncs.** When a visual has to land on a word ("the headline lands on the name-drop"), say so.
+- **One idea per beat.** One or two visual moves. If a beat needs more, it probably says too much.
+- **The close** ends on the callback image and, when there is one, the end card with the CTA.
+- **Same rules as the words.** A number on screen is a claim: it needs its claim ledger entry. A client on screen needs `clientConsent`, otherwise show them by type only. Never show a real person's or brand's name or logo the script can't show. Screenshots of a cited source are fine (the `media-hunt` skill has the rules).
+- Keep it general: what the viewer sees, not editing settings (fonts, timings, transitions). The edit plan handles those.
+
+When the script is drafted as a file or in chat instead of saved through the tool, lay out each beat as its own section with the time range, the spoken words and the visual, and end with the assets list:
+
+```
+## BEAT 1: HOOK (0:00 to 0:05)
+**VO:** <the words said>
+**Visual:** <what's on screen>
+```
 
 ## Hooks for originals
 
@@ -91,8 +116,8 @@ If the CTA type is `comment_keyword` or `dm_keyword`, use the reserved keyword, 
 
 ## Then
 
-1. Apply the spoken-humanizer and specificity checklists to the full draft, and write the captions (the `captions` skill's rules).
+1. Apply the spoken-humanizer and specificity checklists to the full draft, check every beat has its `visual`, and write the captions (the `captions` skill's rules).
 2. Call `scripting_save_script` with `requestApproval: true` and the whole package. Leave out `body` and `hookText`: they are built from the beats. The save runs every check, so there's no separate validate step.
-3. If it fails, it lists the exact fixes. Send only those changes as `patch` (for example `{"beatEdits": [{"index": 2, "text": "..."}]}`), never the whole package again. You get at most two revisions; when the tool says stop, stop and summarise what is still failing.
+3. If it fails, it lists the exact fixes. Send only those changes as `patch` (for example `{"beatEdits": [{"index": 2, "text": "..."}]}`, or `"visual"` in a beat edit to change only what's on screen), never the whole package again. You get at most two revisions; when the tool says stop, stop and summarise what is still failing.
 
-Summarise in plain words: for a remix, the `basedOn` line first and what you kept and changed; then the hook and its pattern, BROAD or INSIDER, the proof used, the keyword, and anything the owner should check while filming.
+Summarise in plain words: for a remix, the `basedOn` line first and what you kept and changed; then the hook and its pattern, BROAD or INSIDER, the proof used, the keyword, the assets the visuals need (screenshots, charts, stills, footage to film), and anything the owner should check while filming.

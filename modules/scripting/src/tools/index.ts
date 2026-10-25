@@ -63,7 +63,7 @@ export const validateScriptTool = defineTool({
 });
 
 const patchSchema = z.record(z.string(), z.unknown()).describe(
-  "Only the fields to change since the last package you sent for this content in this run: e.g. {\"beatEdits\": [{\"index\": 2, \"text\": \"...\"}]}, " +
+  "Only the fields to change since the last package you sent for this content in this run: e.g. {\"beatEdits\": [{\"index\": 2, \"text\": \"...\"}]} (or \"visual\" to change only what's on screen), " +
     "{\"claimLedger\": [...]}, or {\"captions\": {\"tiktok\": {...}}} (captions merge per platform). The body and hook text are rebuilt from the beats.",
 );
 

@@ -43,12 +43,12 @@ export function validCaptions() {
 
 export function validPackage(): ScriptPackageInput {
   const beats = [
-    { role: "hook" as const, text: HOOK },
-    { role: "turn" as const, text: TURN },
-    { role: "proof" as const, text: PROOF },
-    { role: "rehook" as const, text: REHOOK },
-    { role: "play" as const, text: PLAY },
-    { role: "close" as const, text: CLOSE },
+    { role: "hook" as const, text: HOOK, visual: "Talking head in a gutted kitchen. A quote sheet slides in." },
+    { role: "turn" as const, text: TURN, visual: "Cabinets and counters crossed out on screen, then the signed plan." },
+    { role: "proof" as const, text: PROOF, visual: "Bar chart: fixed-scope projects against the rest, with an 18% callout." },
+    { role: "rehook" as const, text: REHOOK, visual: "Zoom into one blank line on the plan." },
+    { role: "play" as const, text: PLAY, visual: "Each item appears as an on-screen label as it's said." },
+    { role: "close" as const, text: CLOSE, visual: "Back to the kitchen. End card with the keyword." },
   ];
   return {
     title: "Why remodel budgets break early",

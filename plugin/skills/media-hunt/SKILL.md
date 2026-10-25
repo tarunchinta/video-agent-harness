@@ -46,6 +46,6 @@ B-roll without a license, and the provenance travels with the post.
 
 ## Placing visuals
 
-- Line each visual up with the sentence that mentions it (output-time transcript from `editing_get_plan`).
+- Start from the script's beat visuals (`beats[].visual`): they say what each part should show. Line each visual up with the sentence that mentions it (output-time transcript from `editing_get_plan`).
 - Change visuals at the format's rhythm (`visualChangeEveryS`); hold a still 2 to 4 s, a loop no longer than it runs.
 - A visual that states a number needs the same `evidenceId` as the claim it supports.

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Check, X } from "lucide-react";
 import { Badge, cn, type BadgeTone } from "@/components/ui";
-import type { CaptionSet, ScriptVersion } from "@/server/queries/content";
+import type { Beat, CaptionSet, ScriptVersion } from "@/server/queries/content";
 import { PlatformGlyph } from "@/motion/PlatformGlyph";
 import { fmtRelative, humanize, platformLabel } from "./format";
 
@@ -75,7 +75,7 @@ export function ScriptPanel({ scripts }: { scripts: ScriptVersion[] }) {
       </div>
 
       <ol className="relative flex flex-col">
-        {(s.beats.length ? s.beats : s.body.split("\n").map((text) => ({ role: "", text }))).map((b, i, arr) => {
+        {(s.beats.length ? s.beats : s.body.split("\n").map((text): Beat => ({ role: "", text }))).map((b, i, arr) => {
           const r = ROLE[b.role] ?? { label: humanize(b.role) || `Line ${i + 1}`, when: "" };
           return (
             <li key={i} className="grid grid-cols-[88px_1fr] gap-4 sm:grid-cols-[112px_1fr]">
@@ -83,7 +83,10 @@ export function ScriptPanel({ scripts }: { scripts: ScriptVersion[] }) {
                 <span className={cn("text-small font-medium", b.role === "hook" ? "text-fg" : "text-fg-2")}>{r.label}</span>
                 {r.when ? <span className="text-caption text-fg-3">{r.when}</span> : null}
               </div>
-              <p className={cn("border-l border-border pb-5 pl-5 text-body", b.role === "hook" ? "text-fg" : "text-fg-2", i === arr.length - 1 && "pb-0")}>{b.text}</p>
+              <div className={cn("border-l border-border pb-5 pl-5", i === arr.length - 1 && "pb-0")}>
+                <p className={cn("text-body", b.role === "hook" ? "text-fg" : "text-fg-2")}>{b.text}</p>
+                {b.visual ? <p className="mt-1.5 text-small text-fg-3">On screen: {b.visual}</p> : null}
+              </div>
             </li>
           );
         })}

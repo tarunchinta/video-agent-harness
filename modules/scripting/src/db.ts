@@ -31,7 +31,7 @@ export type ScriptRow = {
   content_id: string;
   version: number;
   body: string;
-  beats: { role: string; text: string }[] | null;
+  beats: { role: string; text: string; visual?: string }[] | null;
   hook_text: string | null;
   hook_source: Record<string, unknown> | null;
   claim_ledger: { id?: string; claim: string; verdict: string; source?: string | null; note?: string }[] | null;

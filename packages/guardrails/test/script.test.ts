@@ -7,6 +7,25 @@ describe("validateScript: the valid fixture", () => {
     const r = validateScript(validPackage(), rules());
     expect(r.errors).toEqual([]);
     expect(r.ok).toBe(true);
+    expect(warnCodes(r)).not.toContain("beats.no_visual");
+  });
+});
+
+describe("beat visuals", () => {
+  it("warns, never fails, when a beat has no visual, and keeps visuals out of the spoken words", () => {
+    const p = validPackage();
+    const beats = p.beats.map((b, i) => (i === 1 || i === 3 ? { role: b.role, text: b.text } : b));
+    const r = validateScript({ ...p, beats }, rules());
+    expect(r.errors).toEqual([]);
+    const w = r.warnings.find((x) => x.code === "beats.no_visual");
+    expect(w?.message).toBe("Beats 2, 4 have no visual.");
+    expect(w?.path).toBe("beats[1].visual");
+  });
+
+  it("rejects an empty visual", () => {
+    const p = validPackage();
+    const r = validateScript({ ...p, beats: p.beats.map((b, i) => (i === 0 ? { ...b, visual: "  " } : b)) }, rules());
+    expect(codes(r)).toContain("script.shape");
   });
 });
 
