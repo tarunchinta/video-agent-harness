@@ -3,10 +3,10 @@
 * text=auto eol=lf
 
 # Real CSV exports use CRLF; keep test fixtures byte-for-byte so the parser is tested on them.
-packages/providers/analytics-csv/test/fixtures/*.csv -text
+tools/attentionos/packages/providers/analytics-csv/test/fixtures/*.csv -text
 
 # Executables without an extension.
-deploy/aos text eol=lf
+tools/attentionos/deploy/aos text eol=lf
 
 # Binary files: never convert.
 *.png binary

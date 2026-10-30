@@ -1,3 +1,8 @@
+---
+name: emotional-hook-first
+description: "Opening any explainer video. Before a single technical fact appears on screen."
+---
+
 # Skill: emotional-hook-first
 
 ## When to use

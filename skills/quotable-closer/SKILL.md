@@ -1,3 +1,8 @@
+---
+name: quotable-closer
+description: "The final line of the video. This is the distribution mechanism — what viewers repeat to others."
+---
+
 # Skill: quotable-closer
 
 ## When to use

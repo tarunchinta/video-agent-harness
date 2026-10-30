@@ -16,18 +16,24 @@ jobs:
     name: Dependency audit
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tools/attentionos
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: tools/attentionos/package.json
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: tools/attentionos/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm audit --audit-level=moderate
       - uses: astral-sh/setup-uv@v7
       - name: Audit locked Python runtime dependencies and optional features
-        working-directory: media-py
+        working-directory: tools/attentionos/media-py
         run: |
           uv export --frozen --all-extras --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/media-requirements.txt"
           uvx pip-audit --no-deps --disable-pip -r "$RUNNER_TEMP/media-requirements.txt"
@@ -39,6 +45,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build CLI, Studio and runtime from a clean checkout
-        run: docker build --pull -f deploy/Dockerfile -t attentionos:ci .
+        run: docker build --pull -f tools/attentionos/deploy/Dockerfile -t attentionos:ci tools/attentionos
       - name: Smoke test the packaged CLI
         run: docker run --rm --entrypoint attentionos attentionos:ci --version

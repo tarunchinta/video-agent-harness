@@ -1,3 +1,8 @@
+---
+name: follow-the-object
+description: "Structuring any process explainer. The alternative is a topic tour, which loses viewers."
+---
+
 # Skill: follow-the-object
 
 ## When to use

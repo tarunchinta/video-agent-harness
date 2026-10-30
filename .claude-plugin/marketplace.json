@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "attentionos",
-      "source": "./plugin",
+      "source": "./tools/attentionos/plugin",
       "description": "Your AI content team in Claude Code: research, plan, script, edit, publish, follow up and learn, with you approving every public step. Commands are /attention:*.",
       "category": "productivity",
       "tags": ["content", "social-media", "personal-brand", "marketing"]

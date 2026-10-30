@@ -1,3 +1,8 @@
+---
+name: scale-anchor
+description: "Whenever a number is too big or too small to intuit."
+---
+
 # Skill: scale-anchor
 
 ## When to use

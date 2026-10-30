@@ -1,3 +1,8 @@
+---
+name: quantify-everything
+description: "Whenever a claim risks being an adjective (\"fast\", \"huge\", \"tiny\")."
+---
+
 # Skill: quantify-everything
 
 ## When to use

@@ -18,7 +18,7 @@
  * with the workspace as its working directory (a plugin-bundled server would be renamed
  * `mcp__plugin_attention_attentionos__*` and start in the plugin's install folder).
  *
- * The repo-root `.claude-plugin/marketplace.json` lists `./plugin`, so `/plugin marketplace add
+ * The repo-root `.claude-plugin/marketplace.json` lists `./tools/attentionos/plugin`, so `/plugin marketplace add
  * evanbaker315/AttentionOS` then `/plugin install attentionos@attentionos` installs this output.
  */
 

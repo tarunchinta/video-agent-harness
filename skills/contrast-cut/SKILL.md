@@ -1,3 +1,8 @@
+---
+name: contrast-cut
+description: "After establishing a modern marvel, to make its scale legible. Baselines make numbers mean something."
+---
+
 # Skill: contrast-cut
 
 ## When to use
