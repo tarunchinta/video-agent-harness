@@ -48,8 +48,6 @@ old code is pulled in only where it earns its place.
 - **Untrusted content stays contained.** Scraped pages and retrieved posts only
   reach tool-less model calls whose output is validated. Agent-written code and
   browser sessions run in a sandbox.
-- **Cloneable.** Tuned to one creator's workflow, but anyone can run it with
-  their own keys. Personal integrations (Distill) are optional plugins.
 
 ## Architecture
 
