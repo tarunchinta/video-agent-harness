@@ -1,0 +1,68 @@
+#!/bin/sh
+# Proves the image can do what research, demo capture and rendering need. Runs at build time and in the
+# driver's integration test. Uses no network.
+set -eu
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+echo "node $(node --version), $(python --version), $(ffmpeg -hide_banner -version | head -1 | cut -d' ' -f1-3)"
+
+# ffmpeg: the encoders and filters that cuts, captions and audio levelling use.
+for e in libx264 aac; do
+  ffmpeg -hide_banner -encoders | grep -Eq " ${e} " || { echo "ffmpeg is missing the ${e} encoder"; exit 1; }
+done
+for f in scale overlay drawtext subtitles loudnorm atempo setpts concat; do
+  ffmpeg -hide_banner -filters | grep -Eq " ${f} " || { echo "ffmpeg is missing the ${f} filter"; exit 1; }
+done
+ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=1:size=320x568:rate=30 \
+  -f lavfi -i sine=frequency=440:duration=1 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$tmp/clip.mp4"
+ffprobe -v error -show_entries format=duration -of csv=p=0 "$tmp/clip.mp4" >/dev/null
+
+# Python: the baseline imports, and a chart written to disk.
+python - "$tmp/chart.png" <<'PY'
+import sys
+import duckdb, httpx, numpy, pandas
+import matplotlib.pyplot as plt
+
+frame = pandas.DataFrame({"x": numpy.arange(5), "y": numpy.arange(5) ** 2})
+assert duckdb.sql("select sum(y) from frame").fetchall()[0][0] == 30
+frame.plot(x="x", y="y")
+plt.savefig(sys.argv[1])
+PY
+test -s "$tmp/chart.png"
+
+# Browser: load a page, take a screenshot and record a short video. Playwright resolves from /node_modules.
+cat > "$tmp/browser.mjs" <<'JS'
+import { chromium } from "playwright";
+import { statSync } from "node:fs";
+
+const dir = process.argv[2];
+const browser = await chromium.launch();
+const context = await browser.newContext({
+  viewport: { width: 540, height: 960 },
+  recordVideo: { dir, size: { width: 540, height: 960 } },
+});
+const page = await context.newPage();
+await page.setContent("<h1 style='font-family: Inter'>Sandbox check</h1>");
+await page.screenshot({ path: `${dir}/page.png` });
+const video = page.video();
+await context.close();
+await browser.close();
+if (statSync(`${dir}/page.png`).size === 0) throw new Error("empty screenshot");
+if (statSync(await video.path()).size === 0) throw new Error("empty recording");
+JS
+node "$tmp/browser.mjs" "$tmp"
+
+# Voice: the bundled model loads without network and times the words of a clip (silence here, so no words).
+ffmpeg -hide_banner -loglevel error -f lavfi -i anullsrc=r=16000:cl=mono -t 1 "$tmp/silence.wav"
+python - "$tmp/silence.wav" <<'PY'
+import os, sys
+from faster_whisper import WhisperModel
+
+model = WhisperModel(os.environ["HARNESS_WHISPER_MODEL"], device="cpu", compute_type="int8")
+segments, info = model.transcribe(sys.argv[1], word_timestamps=True)
+list(segments)
+assert info.duration > 0.5
+PY
+
+echo "sandbox self-check passed"

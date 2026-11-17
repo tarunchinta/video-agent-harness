@@ -1,0 +1,4 @@
+# Word timings for an uploaded voiceover. Edit this file, then run
+# `pnpm --filter @harness/sandbox-docker image:lock:voice` to rewrite requirements-voice.txt with pinned versions.
+# It is locked against requirements.txt, so packages the two share (numpy) stay at one version.
+faster-whisper

@@ -1,0 +1,52 @@
+Video Agent Harness
+
+This product is licensed under the MIT License (see LICENSE).
+
+This repository began as a fork of AttentionOS and keeps a small number of its files. The rest of
+AttentionOS was removed; README.md lists what was cut.
+
+-------------------------------------------------------------------------------
+AttentionOS
+-------------------------------------------------------------------------------
+
+AttentionOS
+Copyright (c) 2026 The AttentionOS Authors
+Source: https://github.com/evanbaker315/AttentionOS
+License: MIT. The license text and copyright notice are in LICENSE.
+
+Files kept from AttentionOS:
+
+| File | State |
+|---|---|
+| `packages/core/src/tools.ts` | Unchanged |
+| `packages/core/src/providers.ts` | Unchanged |
+| `packages/runner/src/budget.ts` | Unchanged |
+| `packages/runner/src/events.ts` | Unchanged |
+| `packages/runner/src/llm.ts` | Unchanged |
+| `tsconfig.base.json`, `turbo.json`, `.editorconfig`, `.nvmrc`, `.gitignore`, `pnpm-lock.yaml` | Unchanged |
+| `.gitleaks.toml`, `.github/workflows/gitleaks.yml` | Unchanged |
+| `package.json`, `pnpm-workspace.yaml`, `vitest.config.ts`, `.gitattributes` | Trimmed |
+| `CLAUDE.md` | Rewritten; some rules carried over |
+
+-------------------------------------------------------------------------------
+Media in projects/
+-------------------------------------------------------------------------------
+
+Sound effects and fonts used by the reels under projects/ are credited in the CREDITS.md and
+fonts.css files next to them.
+
+-------------------------------------------------------------------------------
+Not included, installed separately
+-------------------------------------------------------------------------------
+
+- npm and Python dependencies are installed by their package managers under their own licenses.
+  See each package's license in node_modules/.
+- The sandbox image (packages/sandbox-docker/image) is built from public base images and packages
+  under their own licenses. Nothing from them is stored in this repository.
+
+-------------------------------------------------------------------------------
+Trademarks
+-------------------------------------------------------------------------------
+
+Claude is a trademark of Anthropic. Other product names are trademarks of their respective owners.
+This project is not affiliated with or endorsed by them.

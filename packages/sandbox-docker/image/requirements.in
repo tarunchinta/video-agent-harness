@@ -1,0 +1,7 @@
+# Python baseline for research experiments and charts. Edit this file, then run
+# `pnpm --filter @harness/sandbox-docker image:lock` to rewrite requirements.txt with pinned versions.
+duckdb
+httpx
+matplotlib
+numpy
+pandas

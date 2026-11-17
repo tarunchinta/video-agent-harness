@@ -1,0 +1,26 @@
+{
+  "name": "video-agent-harness",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "turbo run lint",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "harness": "tsx apps/harness-cli/src/bin.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "turbo": "^2.11.9",
+    "typescript": "~7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

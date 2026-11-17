@@ -1,0 +1,19 @@
+#!/bin/sh
+# Runs one command for the driver, in its own session so the whole process tree can be stopped at once.
+#
+#   sandbox-exec <exec-id> <backstop-seconds> <command> [args...]
+#
+# The driver enforces the real timeout and calls sandbox-kill. The backstop here only matters if the driver
+# itself dies: nothing started through this script outlives it.
+set -u
+id="$1"
+backstop="$2"
+shift 2
+pidfile="/run/sandbox/$id.pid"
+
+# The inner shell is the session leader, so its pid is the process group id that sandbox-kill signals.
+setsid --wait sh -c 'echo "$$" > "$1"; shift; exec timeout --signal=TERM --kill-after=5 "$@"' \
+  sh "$pidfile" "$backstop" "$@"
+code=$?
+rm -f "$pidfile"
+exit "$code"

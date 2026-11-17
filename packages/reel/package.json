@@ -1,0 +1,21 @@
+{
+  "name": "@harness/reel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The reel pipeline on top of the agent loop: stages, research, the two review gates, voiceover timing and the film kit that renders a cut.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/harness": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@harness/sandbox-docker": "workspace:*"
+  }
+}

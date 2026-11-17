@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Film</title>
+<style>
+/* Give each colour one meaning and keep it for the whole film. */
+:root {
+  --paper: #ece5d3; --ink: #17161a; --mute: #7d766a; --accent: #f5a800;
+  --sans: "Inter", system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #0d0d10; color: var(--ink); font-family: var(--sans); overflow: hidden; }
+/* The frame: always 1080 by 1920. Everything the viewer sees is inside #stage. */
+#stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--paper); transform-origin: 0 0; }
+.scene { position: absolute; inset: 0; display: none; }
+.abs { position: absolute; }
+
+/* Captions sit in the lower third, clear of the platform's own buttons at the bottom and right. */
+#captions { position: absolute; left: 100px; width: 820px; top: 1392px; text-align: center; font: 800 50px/1.18 var(--sans); letter-spacing: -.01em; }
+#captions .w { display: inline-block; padding: 0 .09em; border-radius: 6px; }
+#captions .on { background: var(--accent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="scene" id="s1">
+    <div class="abs" id="title" style="left:80px; top:420px; width:920px; font:900 110px/1 var(--sans); letter-spacing:-.03em;">Your title</div>
+    <div class="abs" id="rule" style="left:80px; top:700px; height:14px; background:var(--accent);"></div>
+  </div>
+  <div id="captions"></div>
+</div>
+
+<script src="words.js"></script>
+<script src="kit/film.js"></script>
+<script>
+// This is a starting point. Replace the scenes, the cues and the caption lines with the film's own.
+const { cue, cueEnd, clamp, lerp, E, P, rng, $, css, show, fmt, svgEl, words } = Film;
+
+// Every beat is timed off a phrase of the voiceover, so a new recording re-times the whole film.
+// const T = { hook: cue("the first words"), turn: cue("but then") };
+const T = { start: words.length ? words[0].s : 0 };
+T.end = words.length ? words[words.length - 1].e : 3;
+
+Film.define({
+  fps: 30,
+  duration: T.end + 1.5,
+  T,
+  // Caption lines, in order, word for word what film/words.json says. Leave out to have no captions.
+  // captions: { lines: ["First line of the voiceover,", "then the next."] },
+  draw(t) {
+    // Set everything from t alone. The same t must always give the same frame.
+    show($("s1"), true);
+    css($("title"), { opacity: P(t, T.start, 0.4), transform: `translateY(${lerp(40, 0, P(t, T.start, 0.5))}px)` });
+    css($("rule"), { width: `${lerp(0, 920, P(t, T.start + 0.2, 0.7, E.inOut))}px` });
+  },
+});
+</script>
+</body>
+</html>

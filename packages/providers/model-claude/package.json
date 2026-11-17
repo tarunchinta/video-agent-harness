@@ -1,0 +1,17 @@
+{
+  "name": "@harness/model-claude",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Claude as a model provider for the agent loop, over the Messages API. The only package that imports the Anthropic SDK.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/harness": "workspace:*"
+  }
+}

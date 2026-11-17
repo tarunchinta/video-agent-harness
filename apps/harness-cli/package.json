@@ -1,0 +1,21 @@
+{
+  "name": "@harness/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Start, resume, inspect and replay runs from the terminal.",
+  "license": "MIT",
+  "bin": {
+    "harness": "./src/bin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/harness": "workspace:*",
+    "@harness/model-claude": "workspace:*",
+    "@harness/model-openai-compatible": "workspace:*",
+    "@harness/reel": "workspace:*",
+    "@harness/sandbox-docker": "workspace:*"
+  }
+}

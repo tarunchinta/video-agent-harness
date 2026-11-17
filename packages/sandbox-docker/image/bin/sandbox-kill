@@ -1,0 +1,25 @@
+#!/bin/sh
+# Stops everything a sandbox-exec call started: TERM to the process group, then KILL after two seconds.
+#
+#   sandbox-kill <exec-id>
+set -u
+pidfile="/run/sandbox/$1.pid"
+
+# The kill can arrive before the command has written its pid file. Wait briefly for it.
+i=0
+while [ ! -s "$pidfile" ] && [ "$i" -lt 20 ]; do
+  sleep 0.1
+  i=$((i + 1))
+done
+[ -s "$pidfile" ] || exit 0
+
+# /bin/kill, not the shell's built-in: dash's built-in rejects a negative (process group) target.
+pgid=$(cat "$pidfile")
+/bin/kill -TERM -- "-$pgid" 2>/dev/null || exit 0
+i=0
+while [ "$i" -lt 20 ] && /bin/kill -0 -- "-$pgid" 2>/dev/null; do
+  sleep 0.1
+  i=$((i + 1))
+done
+/bin/kill -KILL -- "-$pgid" 2>/dev/null
+exit 0

@@ -1,0 +1,17 @@
+{
+  "name": "@harness/model-openai-compatible",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Any model behind an OpenAI-style chat completions API (such as a Microsoft Foundry deployment) as a model provider for the agent loop, over plain HTTP.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/harness": "workspace:*"
+  }
+}

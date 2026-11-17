@@ -1,0 +1,21 @@
+# Check out text files with LF line endings on every OS. Git for Windows converts to CRLF by default, which breaks the
+# shell scripts copied into the sandbox image (packages/sandbox-docker/image/bin) with errors like "/bin/sh^M: not found".
+* text=auto eol=lf
+
+# Binary files: never convert.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.mp4 binary
+*.mov binary
+*.wav binary
+*.mp3 binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.onnx binary
+*.bin binary

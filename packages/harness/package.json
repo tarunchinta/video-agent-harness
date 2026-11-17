@@ -1,0 +1,18 @@
+{
+  "name": "@harness/harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The agent loop: model calls, tool dispatch, budgets, review gates, resume and replay, all driven from the append-only event log.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}
