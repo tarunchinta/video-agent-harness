@@ -1,0 +1,22 @@
+{
+  "name": "@harness/search-brave",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Web search through the Brave Search API, over plain HTTP, behind the loop's SearchProvider interface.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/harness": "workspace:*",
+    "@harness/contract": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}

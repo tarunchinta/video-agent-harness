@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRun, Engine, MemoryEventStore, ModelError, type ModelRequest, type ModelResponse } from "@harness/harness";
+import { testModelProvider } from "@harness/contract/conformance";
 import { OpenAICompatibleProvider, type OpenAICompatibleProviderOptions } from "../src/index.ts";
 
 /**
@@ -199,4 +200,15 @@ describe("with the agent loop", () => {
     expect(readFileSync(join(workDir, "note.txt"), "utf8")).toBe("hello");
     expect(sent).toHaveLength(2);
   });
+});
+
+testModelProvider("OpenAI-compatible", (fetch) => new OpenAICompatibleProvider({ apiKey: "test-key", baseUrl: BASE_URL, fetch }), {
+  model: MODEL,
+  text: () => ok(sse([chunk({ role: "assistant", content: "Hel" }), chunk({ content: "lo" }), chunk({}, "stop"), usage(20, 5)])),
+  expectText: "Hello",
+  toolCall: () => ok(sse([...callTool(0, "call_demo_1", "lookup", ['{"q":', '"x"}']), chunk({}, "tool_calls"), usage(20, 8)])),
+  maxOutput: () => ok(sse([chunk({ content: "Hel" }), chunk({}, "length"), usage(20, 1000)])),
+  // No finish reason and no [DONE]: the connection dropped.
+  truncated: () => ok(`data: ${JSON.stringify(chunk({ content: "Hel" }))}\n\n`),
+  status: (code, retryAfter) => fail(code, { message: "Recorded error." }, retryAfter === undefined ? {} : { "retry-after": String(retryAfter) }),
 });

@@ -135,7 +135,7 @@ try {
   writeFileSync(join(OUT, "segments.txt"), ranges.map((_, w) => `file 'seg${w}.mp4'`).join("\n"));
   const silent = join(OUT, "film-silent.mp4");
   execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", join(OUT, "segments.txt"), "-c", "copy", silent]);
-  ranges.forEach((_, w) => rmSync(join(OUT, `seg${w}.mp4`), { force: true }));
+  for (let w = 0; w < ranges.length; w += 1) rmSync(join(OUT, `seg${w}.mp4`), { force: true });
 
   // Sound: the voiceover when there is one, and each sound effect on the frame its event names.
   const inputs = [], filters = [], missing = [];
@@ -157,7 +157,7 @@ try {
       "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-t", length, "-movflags", "+faststart", final]);
   } else {
     const level = hasVoice ? "loudnorm=I=-14:TP=-1.5:LRA=11," : "";
-    filters.push(`${Array.from({ length: n }, (_, i) => `[a${i}]`).join("")}amix=inputs=${n}:normalize=0:duration=longest,apad,atrim=0:${length},${level}alimiter=limit=0.84[mix]`);
+    filters.push(`${Array.from({ length: n }, (_, i) => `[a${i}]`).join("")}amix=inputs=${n}:normalize=0:duration=longest,apad,atrim=0:${length},${level}alimiter=limit=0.84:level=false[mix]`);
     execFileSync("ffmpeg", ["-v", "error", "-y", "-i", silent, ...inputs, "-filter_complex", filters.join(";"), "-map", "0:v", "-map", "[mix]",
       "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-t", length, "-movflags", "+faststart", final]);
   }

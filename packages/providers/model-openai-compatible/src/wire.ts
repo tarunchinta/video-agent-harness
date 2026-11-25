@@ -45,7 +45,12 @@ function userMessages(content: readonly ContentBlock[]): Json[] {
     }
   }
   const text = content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n\n");
-  if (text) out.push({ role: "user", content: text });
+  // Pictures at the top of a user message (tool-less calls such as the critic) go with its text, in one message.
+  const own = content.flatMap((b) =>
+    b.type === "image" && b.data !== undefined ? [{ type: "image_url", image_url: { url: `data:${b.mediaType};base64,${b.data}` } }] : [],
+  );
+  if (own.length) out.push({ role: "user", content: [...(text ? [{ type: "text", text }] : []), ...own] });
+  else if (text) out.push({ role: "user", content: text });
   if (pictures.length) out.push({ role: "user", content: [{ type: "text", text: "Pictures from the tool results above." }, ...pictures] });
   return out;
 }

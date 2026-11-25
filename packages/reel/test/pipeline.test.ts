@@ -6,24 +6,37 @@ import {
   createRun, decideGate, Engine, foldRun, MemoryEventStore, payloadOf,
   type HarnessEvent, type Limits, type ModelResponse, type ToolResultBlock,
 } from "@harness/harness";
-import { FakeSandboxes, respond, resultsIn, ScriptedProvider, toolCall } from "@harness/harness/testing";
-import { REEL_SYSTEM, reelPipeline, reelTask, wordsSchema } from "../src/index.ts";
+import { FakeSandboxes, respond, resultsIn, ScriptedProvider, text, toolCall } from "@harness/harness/testing";
+import { checkCut, REEL_SYSTEM, reelPipeline, reelTask, wordsSchema } from "../src/index.ts";
 
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00]);
 const NARRATION = [
-  "Texas might turn blue in November,",
-  "because four hundred thousand Republicans disappeared in May.",
+  "A library card costs nothing here,",
+  "yet four hundred thousand readers disappeared in May.",
   "Take one of them.",
-  "He votes in March, then stays home for the runoff.",
-  "The establishment stayed home, and the base took the party.",
+  "She borrows in March, then stays home for the summer.",
+  "The regulars stayed home, and the newcomers took the shelves.",
 ].join("\n");
-const SCRIPT = `# The missing votes\n\nHook: Texas might turn blue.\n\n${"Beat: what is said, what is on screen, and the source that backs it. ".repeat(4)}`;
+const SCRIPT = `# The missing readers\n\nHook: a library card costs nothing.\n\n${"Beat: what is said, what is on screen, and the source that backs it. ".repeat(4)}`;
+
+/** What the critic's measuring script reports for the next cut it is shown. Tests change it. */
+let measured: Record<string, unknown> = {};
+const MEASURED_OK = {
+  ok: true, duration: 21.4, width: 1080, height: 1920, audio: true, black: [], freezes: [], silences: [],
+  loudness: { integrated_lufs: -14.2, true_peak_db: -1.6 }, first_word: 0.25, last_word: 20.1,
+  frames: [{ n: 1, t: 0.7, words: "A library card" }, { n: 2, t: 2.0, words: "four hundred thousand" }], sheet: "out/critique/sheet.jpg",
+};
 
 /** A sandbox that stands in for the kit's scripts: it writes the files they would and prints their last line. */
 function sandboxes() {
   return new FakeSandboxes((call, run) => {
     const film = join(run.workDir, "film");
     const [program, script, mode] = call.command;
+    if (program === "node" && script === "kit/review.mjs") {
+      mkdirSync(join(film, "out", "critique"), { recursive: true });
+      writeFileSync(join(film, "out", "critique", "sheet.jpg"), JPEG);
+      return { stdout: `${JSON.stringify({ ...MEASURED_OK, ...measured })}\n` };
+    }
     if (program === "node" && script === "kit/render.mjs" && mode === "--stills") {
       mkdirSync(join(film, "out", "stills"), { recursive: true });
       writeFileSync(join(film, "out", "stills", "sheet.jpg"), JPEG);
@@ -55,14 +68,14 @@ function sandboxes() {
   });
 }
 
-function world(responses: ModelResponse[], limits: Limits = {}) {
+function world(responses: ModelResponse[], limits: Limits = {}, critic = false) {
   const root = mkdtempSync(join(tmpdir(), "reel-pipeline-"));
   const workDir = join(root, "work");
   const store = new MemoryEventStore();
   const provider = new ScriptedProvider(responses);
   const box = sandboxes();
-  const engine = new Engine({ store, provider, workDir: () => workDir, artifactsDir: () => join(root, "artifacts"), sandbox: box.factory, sleep: async () => {}, ...reelPipeline() });
-  const start = () => createRun(store, { task: reelTask({ topic: "Why 400,000 voters stayed home", seconds: 30 }), model: "test-model", system: REEL_SYSTEM, limits });
+  const engine = new Engine({ store, provider, workDir: () => workDir, artifactsDir: () => join(root, "artifacts"), sandbox: box.factory, sleep: async () => {}, ...reelPipeline({ critic }) });
+  const start = () => createRun(store, { task: reelTask({ topic: "Why 400,000 readers stayed home", seconds: 30 }), model: "test-model", system: REEL_SYSTEM, limits });
   /** The result of the nth tool call the model has made so far, as the model was shown it. */
   const shown = (name: string, nth = 0): ToolResultBlock & { name: string } => {
     const request = provider.requests.at(-1)!;
@@ -114,7 +127,7 @@ describe("the reel pipeline", () => {
         respond([write("film/index.html", "<html>second cut, a little longer</html>")]),
         respond([toolCall("render_film", {})]),
         respond([toolCall("submit_cut", {})]),
-        respond([toolCall("finish", { summary: "A 21 second reel on the missing votes.", film: "cuts/cut-2.mp4" })]),
+        respond([toolCall("finish", { summary: "A 21 second reel on the missing readers.", film: "cuts/cut-2.mp4" })]),
       ],
       { max_re_edits: 2 },
     );
@@ -150,7 +163,7 @@ describe("the reel pipeline", () => {
     });
     expect(shown("prepare_voiceover").content).toContain("There is no recording, so the timing is a stand-in made from the narration: 38 words");
     expect(wordsSchema.parse(JSON.parse(readFileSync(join(workDir, "film/words.json"), "utf8")))).toHaveLength(38);
-    expect(readFileSync(join(workDir, "film/words.js"), "utf8")).toMatch(/^window\.WORDS = \[\{"w":"Texas"/);
+    expect(readFileSync(join(workDir, "film/words.js"), "utf8")).toMatch(/^window\.WORDS = \[\{"w":"A"/);
     expect(shown("start_stage", 6).content).toContain("Read film/kit/README.md first");
 
     // The kit is put back before every render, whatever the agent did to it.
@@ -185,7 +198,7 @@ describe("the reel pipeline", () => {
     expect(await engine.run(runId)).toMatchObject({ status: "waiting_gate", gate: "final_cut" });
     await decideGate(store, runId, { gate: "final_cut", decision: "approved" });
     const done = await engine.run(runId);
-    expect(done).toMatchObject({ status: "succeeded", result: { summary: "A 21 second reel on the missing votes.", film: "cuts/cut-2.mp4" } });
+    expect(done).toMatchObject({ status: "succeeded", result: { summary: "A 21 second reel on the missing readers.", film: "cuts/cut-2.mp4" } });
 
     events = await store.read(runId);
     expect(stagesOf(events)).toEqual(["research 1 plan", "script 1 plan", "script 2 creator", "assets 1 plan", "edit 1 plan", "edit 2 creator"]);
@@ -200,8 +213,17 @@ describe("the reel pipeline", () => {
 
   it("times the creator's recording, trims its lead-in and says where it left the narration", async () => {
     const { store, engine, box, workDir, start, shown } = world(
-      [...toApproval, respond([stage("assets")]), respond([toolCall("prepare_voiceover", { vocabulary: ["Paxton", "Cornyn"] })]), respond([stage("edit")]), respond([toolCall("render_film", {})]), respond([toolCall("list_files", {})])],
-      { max_steps: 10 },
+      [
+        ...toApproval,
+        respond([stage("assets")]),
+        respond([toolCall("prepare_voiceover", { vocabulary: ["Marlow", "Quillfeather"] })]),
+        // The timing tool misheard one word. The agent puts it right; the recording is not timed again.
+        respond([toolCall("prepare_voiceover", { corrections: [{ heard: "vanished", write: "disappeared" }, { heard: "Marlo", write: "Marlow" }] })]),
+        respond([stage("edit")]),
+        respond([toolCall("render_film", {})]),
+        respond([toolCall("list_files", {})]),
+      ],
+      { max_steps: 11 },
     );
     const runId = await start();
     await engine.run(runId);
@@ -210,17 +232,24 @@ describe("the reel pipeline", () => {
     await decideGate(store, runId, { gate: "script", decision: "approved", notes: ["The voiceover recording is at inputs/voiceover.m4a."] });
     expect(await engine.run(runId)).toMatchObject({ status: "paused", reason: "budget:steps" });
 
-    expect(box.commands[0]).toEqual({ command: ["python", "kit/align.py", "/work/inputs/voiceover.m4a", "words.raw.json", "--vocabulary", "Paxton, Cornyn"], cwd: "/work/film" });
+    expect(box.commands[0]).toEqual({ command: ["python", "kit/align.py", "/work/inputs/voiceover.m4a", "words.raw.json", "--vocabulary", "Marlow, Quillfeather"], cwd: "/work/film" });
     // The first word was at 2.0 s; the audio is cut so it lands a quarter of a second in.
     expect(box.commands[1]!.command.slice(0, 7)).toEqual(["ffmpeg", "-v", "error", "-y", "-ss", "1.750", "-i"]);
     const words = wordsSchema.parse(JSON.parse(readFileSync(join(workDir, "film/words.json"), "utf8")));
-    expect(words[0]).toEqual({ w: "Texas", s: 0.25, e: 0.55 });
+    expect(words[0]).toEqual({ w: "A", s: 0.25, e: 0.55 });
     expect(existsSync(join(workDir, "film/words.raw.json"))).toBe(false);
 
-    const result = shown("prepare_voiceover").content;
+    const result = shown("prepare_voiceover", 0).content;
     expect(result).toContain("Timed 38 words over");
-    expect(result).toContain('the narration has "thousand Republicans disappeared in May. Take" where the recording says "thousand Republicans vanished in May. Take"');
-    expect(result).toContain("What was said:\nTexas might turn blue in November, because four hundred thousand Republicans vanished in May.");
+    expect(result).toContain('Where what was heard differs from the narration:\n- written: "readers disappeared in"  heard: "readers vanished in"');
+    expect(result).toContain("What was heard:\nA library card costs nothing here, yet four hundred thousand readers vanished in May.");
+
+    const corrected = shown("prepare_voiceover", 1).content;
+    expect(corrected).toContain('These corrections matched nothing and were not applied: "Marlo".');
+    expect(corrected).toContain("What was heard matches the narration word for word.");
+    expect(words.map((w) => w.w).join(" ")).toContain("readers disappeared in May.");
+    // Only the first call ran anything in the sandbox before the render.
+    expect(box.commands.map((c) => c.command[0])).toEqual(["python", "ffmpeg", "node"]);
     expect(shown("render_film").content).toContain("with the voiceover");
   });
 
@@ -249,5 +278,128 @@ describe("the reel pipeline", () => {
     expect(shown("submit_cut")).toMatchObject({ isError: true, content: "A revision of the edit is open and has not been rendered. Call render_film first, so the cut you hand in is the one you last worked on." });
     expect(shown("render_film", 1).content).toContain("Rendered cut 1:");
     expect(stagesOf(await store.read(runId)).filter((s) => s.startsWith("edit"))).toEqual(["edit 1 plan"]);
+  });
+});
+
+/** The critic's answer: every rubric score as given, with one note. */
+const judged = (scores: Partial<Record<"hook" | "pacing" | "sync" | "legibility" | "grounding", number>>) => {
+  const all = { hook: 4, pacing: 4, sync: 4, legibility: 4, grounding: 4, ...scores };
+  return respond([
+    text(
+      JSON.stringify({
+        scores: Object.fromEntries(Object.entries(all).map(([k, v]) => [k, { score: v, why: `${k} is a ${v}.` }])),
+        notes: [{ at: 2.0, issue: "The number is too small to read on a phone." }],
+        summary: "Make the big number bigger.",
+      }),
+    ),
+  ]);
+};
+
+describe("the critic", () => {
+  it("watches every cut, sends a failing one back while revisions are left, and goes to the creator with the cut", async () => {
+    measured = {};
+    const { store, engine, start, shown, provider, workDir } = world(
+      [
+        ...toApproval,
+        respond([stage("assets")]),
+        respond([toolCall("prepare_voiceover", {})]),
+        respond([stage("edit")]),
+        respond([toolCall("render_film", {})]),
+        // Tries to hand the cut in before the critic has seen it.
+        respond([toolCall("submit_cut", {})]),
+        respond([toolCall("review_cut", {})]),
+        judged({ legibility: 2 }),
+        // The critic did not pass it and a revision is left: code says revise.
+        respond([toolCall("submit_cut", {})]),
+        respond([stage("edit")]),
+        respond([write("film/index.html", "<html>bigger number</html>")]),
+        respond([toolCall("render_film", {})]),
+        respond([toolCall("review_cut", {})]),
+        judged({}),
+        respond([toolCall("submit_cut", { note: "Fixed the small number." })]),
+      ],
+      { max_re_edits: 1 },
+      true,
+    );
+    const runId = await start();
+    await engine.run(runId);
+    await decideGate(store, runId, { gate: "script", decision: "approved", notes: ["There is no voiceover recording. Use stand-in timing."] });
+    expect(await engine.run(runId)).toMatchObject({ status: "waiting_gate", gate: "final_cut" });
+
+    expect(shown("submit_cut", 0)).toMatchObject({ isError: true, content: "The critic has not reviewed cut 1 yet. Call review_cut, then hand the cut in." });
+    const first = shown("review_cut", 0);
+    expect(first.content).toContain("The critic did not pass cut 1 (average 3.6 of 5). Saved as cuts/review-1.json.");
+    expect(first.content).toContain("- legibility: 2 of 5. legibility is a 2.");
+    expect(first.content).toContain("- At 2.0 s: The number is too small to read on a phone.");
+    expect(first.images).toHaveLength(1);
+    expect(shown("submit_cut", 1)).toMatchObject({
+      isError: true,
+      content: "The critic did not pass cut 1, and you can still revise it on your own judgement. Start the edit stage again and fix what the review found.",
+    });
+    expect(shown("review_cut", 1).content).toContain("The critic passed cut 2 (average 4.0 of 5).");
+
+    // The critic saw the timeline sheet and the script, in a call with no tools.
+    const critic = provider.requests.filter((r) => r.tools.length === 0);
+    expect(critic).toHaveLength(2);
+    expect(critic[0]!.messages[0]!.content.some((b) => b.type === "image")).toBe(true);
+    expect(JSON.stringify(critic[0]!.messages[0]!.content[0])).toContain("A library card costs nothing here");
+
+    const events = await store.read(runId);
+    // The revision the critic forced counts against the agent's own.
+    expect(stagesOf(events)).toEqual(["research 1 plan", "script 1 plan", "assets 1 plan", "edit 1 plan", "edit 2 critique"]);
+    expect(foldRun(events).reEdits).toBe(1);
+    // The creator gets the review with the cut.
+    expect(payloadOf(events.findLast((e) => e.type === "gate.opened")!, "gate.opened")).toMatchObject({
+      gate: "final_cut",
+      files: ["cuts/cut-2.mp4"],
+      review: { passed: true, mean: 4, scores: { hook: 4, legibility: 4 }, path: "cuts/review-2.json" },
+    });
+    expect(JSON.parse(readFileSync(join(workDir, "cuts/review-1.json"), "utf8"))).toMatchObject({ revision: 1, passed: false });
+  });
+
+  it("lets a failing cut through to the creator once no revisions are left, with the review attached", async () => {
+    measured = { freezes: [{ start: 3, end: 8.5 }] };
+    const { store, engine, start, shown } = world(
+      [
+        ...toApproval,
+        respond([stage("assets")]),
+        respond([toolCall("prepare_voiceover", {})]),
+        respond([stage("edit")]),
+        respond([toolCall("render_film", {})]),
+        respond([toolCall("review_cut", {})]),
+        judged({}),
+        respond([toolCall("submit_cut", {})]),
+      ],
+      { max_re_edits: 0 },
+      true,
+    );
+    const runId = await start();
+    await engine.run(runId);
+    await decideGate(store, runId, { gate: "script", decision: "approved", notes: ["No recording."] });
+    expect(await engine.run(runId)).toMatchObject({ status: "waiting_gate", gate: "final_cut" });
+    // Good scores, but a check in code fails it: the picture freezes for five and a half seconds.
+    const review = shown("review_cut").content;
+    expect(review).toContain("The critic did not pass cut 1");
+    expect(review).toContain("Nothing on screen moves from 3.0 to 8.5 s (5.5 s).");
+    expect(review).toContain("You have no revisions of your own left, so hand it in with submit_cut: the review goes with it.");
+    const events = await store.read(runId);
+    expect(payloadOf(events.findLast((e) => e.type === "gate.opened")!, "gate.opened")).toMatchObject({ review: { passed: false } });
+    measured = {};
+  });
+
+  it("fails a cut in code for what can be measured, whatever the scores", () => {
+    const base = { ...MEASURED_OK } as unknown as Parameters<typeof checkCut>[0];
+    expect(checkCut(base, true)).toEqual([]);
+    const fails = (m: Partial<typeof base>, voice = true) => checkCut({ ...base, ...m }, voice).filter((c) => c.severity === "fail").map((c) => c.what);
+    expect(fails({ black: [{ start: 4, end: 5.2 }] })).toEqual(["The picture is black from 4.0 to 5.2 s."]);
+    // A fade to black at the very end is how films end.
+    expect(fails({ black: [{ start: 21, end: 21.4 }] })).toEqual([]);
+    expect(fails({ first_word: 1.8 })).toEqual(["The first word is not heard until 1.8 s; the hook has to land in the first second."]);
+    expect(fails({ duration: 25 })).toEqual(["The film runs on for 4.9 s after the last word."]);
+    expect(fails({ duration: 18 })).toEqual(["The film ends at 18.0 s, before the last word at 20.1 s."]);
+    expect(fails({ loudness: { integrated_lufs: -14, true_peak_db: -0.2 } })).toEqual(["The sound peaks at -0.2 dB, so it will clip; keep it under -1 dB."]);
+    // With no voice, the sound is not judged.
+    expect(fails({ loudness: { integrated_lufs: -14, true_peak_db: -0.2 } }, false)).toEqual([]);
+    expect(fails({ width: 1920, height: 1080 })).toEqual(["The frame is 1920 by 1080; a reel is 1080 by 1920."]);
   });
 });

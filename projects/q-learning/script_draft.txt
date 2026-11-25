@@ -1,0 +1,72 @@
+The script is now one minute, about 150 spoken words. Your new hook takes 12 seconds, and the remaining 48 seconds cover the reinforcement learning loop, states and actions, the Q-table, exploring, the update, and the payoff. Everything is now in second person to match "you're a taxi." To fit, gamma and alpha are no longer explained by name. They stay in the update line on screen, and the voiceover just describes what the line does.
+
+---
+
+# "You're the taxi" — script draft
+
+Short-form explainer (~1:00, ~150 spoken words at 150 wpm).
+Topic: Q-learning, shown with Gymnasium's `Taxi-v3`.
+Spine: the viewer is the taxi. Every concept appears as a line of code.
+
+---
+
+## BEAT 1 — HOOK (0:00–0:12)
+
+**VO:** You're a taxi trying to pick up a passenger and drop them off. You don't know where they are or where they need to go. How do you train a model to learn where the taxi should go?
+
+**Visual:** The `Taxi-v3` grid, seen as the taxi. It wanders and hits walls. A "?" hangs over the passenger and the four colored stops.
+
+**Code:** `env = gym.make("Taxi-v3")`
+
+---
+
+## BEAT 2 — REINFORCEMENT LEARNING (0:12–0:22)
+
+**VO:** With reinforcement learning. You make a move, and the world tells you where you landed and gives you points. Minus one for every move. Plus twenty for the right drop-off.
+
+**Visual:** Score popups appear over the taxi: −1, −1, −1, +20.
+
+**Code:** `next_state, reward, terminated, truncated, info = env.step(action)`
+
+---
+
+## BEAT 3 — STATE, ACTION, Q-TABLE (0:22–0:36)
+
+**VO:** Where you are, where the passenger is, and where they're going: that's your state. There are five hundred. You have six moves. Q-learning keeps a table that scores every move from every state. It starts at all zeros.
+
+**Visual:** 25 × 5 × 4 = 500 builds on screen, then six move icons. They snap together into a 500 × 6 grid of zeros.
+
+**Code:** `q_table = np.zeros([env.observation_space.n, env.action_space.n])`
+
+---
+
+## BEAT 4 — EXPLORE, THEN UPDATE (0:36–0:52)
+
+**VO:** At first, you guess at random. After every move, you nudge that move's score toward what you just earned, plus the best score from where you landed. That's how the plus twenty spreads back to the moves that got you there. Slowly you guess less and trust the table more.
+
+**Visual:** A die rolls and picks a random arrow. Then the update line, with each term lighting up as it's described. A heatmap spreads backward from the drop-off square while an epsilon meter drains.
+
+**Code:**
+```python
+if random.uniform(0, 1) < epsilon:
+    return random.randint(0, 5)
+q_table[state, action] = (1 - alpha) * old_value + alpha * (reward + gamma * next_max)
+```
+
+---
+
+## BEAT 5 — PAYOFF (0:52–1:00)
+
+**VO:** A thousand trips later, you just find your row and pick the biggest number. Nobody told you where to go.
+
+**Visual:** `render_mode="human"`. The taxi drives straight to the passenger and then to the drop-off. The winning cell in its row glows.
+
+**Code:** `action = np.argmax(q_table[state])`
+
+---
+
+## Notes
+
+- **Hook wording:** a technical viewer could object to "you don't know where they are." In `Taxi-v3`, the passenger's location and destination are part of the state the taxi sees; what it doesn't know is what those numbers mean. Beat 3 handles this, because it reveals that "where the passenger is" was in your state all along. If you want to avoid the objection entirely, change the line to "You don't know how to find them or where they need to go."
+- **Fix the code before filming Beat 5.** The earlier problems still apply. Epsilon only drops to about 0.6 by the end of training, the 50-step cap per episode may stop the taxi from learning the route, and the test loop keeps updating the table. Make sure the trained taxi really drives a clean route before you record it.
+- **Tight on time?** Cut "That's how the plus twenty spreads back to the moves that got you there." That saves about 4 seconds, and the heatmap still shows the idea.

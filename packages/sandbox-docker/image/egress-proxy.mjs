@@ -155,7 +155,7 @@ export function createProxy(allowList) {
     } catch {
       url = null;
     }
-    if (!url || url.protocol !== "http:") {
+    if (url?.protocol !== "http:") {
       res.writeHead(400, { "content-type": "text/plain" }).end("egress proxy: expected an absolute http:// URL\n");
       return;
     }

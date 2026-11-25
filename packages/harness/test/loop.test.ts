@@ -157,7 +157,7 @@ describe("model failures", () => {
 });
 
 describe("limits held in code", () => {
-  const writer = (request: ModelRequest, call: number) =>
+  const writer = (_request: ModelRequest, call: number) =>
     call < 6 ? respond([toolCall("write_file", { path: `file-${call}.txt`, content: "x" })]) : respond([toolCall("finish", { summary: "ok" })]);
 
   it("warns the model near a limit, pauses at it, and continues when the limit is raised", async () => {
@@ -223,10 +223,21 @@ describe("limits held in code", () => {
     expect(provider.requests).toHaveLength(3);
     expect(notes(await store.read(runId), "context_warning")).toHaveLength(1);
   });
+
+  it("keeps room for the answer the model can give, not for a longer one the run asked for", async () => {
+    // The run asks for 600 tokens of output, but this model stops at 100: the window holds 900 of conversation, not 400.
+    const caps = { contextWindow: 1000, maxOutputTokens: 100 };
+    const sized = (inputTokens: number) => respond([toolCall("list_files", { path: `${inputTokens}` })], { usage: { inputTokens, outputTokens: 10 } });
+    const { store, engine, provider } = setup([sized(100), sized(500), respond([toolCall("finish", { summary: "Done." })])], { caps });
+    const runId = await newRun(store, { maxOutputTokens: 600 });
+    expect(await engine.run(runId)).toMatchObject({ status: "succeeded" });
+    expect(provider.requests).toHaveLength(3);
+    expect(notes(await store.read(runId), "context_warning")).toHaveLength(0);
+  });
 });
 
 describe("stopping a run from outside", () => {
-  const tools = (act: (runId: string) => Promise<unknown> | void): ToolDefinition[] => [
+  const tools = (act: (runId: string) => unknown): ToolDefinition[] => [
     ...fileTools,
     defineTool({ name: "trigger", description: "Does something from outside the run.", input: z.object({}), execute: async (_input, exec) => { await act(exec.runId); return "ok"; } }) as ToolDefinition,
   ];

@@ -16,7 +16,11 @@ export type ToolResultBlock = { type: "tool_result"; toolCallId: string; content
  * stores and replays these without reading them.
  */
 export type OpaqueBlock = { type: "opaque"; provider: string; data: unknown };
-export type ContentBlock = TextBlock | ToolCallBlock | ToolResultBlock | OpaqueBlock;
+/**
+ * Message content. An `image` block at the top level of a user message is used only by tool-less calls (a critic
+ * looking at frames); pictures in the agent's own conversation always arrive inside a tool result.
+ */
+export type ContentBlock = TextBlock | ToolCallBlock | ToolResultBlock | OpaqueBlock | ImageBlock;
 
 export type Message = { role: "user" | "assistant"; content: ContentBlock[] };
 
@@ -60,6 +64,11 @@ export interface ModelProvider {
   stream(request: ModelRequest, signal: AbortSignal): AsyncIterable<ModelStreamEvent>;
   /** Cost of one call in millionths of a US dollar. */
   priceMicroUsd(model: string, usage: Usage): number;
+  /**
+   * When the price table was last checked against the published prices, as YYYY-MM-DD. A budget in dollars
+   * is only as good as the table, so the date goes on the run's record and `inspect` warns when it is old.
+   */
+  readonly pricesCheckedOn?: string;
 }
 
 export type ModelErrorKind =

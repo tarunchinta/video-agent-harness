@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRun, decideGate, Engine, MemoryEventStore, payloadOf, type ToolResultBlock } from "@harness/harness";
-import { respond, resultsIn, ScriptedProvider, toolCall } from "@harness/harness/testing";
+import { respond, resultsIn, ScriptedProvider, text, toolCall } from "@harness/harness/testing";
 import { DockerSandbox } from "@harness/sandbox-docker";
 import { REEL_SYSTEM, reelPipeline, reelTask } from "../src/index.ts";
 
@@ -14,8 +14,8 @@ import { REEL_SYSTEM, reelPipeline, reelTask } from "../src/index.ts";
 //   HARNESS_SANDBOX_IT_KEEP=1   also leave the run folder in place and print where it is, to look at the result
 const enabled = process.env.HARNESS_SANDBOX_IT === "1";
 
-const NARRATION = ["Texas might turn blue in November,", "because four hundred thousand Republicans", "disappeared in May.", "Take one of them:", "he votes in March, then stays home."];
-const SCRIPT = `# The missing votes\n\n${"Beat: what is said, what is on screen, and the source that backs it. ".repeat(4)}`;
+const NARRATION = ["A library card costs nothing here,", "yet four hundred thousand readers", "disappeared in May.", "Take one of them:", "she borrows in March, then stays home."];
+const SCRIPT = `# The missing readers\n\n${"Beat: what is said, what is on screen, and the source that backs it. ".repeat(4)}`;
 
 /** A small film written against the kit's contract: two scenes on cues, captions, and a seeded scatter of dots. */
 const PAGE = `<!doctype html>
@@ -37,7 +37,7 @@ html, body { background: #0d0d10; overflow: hidden; font-family: Inter, sans-ser
 <script src="kit/film.js"></script>
 <script>
 const { cue, cueEnd, P, E, lerp, rng, $, css, show, svgEl } = Film;
-const T = { hook: cue("Texas might"), number: cue("four hundred thousand"), take: cue("Take one") };
+const T = { hook: cue("A library"), number: cue("four hundred thousand"), take: cue("Take one") };
 T.end = cueEnd("stays home");
 const random = rng(7);
 const dots = Array.from({ length: 60 }, () => svgEl("circle", { cx: 80 + random() * 920, cy: 300 + random() * 900, r: 14, fill: "#17161a" }, $("dots")));
@@ -74,6 +74,13 @@ describe.skipIf(!enabled)("the film kit in a real sandbox", () => {
       respond([write("film/index.html", PAGE)]),
       respond([toolCall("render_stills", {})]),
       respond([toolCall("render_film", {})]),
+      respond([toolCall("review_cut", {})]),
+      // The critic's call has no tools; it answers with scores.
+      respond([text(JSON.stringify({
+        scores: Object.fromEntries(["hook", "pacing", "sync", "legibility", "grounding"].map((k) => [k, { score: 4, why: "Fine." }])),
+        notes: [],
+        summary: "A plain test film.",
+      }))]),
       respond([toolCall("submit_cut", {})]),
       respond([toolCall("finish", { summary: "Rendered.", film: "cuts/cut-1.mp4" })]),
     ]);
@@ -121,6 +128,15 @@ describe.skipIf(!enabled)("the film kit in a real sandbox", () => {
       expect(statSync(cut).size).toBeGreaterThan(50_000);
       // An MP4 starts with a box whose type is `ftyp`.
       expect(readFileSync(cut).subarray(4, 8).toString("latin1")).toBe("ftyp");
+
+      // The critic measured the real file and was shown its timeline sheet.
+      const review = shown("review_cut");
+      expect(review.isError, review.content).toBeUndefined();
+      expect(review.content).toMatch(/The critic (passed|did not pass) cut 1 \(average 4\.0 of 5\)/);
+      expect(review.images).toHaveLength(1);
+      expect(Buffer.from(review.images![0]!.data!, "base64").length).toBeGreaterThan(5_000);
+      const measured = JSON.parse(readFileSync(join(workDir, "cuts", "review-1.json"), "utf8")) as { checks: { what: string }[] };
+      console.log("critic checks:", JSON.stringify(measured.checks));
 
       await decideGate(store, runId, { gate: "final_cut", decision: "approved" });
       expect((await engine.run(runId)).status).toBe("succeeded");

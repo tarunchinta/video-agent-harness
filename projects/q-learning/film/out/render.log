@@ -1,0 +1,5 @@
+frame 0 of 2080 (0 s)
+frame 600 of 2080 (36 s)
+frame 1200 of 2080 (63 s)
+frame 1800 of 2080 (88 s)
+{"ok":true,"mode":"film","film":"out/film.mp4","sheet":"out/review/sheet.jpg","duration":69.35,"width":1080,"height":1920,"fps":30,"frames":2080,"bytes":7015808,"voice":true,"sound_effects":26,"missing_sound_effects":[],"render_seconds":111}

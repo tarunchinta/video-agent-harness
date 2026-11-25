@@ -76,7 +76,7 @@ old code is pulled in only where it earns its place.
 | Sandbox | Local Docker container per run: code execution, headless browser, ffmpeg, renderer |
 | Research | Web search and fetch, public datasets, code experiments |
 | Demo capture | Browser agent that performs and records a demo |
-| Render | Remotion compositions, chart animation, captions |
+| Render | Films drawn in code as HTML pages, rendered frame by frame in headless Chromium and ffmpeg; chart animation, captions |
 | Voice | Creator-uploaded voiceover with word timestamps; ElevenLabs as an option |
 | Storage | Local disk; blob storage for shareable renders |
 
@@ -176,10 +176,15 @@ working on video, media and generative tools. It should show:
 
 ## Open questions
 
-- Which language the core is written in (TypeScript with a Python media
-  sidecar is the default assumption).
 - How the labelled eval set is built and whether it can be shared, given
   third-party reels cannot be redistributed.
-- How much of the plugin lifecycle design to take from the DeepSeek harness
-  after a closer read of its source.
 - Where post-publish metrics come from.
+
+Answered since this was written:
+
+- **The language of the core.** TypeScript. Python runs only inside the
+  sandbox: the script that times a voiceover's words, and whatever the agent
+  writes.
+- **How much of the plugin lifecycle to take from the DeepSeek harness.**
+  `PLUGIN_CONTRACT.md`, section 1, goes through it line by line. That plan is
+  still a proposal.

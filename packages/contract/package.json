@@ -1,0 +1,22 @@
+{
+  "name": "@harness/contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The plugin contract: definePlugin, seams, the loader with all-or-nothing boot, scoped effects, and the conformance kits every provider must pass.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./conformance": "./src/conformance/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/harness": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}

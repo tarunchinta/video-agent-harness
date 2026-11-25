@@ -9,14 +9,15 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "node tools/typecheck.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "turbo run lint",
+    "lint": "biome lint .",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "harness": "tsx apps/harness-cli/src/bin.ts"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.8",
     "@types/node": "^26.6.5",
     "tsx": "^4.23.15",
     "turbo": "^2.11.9",

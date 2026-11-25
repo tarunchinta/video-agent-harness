@@ -1,7 +1,7 @@
 import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ToolError, type SandboxExecResult } from "@harness/harness";
+import { diskNote, ToolError, type SandboxExecResult } from "@harness/harness";
 import { wordsScript } from "./words.ts";
 
 /** The film's folder in the working directory, and where it sits inside the sandbox. */
@@ -10,7 +10,7 @@ export const SANDBOX_FILM_DIR = "/work/film";
 
 const KIT_SOURCE = fileURLToPath(new URL("../kit/", import.meta.url));
 /** Files the tools run or the page loads. Written fresh before every use, so the agent cannot break them. */
-const FIXED = ["film.js", "render.mjs", "align.py", "README.md"];
+const FIXED = ["film.js", "render.mjs", "review.mjs", "align.py", "README.md"];
 
 const exists = (path: string) => access(path).then(() => true, () => false);
 
@@ -35,6 +35,7 @@ export async function installKit(workDir: string): Promise<{ createdPage: boolea
  */
 export function kitResult(result: SandboxExecResult, what: string): Record<string, unknown> {
   if (result.timedOut) throw new ToolError(`${what} ran out of time and was stopped.`);
+  if (result.diskFull) throw new ToolError(`${what} filled the working folder.${diskNote(result.diskFull)}`);
   const last = result.stdout.trim().split("\n").at(-1) ?? "";
   let parsed: unknown;
   try {

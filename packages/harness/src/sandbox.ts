@@ -24,6 +24,8 @@ export type SandboxExecResult = {
   truncated: boolean;
   timedOut: boolean;
   durationMs: number;
+  /** Set when the run's working folder holds more than its limit after the command. */
+  diskFull?: { usedBytes: number; limitBytes: number };
 };
 
 export interface SandboxSession {

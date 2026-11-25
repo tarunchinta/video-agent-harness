@@ -1,0 +1,85 @@
+# "Train a tiny taxi" — script draft v2
+
+Short-form explainer (~1:02 at the pace of the v2 recording with its pauses cut, about 195 wpm).
+Topic: Q-learning, shown with Gymnasium's `Taxi-v4`.
+Spine: three attempts at the same game. Each one fails in a way the next one fixes.
+
+---
+
+## BEAT 1 — THE GOAL (0:00–0:08)
+
+**VO:** You're training a tiny AI agent to act like a virtual taxi, so it picks up a passenger and drops them off at their desired location.
+
+**Visual:** The taxi grid. Highlight the taxi, then the passenger, then the destination.
+
+**Code:** `env = gym.make("Taxi-v4")`
+
+---
+
+## BEAT 2 — WHAT THE TAXI SEES (0:08–0:15)
+
+**VO:** But it can't see this map. All it sees is a state number, like 266, and it has no idea what that means.
+
+**Visual:** On "can't see this map" the board goes dark and only "266" is left. The taxi moves north and the number changes to 166.
+
+**Code:** `state, info = env.reset()`
+
+---
+
+## BEAT 3 — RANDOM (0:15–0:23)
+
+**VO:** So you have the agent move around randomly until it accidentally finds the passenger and their destination. That works about five percent of the time.
+
+**Visual:** The taxi wanders, sped up. "5%" lands on screen.
+
+**Code:** `env.step(env.action_space.sample())`
+
+---
+
+## BEAT 4 — REMEMBER THE REWARD (0:23–0:39)
+
+**VO:** So you give it a memory. Every move costs a point, illegal pickups and drop-offs cost ten, and the right drop-off earns twenty. The agent writes down what each action earned in each state, then picks the best one. But every move costs the same, so it drives into a wall and stays there.
+
+**Visual:** A table fills in, each row labelled with its state number. Zoom into row 266: −1, −1, −1, −1, −10, −10. Four-way tie. The taxi heads south and gets stuck.
+
+**Code:**
+```python
+rewards[state, action] = reward
+action = np.argmax(rewards[state])
+```
+
+---
+
+## BEAT 5 — Q-LEARNING (0:39–0:53)
+
+**VO:** So how does your first move know about the twenty points at the end? That's Q-learning. Each action's score becomes its reward, plus the best score from where it lands. So the twenty spreads backward, one state at a time, to the moves that led there.
+
+**Visual:** The Beat 4 line grows the new term, which lights up. The +20 glows at the drop-off and spreads backward across the grid: 20, 18.8, 17.6.
+
+**Code:**
+```python
+rewards[state, action] = reward                        # before
+q_table[state, action] = reward + gamma * next_max     # after
+```
+
+---
+
+## BEAT 6 — PAYOFF (0:53–1:02)
+
+**VO:** At first it guesses, then it slowly trusts the table. Two thousand trips later, it delivers almost every passenger. And it still has never seen the map.
+
+**Visual:** The trained taxi drives to the passenger, then the destination. Counter: 5%, 0%, 99%+. On the last line the board goes dark again and only the changing state numbers are left.
+
+**Code:** `action = np.argmax(q_table[state])`
+
+---
+
+## Notes
+
+- **On-screen numbers are measured** over 1,000 test trips: random 5%, best immediate reward 0%, Q-learning 99.6–100%.
+- **Say "can't see this map," not "can't see where the passenger is."** The state number, 0 to 499, encodes the taxi, the passenger and the destination. The agent gets that information; it doesn't know what the number means. 266 is the real state at the start of the trip in the film, and 166 is the state after one move north.
+- **The Beat 5 code is simplified.** `main.py` also blends in the old value with alpha. With alpha at 0.95, the new value is almost all of it.
+- **Say "illegal," not "wrong."** Dropping the passenger at one of the other three stops is allowed and only costs 1 point.
+- **Filming Beat 3:** `random_agent.py` runs without a window. Add `render_mode="human"` and drop it to one episode for the shot.
+- **New lines to record:** all of Beat 2, and the last sentence of Beat 6. The rest is already recorded, with small wording differences.
+- **Tight on time?** Cut "illegal pickups and drop-offs cost ten" and the first sentence of Beat 6 to save about 5 seconds.

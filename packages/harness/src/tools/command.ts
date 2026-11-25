@@ -15,6 +15,14 @@ export function sandboxPath(path: string): string {
   return full;
 }
 
+const gb = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+
+/** What the model is told when the working folder is over its limit. */
+export const diskNote = (full: { usedBytes: number; limitBytes: number } | undefined): string =>
+  full
+    ? `\n\nThe working folder now holds ${gb(full.usedBytes)}, more than its ${gb(full.limitBytes)} limit. Delete files you no longer need (old renders, downloads, caches) before doing anything else.`
+    : "";
+
 const section = (name: string, text: string) => (text.trim() ? `\n\n${name}:\n${text.trimEnd()}` : "");
 
 /**
@@ -53,6 +61,6 @@ export const runCommandTool = defineTool({
       ? `Stopped after ${input.timeout_seconds} seconds without finishing.`
       : `Exit code ${r.exitCode} in ${seconds} s.`;
     const cut = r.truncated ? "\n\n(Some output was left out because it was too long. Write long output to a file and read that.)" : "";
-    return `${head}${section("stdout", r.stdout)}${section("stderr", r.stderr)}${cut}`;
+    return `${head}${section("stdout", r.stdout)}${section("stderr", r.stderr)}${cut}${diskNote(r.diskFull)}`;
   },
 });

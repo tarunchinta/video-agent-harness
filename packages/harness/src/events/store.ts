@@ -1,4 +1,5 @@
 import { isSpanClose, isSpanOpen, validateNewEvent, type HarnessEvent, type NewEvent } from "./envelope.ts";
+import { foldRun, type RunStatus } from "./reducer.ts";
 
 /**
  * Where events live. The contract is the one in docs/plans/event-log-and-run-state.md: a gapless per-run `seq`,
@@ -21,7 +22,49 @@ export interface EventStore {
   /** Keeps a held lease alive. The worker calls this on a timer, so a long tool call does not lose the run. */
   renewLease(runId: string, worker: string, epoch: number): Promise<void>;
   releaseLease(runId: string, worker: string, epoch: number): Promise<void>;
+  /**
+   * Whether a worker holds a live lease on the run. A run whose status is `running` with no live lease has lost
+   * its worker (a crash), and nothing will move it until someone runs it again.
+   */
+  leaseHeld(runId: string): Promise<boolean>;
 }
+
+/** One run as a list sees it: enough to tell whether it changed, without reading its log. */
+export type RunHead = {
+  runId: string;
+  lastSeq: number;
+  /** Where the run is. `created` and `running` with no `leaseOwner` mean it is waiting for a worker. */
+  status: RunStatus;
+  /** The worker holding a live lease, if any. */
+  leaseOwner?: string;
+};
+
+/**
+ * What a front end that follows many runs needs from a store, so it never looks behind the store at files or
+ * tables. Each run also keeps its own files (working directory, renders, uploads) on this machine, under
+ * `runDir`, whichever store holds its log.
+ */
+export interface RunDirectory {
+  /** Every run, with its head. One cheap call, made about once a second. */
+  listRuns(): Promise<RunHead[]>;
+  runDir(runId: string): string;
+  /**
+   * Calls `onChange` soon after a run gains events, from any process. Optional: without it, or if it fails, a
+   * front end finds changes with `listRuns`. Returns a function that stops listening.
+   */
+  watch?(onChange: (runId: string) => void): Promise<() => Promise<void>>;
+  /**
+   * Passes model text as it is typed to every process following the store (Postgres `NOTIFY`), for a front
+   * end on another machine than the worker. Never part of the log: a delta nobody hears is gone, and the
+   * finished text arrives with its event as always. Optional, and best effort.
+   */
+  publishText?(runId: string, delta: string): Promise<void>;
+  /** Hears what `publishText` sends, from any process. Returns a function that stops listening. */
+  watchText?(onText: (runId: string, delta: string) => void): Promise<() => Promise<void>>;
+}
+
+/** A store a front end can drive and follow runs through: the JSON-lines store or the Postgres one. */
+export type RunStore = EventStore & RunDirectory;
 
 export class HeadMovedError extends Error {
   constructor(public readonly runId: string, public readonly expected: number, public readonly actual: number) {
@@ -140,6 +183,20 @@ export class MemoryEventStore implements EventStore {
   async releaseLease(runId: string, worker: string, epoch: number): Promise<void> {
     const run = this.run(runId);
     if (run.lease?.owner === worker && run.lease.epoch === epoch) run.lease = undefined;
+  }
+
+  async leaseHeld(runId: string): Promise<boolean> {
+    const lease = this.run(runId).lease;
+    return Boolean(lease && lease.expiresAt > this.now());
+  }
+
+  async listRuns(): Promise<RunHead[]> {
+    return [...this.runs].map(([runId, run]) => ({
+      runId,
+      lastSeq: run.events.length,
+      status: foldRun(run.events).status,
+      ...(run.lease && run.lease.expiresAt > this.now() ? { leaseOwner: run.lease.owner } : {}),
+    }));
   }
 
   /** Test helper: what a dead worker's lease does on its own after a minute. */

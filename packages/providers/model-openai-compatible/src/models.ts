@@ -7,6 +7,9 @@ export type ModelInfo = ModelCapabilities & {
   cacheRead: number;
 };
 
+/** When the table below was last checked. The DeepSeek entry is an estimate, so this says when it was made. */
+export const PRICES_CHECKED_ON = "2026-11-16";
+
 /**
  * The models this provider knows, by deployment name. The DeepSeek entry is an estimate, not a published price
  * list: check it against your resource's pricing before trusting a budget, and pass `models` to the provider to

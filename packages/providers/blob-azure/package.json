@@ -1,0 +1,20 @@
+{
+  "name": "@harness/blob-azure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Azure Blob Storage behind the web UI's BlobStore interface, over plain HTTP with a container SAS URL.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/web": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}

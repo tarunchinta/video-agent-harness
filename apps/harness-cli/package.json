@@ -16,6 +16,13 @@
     "@harness/model-claude": "workspace:*",
     "@harness/model-openai-compatible": "workspace:*",
     "@harness/reel": "workspace:*",
-    "@harness/sandbox-docker": "workspace:*"
+    "@harness/sandbox-docker": "workspace:*",
+    "@harness/web": "workspace:*",
+    "zod": "^4.6.7",
+    "@harness/store-postgres": "workspace:*",
+    "@harness/search-brave": "workspace:*",
+    "@harness/search-searxng": "workspace:*",
+    "@harness/contract": "workspace:*",
+    "@harness/blob-azure": "workspace:*"
   }
 }

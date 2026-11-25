@@ -44,7 +44,9 @@ export const ofType = (events: HarnessEvent[], type: string) => events.filter((e
 
 /** The rules every log must keep, whatever happened during the run. */
 export function expectWellFormed(events: HarnessEvent[], options: { terminal: boolean }): void {
-  events.forEach((e, i) => expect(e.seq).toBe(i + 1));
+  events.forEach((e, i) => {
+    expect(e.seq).toBe(i + 1);
+  });
   const closed = new Map<string, number>();
   for (const e of events) if (e.type.endsWith(".completed") || e.type.endsWith(".failed")) closed.set(e.spanId, (closed.get(e.spanId) ?? 0) + 1);
   for (const count of closed.values()) expect(count).toBe(1);

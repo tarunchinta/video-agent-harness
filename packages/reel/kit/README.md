@@ -79,3 +79,7 @@ ffmpeg -f lavfi -i "sine=frequency=60:duration=0.35" -af "afade=t=out:st=0.05:d=
 2. Fix what is wrong: overlapping text, things cut off, a beat that lands on the wrong word, empty frames.
    Ask for stills at exact seconds to look closely at one moment.
 3. When the stills are right, call `render_film` once. It takes a few minutes and ends this revision.
+4. Call `review_cut`. The critic measures the finished file and scores it: hook, pacing, sync, legibility and
+   grounding. Code fails a cut that goes black, holds still for four seconds or more, starts talking after the
+   first second, runs on more than 2.5 seconds past the last word, ends before it, or clips the sound. A cut that
+   does not pass goes back for a revision while you have revisions left.

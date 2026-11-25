@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Train a tiny taxi</title>
+<style>
+/* One colour, one meaning: amber = the agent (taxi). blue = the passenger. green = the +20 and what it spreads to.
+   red = penalties and being stuck. Ink and paper carry everything else. */
+:root { --paper:#ece5d3; --card:#f7f2e6; --ink:#17161a; --mute:#7d766a; --rule:#cfc6b1; --amber:#f5a800; --blue:#1f4fd1; --green:#15803d; --red:#b8202b;
+  --sans:"Inter",system-ui,sans-serif; --mono:"Liberation Mono",Consolas,monospace; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { background:#0d0d10; color:var(--ink); font-family:var(--sans); overflow:hidden; }
+#stage { position:absolute; left:0; top:0; width:1080px; height:1920px; overflow:hidden; background:var(--paper); transform-origin:0 0; }
+.abs { position:absolute; }
+svg { position:absolute; left:0; top:0; overflow:visible; }
+#head { left:80px; top:232px; display:flex; align-items:center; gap:22px; white-space:nowrap; }
+#num { width:74px; height:74px; border-radius:37px; background:var(--ink); color:var(--paper); font:800 44px/74px var(--sans); text-align:center; }
+#title { font:800 54px/1 var(--sans); letter-spacing:-.02em; }
+#hud { right:80px; top:232px; text-align:right; }
+#hud b { display:block; font:800 48px/1 var(--sans); letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+#hud span { font:600 27px/1.1 var(--sans); color:var(--mute); font-variant-numeric:tabular-nums; }
+#code { left:80px; width:920px; top:1240px; height:104px; border-radius:20px; background:#1d1b22; color:#f3eee2; font:400 38px/104px var(--mono); text-align:center; white-space:pre; overflow:hidden; }
+#badge { left:270px; width:540px; top:690px; padding:24px 0; border-radius:26px; text-align:center; background:var(--red); color:#fff; font:800 104px/1 var(--sans); }
+#badge small { display:block; font:700 38px/1.3 var(--sans); }
+#tries, #table, #tie, #formula, #chart, #bars { inset:0; display:none; }
+.chip { position:absolute; left:560px; width:450px; height:130px; border-radius:22px; background:var(--card); display:flex; align-items:center; gap:20px; padding:0 26px; font:700 36px/1.12 var(--sans); }
+.chip b { flex:none; width:128px; font:800 66px/1 var(--sans); letter-spacing:-.03em; }
+#tcode { left:80px; width:920px; top:836px; height:72px; border-radius:16px; background:#1d1b22; color:#f3eee2; font:400 36px/72px var(--mono); text-align:center; white-space:pre; }
+.hcell, .cell { position:absolute; width:146px; text-align:center; font:700 30px/52px var(--sans); color:var(--mute); }
+.cell { height:56px; border-radius:12px; background:var(--card); color:var(--ink); font:800 38px/56px var(--sans); font-variant-numeric:tabular-nums; }
+.big { position:absolute; width:280px; height:190px; border-radius:24px; background:var(--card); text-align:center; padding-top:22px; font:800 84px/1 var(--sans); }
+.big small { display:block; font:700 36px/1.5 var(--sans); color:var(--mute); }
+#tieT { left:80px; width:920px; top:1130px; text-align:center; font:800 76px/1 var(--sans); letter-spacing:-.02em; }
+.fl { position:absolute; left:80px; width:920px; text-align:center; font:700 50px/1.15 var(--mono); white-space:pre; }
+#calc { left:80px; width:920px; top:1208px; height:120px; border-radius:22px; background:var(--card); text-align:center; font:800 60px/120px var(--sans); }
+.bar { position:absolute; left:80px; width:920px; height:92px; }
+.bar span { position:absolute; left:0; top:0; width:370px; font:700 42px/92px var(--sans); white-space:nowrap; }
+.bar i { position:absolute; left:390px; top:16px; height:60px; border-radius:10px; }
+.bar b { position:absolute; top:0; font:800 50px/92px var(--sans); }
+.ro { position:absolute; top:1130px; width:440px; height:200px; border-radius:24px; background:var(--card); text-align:center; padding-top:28px; font:800 92px/1 var(--sans); font-variant-numeric:tabular-nums; }
+.ro small { display:block; font:700 38px/1.4 var(--sans); color:var(--ink); }
+#captions { position:absolute; left:100px; width:880px; top:1392px; text-align:center; font:800 54px/1.18 var(--sans); letter-spacing:-.01em; }
+#captions .w { display:inline-block; padding:0 .09em; border-radius:6px; }
+#captions .on { background:var(--amber); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="head" class="abs"><div id="num"></div><div id="title"></div></div>
+  <div id="hud" class="abs"><b id="hudA"></b><span id="hudB"></span></div>
+  <svg id="svg" width="1080" height="1920"></svg>
+  <div id="tries" class="abs"><svg id="triesS" width="1080" height="1920"></svg></div>
+  <div id="table" class="abs"><div id="tcode" class="abs"></div></div>
+  <div id="tie" class="abs"><div id="tieT" class="abs">A four-way tie</div></div>
+  <div id="formula" class="abs">
+    <div class="fl" id="f1" style="top:910px">q_table[state, action] =</div>
+    <div class="fl" id="f2" style="top:1000px">reward</div>
+    <div class="fl" id="f3" style="top:1090px; color:var(--green)">+ gamma * next_max</div>
+    <div id="calc" class="abs"></div>
+  </div>
+  <div id="chart" class="abs"><svg id="chartS" width="1080" height="1920"></svg>
+    <div class="ro" id="roE" style="left:80px"></div><div class="ro" id="roD" style="left:560px"></div></div>
+  <div id="bars" class="abs"></div>
+  <div id="code" class="abs"></div>
+  <div id="badge" class="abs"></div>
+  <div id="captions"></div>
+</div>
+
+<script src="words.js"></script>
+<script src="data.js"></script>
+<script src="kit/film.js"></script>
+<script>
+const { cue, cueEnd, clamp, lerp, E, P, rng, $, css, show, svgEl, words } = Film;
+const D = window.DATA;
+const C = { amber: "#f5a800", blue: "#1f4fd1", green: "#15803d", red: "#b8202b", ink: "#17161a", mute: "#7d766a", rule: "#cfc6b1", card: "#f7f2e6", cell: "#efe8d6" };
+const minus = (n) => String(n).replace("-", "−");
+
+const T = {
+  start: words[0].s, agent: cue("AI agent"), taxi: cue("taxi"), pick: cue("so it picks"), passenger: cueEnd("up a passenger"), drops: cue("drops them"), location: cueEnd("desired location"),
+  first: cue("Your first approach"), one: cue("one direction"), fails: cue("fails quickly"), failEnd: cueEnd("fails quickly"),
+  random: cue("So you have"), randomly: cue("randomly"), found: cueEnd("finds the passenger"), dest: cueEnd("their destination"), works: cue("That works"), five: cue("5%"),
+  memory: cue("You give it"), mem: cue("memory"), move: cue("Every move costs"), illegal: cue("illegal"), right: cue("the right drop-off"), twenty: cue("earns 20"),
+  writes: cue("The agent writes"), earned: cue("earned in"), picks: cue("then picks"), same: cue("But every move"), wall: cue("so it drives"), stays: cue("and stays"), stayEnd: cueEnd("stays there"),
+  how: cue("How does"), move1: cue("first move know"), pts: cue("20 points"), q: cue("That's Q-learning"), each: cue("Each action's"), reward: cue("its reward"), best: cue("plus the best"), lands: cue("where it lands"),
+  spread: cue("So the 20"), back: cue("backward"), led: cueEnd("led there"),
+  guess: cue("At first"), slowly: cue("then slowly"), trips: cue("2,000 trips"), later: cueEnd("trips later"), delivers: cue("it delivers"), every: cue("every passenger"),
+};
+T.last = cueEnd("every passenger");
+const S1 = T.first - 0.15, S2 = T.random - 0.15, S2B = T.dest + 0.9, S3 = T.memory - 0.15, S3B = T.same - 0.1, S3C = T.wall - 0.1, S4 = T.how - 0.2, S4B = T.each - 0.2, S4C = T.spread - 0.15, S5 = T.guess - 0.2, S5B = T.delivers - 0.1;
+const DUR = T.last + 1.5;
+
+// ---------- trips: the recorded runs, as positions over step number ----------
+const DIR = [[0, 1], [0, -1], [1, 0], [-1, 0]], ANG = [180, 0, 90, 270], CELL = 170;
+const mid = ([r, c]) => [c * CELL + CELL / 2, r * CELL + CELL / 2];
+const START = [D.start[0], D.start[1]], PAX = D.locs[D.start[2]], DEST = D.locs[D.start[3]];
+function trip(steps, from) {
+  const at = [from, ...steps.map((s) => s.at)], score = [0], ang = [0];
+  for (const s of steps) { score.push(score[score.length - 1] + s.r); ang.push(s.a < 4 ? ANG[s.a] : ang[ang.length - 1]); }
+  const n = steps.length;
+  return { n, score, at, steps, pos(u) {
+    u = clamp(u, 0, n);
+    const i = Math.min(n - 1, Math.floor(u)), f = u - i, s = steps[i], e = E.inOut(f);
+    const [ax, ay] = mid(at[i]), [bx, by] = mid(at[i + 1]);
+    let x = lerp(ax, bx, e), y = lerp(ay, by, e);
+    if (s.a < 4 && ax === bx && ay === by) { const k = Math.sin(Math.PI * f) * 22; x += DIR[s.a][0] * k; y += DIR[s.a][1] * k; }
+    const d = ((ang[i + 1] - ang[i] + 540) % 360) - 180;
+    return { x, y, ang: ang[i] + d * clamp(f / 0.35), aboard: (i > 0 && steps[i - 1].aboard) || (f >= 1 && s.aboard), score: score[Math.min(n, Math.floor(u + 1e-6))], step: Math.floor(u + 1e-6) };
+  } };
+}
+const ROUTE = trip(D.route, START), NORTH = trip(D.north, START), GREEDY = trip(D.greedy, START), RAND = trip(D.random, START);
+const PICK = D.route.findIndex((s) => s.a === 4), RPICK = D.random.findIndex((s) => s.aboard) + 1;
+// Which step a trip has reached at time t: straight lines between [time, step] points.
+const along = (t, pts) => {
+  if (t <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) return lerp(pts[i - 1][1], pts[i][1], (t - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0]));
+  return pts[pts.length - 1][1];
+};
+
+// ---------- the board ----------
+const FONT = { "text-anchor": "middle", "font-weight": 800, "font-family": "Inter, sans-serif" };
+const svg = $("svg"), G = svgEl("g", {}, svg), L = 5 * CELL;
+svgEl("rect", { x: -14, y: -14, width: L + 28, height: L + 28, rx: 26, fill: C.ink }, G);
+svgEl("rect", { x: 0, y: 0, width: L, height: L, rx: 12, fill: C.card }, G);
+const cells = {};
+for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) cells[`${r},${c}`] = svgEl("rect", { x: c * CELL + 6, y: r * CELL + 6, width: CELL - 12, height: CELL - 12, rx: 12, fill: C.cell }, G);
+for (const [r, c] of D.locs) svgEl("rect", { x: c * CELL + 26, y: r * CELL + 26, width: CELL - 52, height: CELL - 52, rx: 18, fill: "none", stroke: C.rule, "stroke-width": 6, "stroke-dasharray": "14 12" }, G);
+const trail = svgEl("polyline", { fill: "none", stroke: C.amber, "stroke-width": 8, "stroke-opacity": 0.45, "stroke-linejoin": "round" }, G);
+const path = svgEl("polyline", { fill: "none", stroke: C.mute, "stroke-width": 10, "stroke-linecap": "round", "stroke-dasharray": "4 26" }, G);
+path.setAttribute("points", ROUTE.at.map((p) => mid(p).join(",")).join(" "));
+// Taxi's inside walls: [column on their left, first row, last row]
+for (const [c, a, b] of [[1, 0, 1], [0, 3, 4], [2, 3, 4]]) svgEl("line", { x1: (c + 1) * CELL, x2: (c + 1) * CELL, y1: a * CELL + 8, y2: (b + 1) * CELL - 8, stroke: C.ink, "stroke-width": 16, "stroke-linecap": "round" }, G);
+const hot = svgEl("line", { stroke: C.red, "stroke-width": 26, "stroke-linecap": "round" }, G);
+const ring = svgEl("rect", { width: CELL - 8, height: CELL - 8, rx: 20, fill: "none", "stroke-width": 12 }, G);
+const setRing = ([r, c], color, o) => { ring.setAttribute("x", c * CELL + 4); ring.setAttribute("y", r * CELL + 4); ring.setAttribute("stroke", color); ring.setAttribute("opacity", o); };
+// The score of the best action in each state on the route: 20 at the end. Pickup and drive-off share a cell.
+const VAL = D.route.map((_s, i) => {
+  const [x, y] = mid(ROUTE.at[i]), twin = i === PICK ? 34 : i === PICK + 1 ? -34 : 0;
+  const el = svgEl("text", { ...FONT, x, y: y + 20 + twin, "font-size": twin ? 50 : 60, fill: "#fff" }, G);
+  el.textContent = i === D.route.length - 1 ? "20" : (Math.round(D.routeValues[i] * 10) / 10).toFixed(1);
+  return el;
+});
+const flag = svgEl("g", {}, G);
+svgEl("rect", { x: -58, y: -58, width: 116, height: 116, rx: 20, fill: C.green }, flag);
+svgEl("path", { d: "M-22 40 V-40 L34 -18 L-22 4", fill: "#fff", stroke: "#fff", "stroke-width": 8, "stroke-linejoin": "round" }, flag);
+const pax = svgEl("g", {}, G);
+svgEl("circle", { cx: 0, cy: -26, r: 22, fill: C.blue }, pax);
+svgEl("path", { d: "M-38 46 Q-38 4 0 4 Q38 4 38 46 Z", fill: C.blue }, pax);
+const taxi = svgEl("g", {}, G);
+for (const [x, y] of [[-48, -38], [38, -38], [-48, 26], [38, 26]]) svgEl("rect", { x, y, width: 10, height: 26, rx: 4, fill: C.ink }, taxi);
+svgEl("rect", { x: -42, y: -64, width: 84, height: 128, rx: 26, fill: C.amber, stroke: C.ink, "stroke-width": 5 }, taxi);
+svgEl("rect", { x: -29, y: -38, width: 58, height: 26, rx: 9, fill: C.ink }, taxi);
+svgEl("rect", { x: -27, y: 34, width: 54, height: 18, rx: 8, fill: C.ink }, taxi);
+for (let i = 0; i < 6; i++) svgEl("rect", { x: -30 + i * 10, y: i % 2 ? -2 : 8, width: 10, height: 10, fill: C.ink }, taxi);
+svgEl("circle", { cx: -24, cy: -56, r: 6, fill: "#fff" }, taxi);
+svgEl("circle", { cx: 24, cy: -56, r: 6, fill: "#fff" }, taxi);
+const rider = svgEl("circle", { cx: 0, cy: 18, r: 19, fill: C.blue, stroke: "#fff", "stroke-width": 5 }, taxi);
+const tag = svgEl("g", {}, G);
+svgEl("rect", { x: -130, y: -42, width: 260, height: 80, rx: 18, fill: C.ink }, tag);
+const tagT = svgEl("text", { ...FONT, x: 0, y: 15, "font-size": 48, fill: "#fff" }, tag);
+const q0 = svgEl("text", { ...FONT, "font-size": 150, fill: C.red }, G);
+q0.textContent = "?";
+
+// Points that rise off the board as they are earned.
+const POPS = [
+  { t: T.location - 0.1, text: "+20", color: C.green, at: DEST },
+  { t: T.move + 0.35, text: "−1", color: C.red, at: [1, 3] },
+  { t: T.illegal + 0.45, text: "−10", color: C.red, at: [1, 3] },
+  { t: T.twenty + 0.1, text: "+20", color: C.green, at: DEST },
+  { t: DUR - 2.0, text: "+20", color: C.green, at: DEST },
+].map((p) => {
+  const el = svgEl("text", { ...FONT, "font-size": 130, fill: p.color, stroke: "#fff", "stroke-width": 14, "paint-order": "stroke", "stroke-linejoin": "round" }, G);
+  el.textContent = p.text;
+  return { ...p, el };
+});
+
+// ---------- the other panels ----------
+const tri = [], pickLucky = rng(11), lucky = new Set();
+while (lucky.size < 5) lucky.add(Math.floor(pickLucky() * 100));
+for (let i = 0; i < 100; i++) tri.push(svgEl("circle", { cx: 195 + (i % 10) * 76.7, cy: 400 + Math.floor(i / 10) * 72 }, $("triesS")));
+const triT = svgEl("text", { ...FONT, x: 540, y: 1220, "font-size": 130 }, $("triesS"));
+const triL = svgEl("text", { ...FONT, "font-weight": 700, x: 540, y: 1300, "font-size": 48, fill: C.ink }, $("triesS"));
+
+const CH = [["−1", "Every move", C.red, T.move + 0.35], ["−10", "Illegal pickup or drop-off", C.red, T.illegal + 0.45], ["+20", "The right drop-off", C.green, T.right + 0.2]].map(([n, l, col, t], i) => {
+  const el = document.createElement("div");
+  el.className = "chip"; el.style.top = `${345 + i * 150}px`;
+  el.innerHTML = `<b style="color:${col}">${n}</b><span>${l}</span>`;
+  $("table").appendChild(el);
+  return { el, t };
+});
+const HEADS = ["south", "north", "east", "west", "pick up", "drop off"];
+const add = (cls, parent, left, top) => { const el = document.createElement("div"); el.className = cls; css(el, { left: `${left}px`, top: `${top}px` }); $(parent).appendChild(el); return el; };
+HEADS.forEach((h, i) => { add("hcell", "table", 80 + i * 154, 914).textContent = h; });
+const TB = D.rows.map((row, j) => row.r.map((v, i) => ({ el: add("cell", "table", 80 + i * 154, 968 + j * 62), v })));
+const BIG = D.rows[0].r.map((v, i) => { const el = add("big", "tie", 80 + (i % 3) * 320, 560 + Math.floor(i / 3) * 230); el.innerHTML = `${minus(v)}<small>${HEADS[i]}</small>`; return { el, v }; });
+
+const chart = $("chartS"), X0 = 200, X1 = 970, Y0 = 1000, Y1 = 400;
+svgEl("rect", { x: 80, y: 340, width: 920, height: 760, rx: 26, fill: C.card }, chart);
+for (const [p, l] of [[0, "0%"], [0.5, "50%"], [1, "100%"]]) {
+  const y = lerp(Y0, Y1, p);
+  svgEl("line", { x1: X0, x2: X1, y1: y, y2: y, stroke: C.rule, "stroke-width": 4 }, chart);
+  svgEl("text", { ...FONT, "text-anchor": "end", "font-weight": 600, x: X0 - 18, y: y + 11, "font-size": 32, fill: C.mute }, chart).textContent = l;
+}
+const xLab = svgEl("text", { ...FONT, "text-anchor": "end", "font-weight": 700, x: X1, y: Y0 + 66, "font-size": 42, fill: C.ink }, chart);
+const lineE = svgEl("polyline", { fill: "none", stroke: C.amber, "stroke-width": 14, "stroke-linejoin": "round", "stroke-linecap": "round" }, chart);
+const lineD = svgEl("polyline", { fill: "none", stroke: C.green, "stroke-width": 14, "stroke-linejoin": "round", "stroke-linecap": "round" }, chart);
+const dotE = svgEl("circle", { fill: C.amber }, chart), dotD = svgEl("circle", { fill: C.green }, chart);
+const CURVE = [{ trip: 0, delivered: 0, epsilon: 1 }, ...D.curve];
+const curveAt = (n) => { const i = clamp(Math.floor(n / 10), 0, CURVE.length - 2), f = clamp((n - CURVE[i].trip) / 10); return { e: lerp(CURVE[i].epsilon, CURVE[i + 1].epsilon, f), d: lerp(CURVE[i].delivered, CURVE[i + 1].delivered, f) }; };
+
+const BARS = [["One direction", 0, "0%", C.red], ["Random", 0.05, "5%", C.mute], ["Best reward", 0, "0%", C.red], ["Q-learning", 0.995, "99%+", C.green]].map(([l, v, s, col], i) => {
+  const el = add("bar", "bars", 80, 935 + i * 104);
+  el.innerHTML = `<span>${l}</span><i style="background:${col}"></i><b style="color:${col}">${s}</b>`;
+  return { el, v };
+});
+
+// ---------- drawing ----------
+const PL = { full: [115, 345, 1], top: [276, 345, 0.62], left: [84, 352, 0.5] };
+function board(a, b, p) { const m = PL[a].map((v, i) => lerp(v, PL[b][i], p)); G.setAttribute("transform", `translate(${m[0]} ${m[1]}) scale(${m[2]})`); }
+function putTaxi(s, t, k = 1) {
+  taxi.setAttribute("transform", `translate(${s.x} ${s.y + Math.sin(t * 5) * 2}) rotate(${s.ang}) scale(${k})`);
+  rider.setAttribute("opacity", s.aboard ? 1 : 0);
+}
+const put = (el, at, k = 1) => { const [x, y] = mid(at); el.setAttribute("transform", `translate(${x} ${y}) scale(${Math.max(0.001, k)})`); };
+function hud(score, step) { show($("hud"), true); $("hudA").textContent = `${minus(score)} points`; $("hudB").textContent = `step ${step}`; css($("hudA"), { color: score < 0 ? C.red : C.ink }); }
+function head(n, title, t, t0) { $("num").textContent = n; show($("num"), !!n); $("title").textContent = title; css($("head"), { opacity: P(t, t0, 0.25), transform: `translateX(${lerp(-40, 0, P(t, t0, 0.35))}px)` }); }
+function code(text, t, t0) { show($("code"), true); $("code").textContent = text; css($("code"), { opacity: P(t, t0, 0.25), transform: `translateY(${lerp(40, 0, P(t, t0, 0.35))}px)` }); }
+function badge(big, small, t, t0, color, top) { show($("badge"), t >= t0); $("badge").innerHTML = `${big}<small>${small}</small>`; css($("badge"), { top: `${top}px`, background: color, transform: `scale(${lerp(1.5, 1, P(t, t0, 0.22))}) rotate(-4deg)`, opacity: P(t, t0, 0.12) }); }
+function wall(col, y, o) { hot.setAttribute("x1", col * CELL + 20); hot.setAttribute("x2", (col + 1) * CELL - 20); hot.setAttribute("y1", y); hot.setAttribute("y2", y); hot.setAttribute("opacity", o); }
+
+const CAPS = ["You're training a tiny AI agent", "to act like a virtual taxi,", "so it picks up a passenger", "and drops them off", "at their desired location.", "Your first approach", "is to go in one direction,", "but that fails quickly.", "So you have the agent", "move around randomly", "until it accidentally finds", "the passenger and their destination.", "That works about 5% of the time.", "You give it memory.", "Every move costs a point,", "illegal pickups and drop-offs cost 10,", "and the right drop-off earns 20.", "The agent writes down", "what each action earned in each state,", "then picks the best one.", "But every move costs the same,", "so it drives into a wall", "and stays there.", "How does your first move", "know about the 20 points at the end?", "That's Q-learning.", "Each action's score", "becomes its reward,", "plus the best score", "from where it lands.", "So the 20 spreads backward,", "one state at a time,", "to the moves that led there.", "At first it guesses,", "then slowly it trusts the table.", "2,000 trips later,", "it delivers almost every passenger."];
+
+function draw(t) {
+  // Everything off, then each scene turns on what it needs.
+  for (const id of ["tries", "table", "tie", "formula", "chart", "bars", "code", "badge", "hud"]) show($(id), false);
+  css($("svg"), { opacity: 1 });
+  css($("head"), { display: "flex" });
+  board("full", "full", 0);
+  for (const el of [trail, path, hot, ring, tag, q0, ...VAL]) el.setAttribute("opacity", 0);
+  for (const k in cells) cells[k].setAttribute("fill", C.cell);
+  for (const el of [flag, pax, taxi]) el.setAttribute("opacity", 1);
+  put(flag, DEST); put(pax, PAX);
+  for (const p of POPS) {
+    const on = t >= p.t && t < p.t + 1.15, [x, y] = mid(p.at);
+    p.el.setAttribute("opacity", on ? 1 - P(t, p.t + 0.8, 0.35, E.lin) : 0);
+    p.el.setAttribute("x", clamp(x, 130, L - 130));
+    p.el.setAttribute("y", Math.max(160, y) - 10 - 70 * P(t, p.t, 0.9));
+  }
+  const pulse = (since, speed = 5) => Math.abs(Math.sin((t - since) * speed));
+
+  if (t < S1) { // the goal
+    head("", "Teach a taxi to drive", t, -1);
+    const u = along(t, [[T.pick, 0], [T.passenger - 0.15, PICK], [T.passenger + 0.1, PICK + 1], [T.drops, PICK + 1], [T.location - 0.35, ROUTE.n - 1], [T.location - 0.1, ROUTE.n]]);
+    putTaxi(ROUTE.pos(u), t, lerp(0.5, 1, P(t, 0, 0.5, E.back)));
+    put(pax, PAX, P(t, T.pick - 0.15, 0.4, E.back) * (1 + 0.08 * Math.sin(t * 9)));
+    pax.setAttribute("opacity", t < T.pick - 0.15 || u >= PICK + 0.7 ? 0 : 1);
+    put(flag, DEST, P(t, T.drops - 0.1, 0.4, E.back));
+    flag.setAttribute("opacity", t < T.drops - 0.1 ? 0 : 1);
+    if (t < T.pick) for (let i = 0; i < 25; i++) { const k = P(t, 0.1 + i * 0.03, 0.25); if (k < 1) cells[`${Math.floor(i / 5)},${i % 5}`].setAttribute("fill", `rgba(245,168,0,${(1 - k) * 0.7})`); }
+    if (t >= T.agent - 0.1 && t < T.pick - 0.1) {
+      const isTaxi = t >= T.taxi - 0.1, [x, y] = mid(START);
+      tagT.textContent = isTaxi ? "taxi" : "AI agent";
+      tag.setAttribute("opacity", 1);
+      tag.setAttribute("transform", `translate(${x} ${y + 125}) scale(${lerp(0.5, 1, P(t, isTaxi ? T.taxi - 0.1 : T.agent - 0.1, 0.25, E.back))})`);
+    }
+    if (t >= T.pick - 0.1 && u < PICK + 1) setRing(PAX, C.blue, 0.5 + 0.5 * Math.sin(t * 8));
+    if (t >= T.location - 0.1) { cells[DEST.join()].setAttribute("fill", C.green); put(flag, DEST, 1 + 0.1 * pulse(T.location)); }
+    code('env = gym.make("Taxi-v4")', t, T.start + 0.4);
+  } else if (t < S2) { // 1. one direction
+    head("1", "One direction", t, S1);
+    const u = along(t, [[T.one - 0.3, 0], [T.one + 0.75, 2], [T.one + 1.5, 4], [T.failEnd + 0.35, NORTH.n]]), s = NORTH.pos(u);
+    if (u >= 2) { const k = pulse(T.one, 9); [s.x, s.y] = mid([0, START[1]]); s.y -= k * 20; s.ang = 0; wall(START[1], 0, 0.45 + 0.5 * k); }
+    putTaxi(s, t); hud(s.score, s.step);
+    code("env.step(1)   # always north", t, S1 + 0.3);
+    badge("0%", "delivered", t, T.failEnd - 0.25, C.red, 800);
+  } else if (t < S2B) { // 2. random
+    head("2", "Random moves", t, S2);
+    const u = along(t, [[T.random + 0.5, 0], [T.randomly + 0.5, 12], [T.found, RPICK], [T.found + 0.25, RPICK + 1], [T.dest + 0.1, RAND.n]]), s = RAND.pos(u);
+    putTaxi(s, t); hud(s.score, s.step);
+    const jit = rng(3), pts = [];
+    for (let i = 0; i <= Math.floor(u); i++) { const [x, y] = mid(RAND.at[i]); pts.push(`${x + (jit() - 0.5) * 60},${y + (jit() - 0.5) * 60}`); }
+    trail.setAttribute("points", pts.join(" ")); trail.setAttribute("opacity", 1);
+    pax.setAttribute("opacity", u >= RPICK ? 0 : 1);
+    if (u >= RAND.n) { cells[DEST.join()].setAttribute("fill", C.green); put(flag, DEST, 1 + 0.12 * pulse(T.dest)); }
+    code("env.step(env.action_space.sample())", t, S2 + 0.3);
+    badge("Got lucky", `${RAND.n} steps, ${minus(D.randomTotal)} points`, t, T.dest + 0.1, C.ink, 620);
+  } else if (t < S3) { // how often that works
+    css($("svg"), { opacity: 0 }); head("2", "Random moves", t, 0); show($("tries"), true);
+    const n = Math.floor(lerp(0, 100, P(t, S2B, T.five - S2B - 0.15, E.lin))), lit = t >= T.five;
+    tri.forEach((el, i) => {
+      const win = lucky.has(i);
+      el.setAttribute("fill", i >= n ? "#dcd4c0" : win ? C.green : "#b0a68f");
+      el.setAttribute("r", win && lit ? 28 + 10 * pulse(T.five) : i < n ? 27 : 18);
+    });
+    triT.textContent = lit ? "5%" : `${n} trips`; triT.setAttribute("fill", lit ? C.green : C.ink);
+    triL.textContent = lit ? "about 5 trips in 100 delivered" : "up to 200 moves each";
+  } else if (t < S3B) { // 3. remember the reward
+    head("3", "Remember the reward", t, S3); board("full", "left", P(t, S3 + 0.15, 0.6, E.inOut)); show($("table"), true);
+    css($("table"), { opacity: P(t, T.mem - 0.1, 0.4), transform: `translateY(${lerp(60, 0, P(t, T.mem - 0.1, 0.5))}px)` });
+    let s;
+    if (t < T.right) { s = ROUTE.pos(along(t, [[T.move, 0], [T.move + 0.5, 1]])); if (t >= T.illegal && t < T.illegal + 1.2) s.x += Math.sin(t * 45) * 12 * (1 - P(t, T.illegal, 1.2, E.lin)); }
+    else if (t < T.writes) s = ROUTE.pos(along(t, [[T.right, ROUTE.n - 4], [T.twenty, ROUTE.n - 1], [T.twenty + 0.2, ROUTE.n]]));
+    else s = ROUTE.pos(along(t, [[T.writes, 0], [T.picks, ROUTE.n]]));
+    putTaxi(s, t); pax.setAttribute("opacity", s.aboard ? 0 : 1);
+    if (t >= T.twenty + 0.1 && t < T.writes) cells[DEST.join()].setAttribute("fill", C.green);
+    for (const c of CH) css(c.el, { opacity: P(t, c.t, 0.2), transform: `scale(${lerp(0.7, 1, P(t, c.t, 0.3, E.back))})` });
+    const n = lerp(0, TB.length * 6, P(t, T.writes, T.picks - T.writes - 0.2, E.lin)), picking = t >= T.picks;
+    TB.forEach((row, j) => row.forEach((c, i) => {
+      const win = picking && c.v === 20;
+      c.el.textContent = j * 6 + i < n ? minus(c.v > 0 ? `+${c.v}` : c.v) : "";
+      css(c.el, { color: win ? "#fff" : c.v > 0 ? C.green : c.v < -1 ? C.red : C.ink, background: win ? C.green : C.card, transform: win ? `scale(${1 + 0.1 * pulse(T.picks)})` : "none" });
+    }));
+    $("tcode").textContent = picking ? "action = np.argmax(rewards[state])" : "rewards[state, action] = reward";
+  } else if (t < S3C) { // the tie
+    css($("svg"), { opacity: 0 }); head("3", "Remember the reward", t, 0); show($("tie"), true);
+    const tieAt = T.same + 0.75, tied = t >= tieAt;
+    BIG.forEach((b, i) => {
+      const k = P(t, S3B + i * 0.06, 0.3, E.back), one = b.v === -1;
+      css(b.el, { transform: `scale(${lerp(0.5, 1, k) * (one && tied ? 1 + 0.05 * Math.sin((t - tieAt) * 9) : 1)})`, opacity: k * (one ? 1 : lerp(1, 0.35, P(t, tieAt, 0.3))), color: one ? C.ink : C.red, background: one && tied ? C.amber : C.card });
+    });
+    css($("tieT"), { opacity: P(t, tieAt + 0.1, 0.25), transform: `translateY(${lerp(30, 0, P(t, tieAt + 0.1, 0.3))}px)` });
+  } else if (t < S4) { // stuck on the wall
+    head("3", "Remember the reward", t, 0);
+    const u = along(t, [[S3C + 0.1, 0], [T.wall + 1.1, 2], [T.stays + 0.6, 5], [S4 - 0.6, GREEDY.n]]), s = GREEDY.pos(u);
+    if (u >= 2) { const k = pulse(T.wall, 9); [s.x, s.y] = mid([4, START[1]]); s.y += k * 20; s.ang = 180; wall(START[1], L, 0.45 + 0.5 * k); }
+    putTaxi(s, t);
+    code("# a tie: argmax takes the first", t, S3C + 0.1);
+    badge("0%", `delivered, ${minus(s.score)} points`, t, T.stayEnd, C.red, 600);
+  } else if (t < S4B) { // how does the first move know? then Q-learning
+    const named = t >= T.q;
+    head(named ? "4" : "", named ? "Q-learning" : "The +20 is 13 steps away", t, named ? T.q : S4);
+    putTaxi(ROUTE.pos(0), t);
+    path.setAttribute("opacity", P(t, S4 + 0.2, 0.4)); path.setAttribute("stroke-dashoffset", -t * 60);
+    const f = P(t, T.move1, 0.3), [x, y] = mid(ROUTE.at[1]);
+    setRing(ROUTE.at[1], C.amber, f * (0.6 + 0.4 * Math.sin(t * 8)));
+    if (t >= T.pts) put(flag, DEST, 1 + 0.14 * pulse(T.pts));
+    if (!named) { q0.setAttribute("x", x); q0.setAttribute("y", y + 52 + Math.sin(t * 6) * 6); q0.setAttribute("opacity", f); }
+    else for (let i = 0; i < ROUTE.n; i++) { const k = P(t, T.q + (ROUTE.n - i) * 0.06, 0.3); if (k > 0) cells[ROUTE.at[i].join()].setAttribute("fill", `rgba(21,128,61,${0.4 * k})`); }
+    code(named ? "q_table = np.zeros([500, 6])" : "# reward only sees one step", t, named ? T.q : S4 + 0.3);
+  } else if (t < S4C) { // the formula
+    head("4", "Q-learning", t, 0); board("full", "top", P(t, S4B, 0.6, E.inOut)); show($("formula"), true);
+    const s = ROUTE.pos(along(t, [[T.lands - 0.3, ROUTE.n - 2], [T.lands + 0.5, ROUTE.n - 1]]));
+    putTaxi(s, t); pax.setAttribute("opacity", 0);
+    cells["3,0"].setAttribute("fill", "rgba(245,168,0,.5)"); cells[DEST.join()].setAttribute("fill", C.green);
+    const into = (id, t0) => css($(id), { opacity: P(t, t0, 0.2), transform: `scale(${lerp(0.8, 1, P(t, t0, 0.3, E.back))})` });
+    into("f1", T.each); into("f2", T.reward); into("f3", T.best); into("calc", T.lands);
+    $("calc").innerHTML = `<span style="color:${C.red}">−1</span> + 0.99 × <span style="color:${C.green}">20</span> = 18.8`;
+    setRing(t < T.best ? [3, 0] : DEST, t < T.best ? C.amber : C.ink, 0.5 + 0.5 * Math.sin(t * 8));
+  } else if (t < S5) { // the 20 spreads backward
+    head("4", "The 20 spreads backward", t, S4C);
+    const last = ROUTE.n - 1, gap = (T.led - T.back) / last, when = (i) => (i === last ? T.spread + 0.3 : T.back + (last - 1 - i) * gap), drive = t >= T.led + 0.5;
+    pax.setAttribute("opacity", 0); flag.setAttribute("opacity", t < when(last) ? 1 : 0);
+    let cur = -1;
+    for (let i = last; i >= 0; i--) {
+      const k = P(t, when(i), 0.3);
+      if (k <= 0) break;
+      cur = i;
+      VAL[i].setAttribute("opacity", k);
+      const v = D.routeValues[i] / 20;
+      cells[ROUTE.at[i].join()].setAttribute("fill", `rgb(${Math.round(lerp(125, 21, v))},${Math.round(lerp(170, 110, v))},${Math.round(lerp(140, 61, v))})`);
+    }
+    if (!drive && cur >= 0) setRing(ROUTE.at[cur], C.ink, 1);
+    putTaxi(ROUTE.pos(drive ? along(t, [[T.led + 0.5, 0], [S5 - 0.1, ROUTE.n]]) : 0), t, drive ? 0.85 : 1);
+    if (!drive && cur >= 0) taxi.setAttribute("opacity", 1 - 0.85 * P(t, when(1), 0.4));
+    code(drive ? "# follow the biggest score" : "reward + gamma * next_max", t, drive ? T.led + 0.5 : S4C);
+  } else if (t < S5B) { // learning over 2,000 trips
+    css($("svg"), { opacity: 0 }); head("4", "Guess less, trust more", t, S5); show($("chart"), true);
+    const xmax = lerp(300, 2000, P(t, T.trips, 0.7, E.inOut)), n = along(t, [[T.guess, 0], [T.slowly, 30], [T.trips, 300], [T.later, 2000]]);
+    const X = (v) => lerp(X0, X1, v / xmax), Y = (v) => lerp(Y0, Y1, v), now = curveAt(n), pe = [], pd = [];
+    for (const c of CURVE) { if (c.trip > n) break; pe.push(`${X(c.trip)},${Y(c.epsilon)}`); pd.push(`${X(c.trip)},${Y(c.delivered)}`); }
+    pe.push(`${X(n)},${Y(now.e)}`); pd.push(`${X(n)},${Y(now.d)}`);
+    lineE.setAttribute("points", pe.join(" ")); lineD.setAttribute("points", pd.join(" "));
+    for (const [d, v] of [[dotE, now.e], [dotD, now.d]]) { d.setAttribute("cx", X(n)); d.setAttribute("cy", Y(v)); d.setAttribute("r", 20 + 4 * Math.sin(t * 8)); }
+    xLab.textContent = `${Film.fmt(n)} of 2,000 training trips`;
+    $("roE").innerHTML = `<span style="color:#b97b00">${Math.round(now.e * 100)}%</span><small>random guesses</small>`;
+    $("roD").innerHTML = `<span style="color:${C.green}">${Math.round(now.d * 100)}%</span><small>of last 10 delivered</small>`;
+  } else { // the payoff
+    head("4", "Trips delivered", t, S5B); board("top", "top", 0); show($("bars"), true);
+    const s = ROUTE.pos(along(t, [[S5B, 0], [DUR - 2.0, ROUTE.n], [DUR - 1.1, ROUTE.n], [DUR - 1.099, 0], [DUR + 0.6, ROUTE.n]]));
+    putTaxi(s, t); pax.setAttribute("opacity", s.aboard ? 0 : 1);
+    path.setAttribute("opacity", 0.6); path.setAttribute("stroke-dashoffset", -t * 60);
+    BARS.forEach((b, i) => {
+      const t0 = i < 3 ? S5B + 0.1 + i * 0.22 : T.every - 0.1, w = Math.max(10, 340 * b.v * P(t, t0, i < 3 ? 0.35 : 0.8));
+      css(b.el, { opacity: P(t, t0, 0.2) });
+      css(b.el.children[1], { width: `${w}px` });
+      css(b.el.children[2], { left: `${405 + w}px` });
+    });
+  }
+}
+
+const ev = (t, sfx, gain) => ({ t, sfx, gain });
+Film.define({
+  fps: 30, duration: DUR, T, captions: { lines: CAPS }, draw,
+  events: [ev(T.passenger, "pop", -14), ev(T.location - 0.1, "ding", -16), ev(T.one + 0.75, "thud", -12), ev(T.failEnd - 0.25, "thud", -10), ev(T.dest + 0.1, "ding", -18), ev(T.five, "pop", -14),
+    ev(T.move + 0.35, "pop", -16), ev(T.illegal + 0.45, "thud", -12), ev(T.twenty + 0.1, "ding", -16), ev(T.wall + 1.1, "thud", -12), ev(T.stayEnd, "thud", -10), ev(T.best, "pop", -14), ev(T.spread + 0.3, "ding", -18),
+    ...Array.from({ length: 12 }, (_, i) => ev(T.back + (i * (T.led - T.back)) / 12, "pop", -22)), ev(DUR - 2.0, "ding", -16)],
+});
+</script>
+</body>
+</html>

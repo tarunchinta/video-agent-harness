@@ -62,6 +62,12 @@ export type ToolExec = {
    */
   extract<S extends z.ZodType>(request: { instructions: string; untrusted: string; schema: S }): Promise<z.output<S>>;
   /**
+   * Asks a separate model call, with no tools and no view of this conversation, to judge the run's own work:
+   * a critic. `material` is the text it judges, `images` are pictures in the working directory it looks at, and
+   * its answer must match `schema`. The answer is a second opinion, not a decision: the tool decides what it means.
+   */
+  judge<S extends z.ZodType>(request: { instructions: string; material: string; schema: S; images?: string[] }): Promise<z.output<S>>;
+  /**
    * The run's sandbox, started the first time a tool asks for it. It is removed whenever the run stops, so
    * only the working directory carries over to the next call.
    */

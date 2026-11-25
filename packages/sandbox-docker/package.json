@@ -15,6 +15,8 @@
     "image:lock:voice": "docker run --rm -v ./image:/src:ro python:3.12-slim sh -c \"pip install -q --root-user-action=ignore --disable-pip-version-check uv==0.13.0 && uv pip compile /src/requirements-voice.in -c /src/requirements.txt --python-version 3.12 --no-header --no-annotate\" > image/requirements-voice.txt"
   },
   "dependencies": {
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@harness/contract": "workspace:*",
+    "@harness/harness": "workspace:*"
   }
 }

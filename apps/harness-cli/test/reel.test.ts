@@ -22,9 +22,26 @@ const calls = (...tools: [name: string, input: Json][]) =>
     { type: "message_stop" },
   ]);
 
+/** One model turn that answers in text: the critic's scores, for the call with no tools. */
+const says = (answer: string) =>
+  sse([
+    { type: "message_start", message: { id: "msg_demo", model: "claude-opus-5-5", usage: { input_tokens: 500, output_tokens: 1 } } },
+    { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+    { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: answer } },
+    { type: "content_block_stop", index: 0 },
+    { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 80 } },
+    { type: "message_stop" },
+  ]);
+const score = (n: number) => ({ score: n, why: "Fine." });
+const CRITIC = JSON.stringify({
+  scores: { hook: score(4), pacing: score(4), sync: score(4), legibility: score(4), grounding: score(4) },
+  notes: [],
+  summary: "Ready to hand in.",
+});
+
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00]);
-const NARRATION = ["Texas might turn blue in November,", "because four hundred thousand Republicans disappeared in May.", "Take one of them.", "He votes in March, then stays home for the runoff.", "The establishment stayed home, and the base took the party."].join("\n");
-const SCRIPT = `# The missing votes\n\n${"Beat: what is said, what is on screen, and the source that backs it. ".repeat(4)}`;
+const NARRATION = ["A library card costs nothing here,", "yet four hundred thousand readers disappeared in May.", "Take one of them.", "She borrows in March, then stays home for the summer.", "The regulars stayed home, and the newcomers took the shelves."].join("\n");
+const SCRIPT = `# The missing readers\n\n${"Beat: what is said, what is on screen, and the source that backs it. ".repeat(4)}`;
 
 function cli(turns: string[]) {
   const cwd = mkdtempSync(join(tmpdir(), "harness-reel-"));
@@ -41,6 +58,15 @@ function cli(turns: string[]) {
     if (call.command[0] === "ffmpeg") {
       writeFileSync(join(film, "vo.m4a"), "audio");
       return {};
+    }
+    if (call.command[1] === "kit/review.mjs") {
+      mkdirSync(join(film, "out", "critique"), { recursive: true });
+      writeFileSync(join(film, "out", "critique", "sheet.jpg"), JPEG);
+      const measured = {
+        ok: true, duration: 15.2, width: 1080, height: 1920, audio: true, black: [], freezes: [], silences: [],
+        loudness: { integrated_lufs: -14, true_peak_db: -1.5 }, first_word: 0.25, last_word: 15.0, frames: [{ n: 1, t: 1, words: "A library card" }], sheet: "out/critique/sheet.jpg",
+      };
+      return { stdout: `${JSON.stringify(measured)}\n` };
     }
     mkdirSync(join(film, "out", "review"), { recursive: true });
     writeFileSync(join(film, "out", "film.mp4"), "video");
@@ -83,8 +109,10 @@ describe("harness reel", () => {
       calls(["prepare_voiceover", {}]),
       calls(["start_stage", { stage: "edit" }]),
       calls(["render_film", {}]),
+      calls(["review_cut", {}]),
+      says(CRITIC),
       calls(["submit_cut", { note: "The map is simplified." }]),
-      calls(["finish", { summary: "A 15 second reel on the missing votes.", film: "cuts/cut-1.mp4" }]),
+      calls(["finish", { summary: "A 15 second reel on the missing readers.", film: "cuts/cut-1.mp4" }]),
     ]);
     mkdirSync(join(cwd, "my-notes"));
     writeFileSync(join(cwd, "my-notes", "hooks.md"), "Open on the number.");
@@ -92,7 +120,7 @@ describe("harness reel", () => {
     writeFileSync(join(cwd, "reading.m4a"), "my voice");
 
     // --- the topic, up to the script review ---
-    const first = await run("reel", "--topic", "Why 400,000 voters stayed home", "--seconds", "30", "--source", "https://news.example/runoff", "--notes", "my-notes");
+    const first = await run("reel", "--topic", "Why 400,000 readers stayed home", "--seconds", "30", "--source", "https://news.example/runoff", "--notes", "my-notes");
     expect(first.err).toBe("");
     expect(first.code).toBe(2);
     const id = runId();
@@ -118,7 +146,7 @@ describe("harness reel", () => {
     const task = ((bodies[0]!.messages as Json[])[0]!.content as Json[])[0]!.text as string;
     expect(task).toBe(
       [
-        "Make a reel about: Why 400,000 voters stayed home",
+        "Make a reel about: Why 400,000 readers stayed home",
         "",
         "Length: about 30 seconds.",
         "",
@@ -132,7 +160,7 @@ describe("harness reel", () => {
     );
     expect(readdirSync(join(work, "notes"))).toEqual(["hooks.md"]);
     expect((bodies[0]!.tools as Json[]).map((t) => t.name)).toEqual([
-      "finish", "list_files", "prepare_voiceover", "read_file", "render_film", "render_stills", "run_command", "start_stage", "submit_cut", "submit_script", "view_image", "web_fetch", "write_file",
+      "finish", "list_files", "prepare_voiceover", "read_file", "render_film", "render_stills", "review_cut", "run_command", "start_stage", "submit_cut", "submit_script", "view_image", "web_fetch", "write_file",
     ]);
 
     // --- approving the script takes the recording with it ---
@@ -162,14 +190,16 @@ describe("harness reel", () => {
     // The agent was told where the recording is, as the creator's note on the approval.
     const approval = JSON.stringify(bodies[4]!.messages);
     expect(approval).toContain("The voiceover recording is at inputs/voiceover.m4a.");
-    expect(box.commands.map((c) => c.command.slice(0, 2).join(" "))).toEqual(["python kit/align.py", "ffmpeg -v", "node kit/render.mjs"]);
+    expect(box.commands.map((c) => c.command.slice(0, 2).join(" "))).toEqual(["python kit/align.py", "ffmpeg -v", "node kit/render.mjs", "node kit/review.mjs"]);
+    // The critic watched the cut before it was handed in, and passed it.
+    expect(readFileSync(join(work, "cuts", "review-1.json"), "utf8")).toContain('"passed": true');
     // The picture of the render went to the model with the result.
     expect(JSON.stringify(bodies[8]!.messages)).toContain(`"media_type":"image/jpeg","data":"${JPEG.toString("base64")}"`);
 
     // --- approving the cut ends the run ---
     const third = await run("resume", id, "--approve");
     expect(third.code).toBe(0);
-    expect(third.out.split("\n").slice(-3)).toEqual(["Done. A 15 second reel on the missing votes.", `The film is at ${join(work, "cuts", "cut-1.mp4")}`, ""]);
+    expect(third.out.split("\n").slice(-3)).toEqual(["Done. A 15 second reel on the missing readers.", `The film is at ${join(work, "cuts", "cut-1.mp4")}`, ""]);
     expect(existsSync(join(work, "cuts", "cut-1.mp4"))).toBe(true);
     expect([box.started, box.stopped]).toEqual([1, 1]);
 

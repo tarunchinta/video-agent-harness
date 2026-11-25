@@ -13,6 +13,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+# runs made with `pnpm harness`: each holds a creator's script, recording and renders
+/runs/
 # local workspaces created while developing
 /workspaces/
 /tmp/

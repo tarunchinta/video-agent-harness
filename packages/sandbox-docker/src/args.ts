@@ -68,6 +68,8 @@ export function sandboxRunArgs(options: SandboxOptions, host: HostFacts): string
     "--pids-limit", String(options.limits.pids),
     "--shm-size", `${shmMb}m`,
     "--ulimit", "core=0",
+    // No one file can be larger than the whole working folder may be. The value is in bytes.
+    "--ulimit", `fsize=${options.limits.workDiskMb * 1024 * 1024}`,
     "--workdir", "/work",
     "--mount", bindMount(options.workDir, "/work", false),
   ];
@@ -140,6 +142,11 @@ export function execArgs(runId: string, execId: string, command: readonly string
     "sandbox-exec", execId, String(backstop),
     ...command,
   ];
+}
+
+/** Kilobytes used under /work, on that file system only. */
+export function workUsageArgs(runId: string): string[] {
+  return ["exec", containerName(runId), "du", "-skx", "/work"];
 }
 
 export function killArgs(runId: string, execId: string): string[] {

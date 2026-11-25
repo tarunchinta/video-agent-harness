@@ -50,4 +50,9 @@ export class FaultyStore implements EventStore {
     this.check();
     return this.inner.releaseLease(runId, worker, epoch);
   }
+
+  async leaseHeld(runId: string): Promise<boolean> {
+    this.check();
+    return this.inner.leaseHeld(runId);
+  }
 }

@@ -66,6 +66,12 @@ export const payloadSchemas = {
       pipeline: z.string().optional(),
       /** Set when the run has a sandbox: what its commands can reach. */
       sandbox_network: z.enum(["none", "public"]).optional(),
+      /** Set when a critic must review each cut before it is handed in. */
+      critic: z.boolean().optional(),
+      /** Set when the loop may clear old tool results and summarise the conversation as it fills the window. */
+      compaction: z.boolean().optional(),
+      /** Set when the creator wrote and recorded the narration themselves: its words, which the run may not change. */
+      narration: z.string().optional(),
     }),
     limits: limitsSchema,
     harness_version: z.string(),
@@ -113,6 +119,26 @@ export const payloadSchemas = {
   "agent.completed": z.looseObject({ result: z.unknown() }),
   "agent.failed": z.looseObject({ error: errorSchema }),
   "context.message": z.looseObject({ origin: z.string(), content: z.string(), kind: z.string().optional() }),
+  /**
+   * The agent's conversation was made smaller. `trim` replaces the named tool results with a pointer to their
+   * saved text; `summary` replaces everything after the task with one summary. Either starts a new request prefix.
+   */
+  "context.compacted": z.discriminatedUnion("mode", [
+    z.looseObject({
+      mode: z.literal("trim"),
+      cleared: z.array(z.looseObject({ tool_call_id: z.string(), path: z.string() })).min(1),
+      tokens_before: z.number().int().nonnegative(),
+      tokens_after: z.number().int().nonnegative(),
+    }),
+    z.looseObject({
+      mode: z.literal("summary"),
+      summary: z.string().min(1),
+      from_seq: z.number().int().nonnegative(),
+      to_seq: z.number().int().nonnegative(),
+      tokens_before: z.number().int().nonnegative(),
+      tokens_after: z.number().int().nonnegative(),
+    }),
+  ]),
   "model.call.started": z.looseObject({
     provider: z.string(),
     model: z.string(),

@@ -1,10 +1,10 @@
-import { appendFileSync, mkdtempSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   EventValidationError, foldRun, HeadMovedError, JsonlEventStore, LeaseHeldError, MemoryEventStore, StaleEpochError,
-  type EventStore, type NewEvent,
+  type EventStore, type NewEvent, type RunDirectory,
 } from "../src/index.ts";
 import { newRun } from "./helpers.ts";
 
@@ -75,6 +75,20 @@ describe.each(stores)("%s event store", (_name, make) => {
     await expect(store.append(runId, 1, [note("stale")], a.epoch)).rejects.toBeInstanceOf(StaleEpochError);
     await store.append(runId, 1, [note("current")], b.epoch);
   });
+
+  it("lists every run with its head and who drives it", async () => {
+    const store = make() as EventStore & Pick<RunDirectory, "listRuns">;
+    expect(await store.listRuns()).toEqual([]);
+    const quiet = await newRun(store);
+    const busy = await newRun(store);
+    await store.append(busy, 1, [note("a"), note("b")]);
+    const lease = await store.acquireLease(busy, "worker-1");
+    const byId = async () => new Map((await store.listRuns()).map((h) => [h.runId, h]));
+    expect((await byId()).get(quiet)).toEqual({ runId: quiet, lastSeq: 1, status: "created" });
+    expect((await byId()).get(busy)).toEqual({ runId: busy, lastSeq: 3, status: "created", leaseOwner: "worker-1" });
+    await store.releaseLease(busy, "worker-1", lease.epoch);
+    expect((await byId()).get(busy)).toEqual({ runId: busy, lastSeq: 3, status: "created" });
+  });
 });
 
 describe("worker lease", () => {
@@ -112,5 +126,15 @@ describe("jsonl event store", () => {
     // The next append lands on a clean line, not glued to the fragment.
     await reopened.append(runId, 2, [note("after the crash")]);
     expect((await new JsonlEventStore(root).read(runId)).map((e) => e.seq)).toEqual([1, 2, 3]);
+  });
+
+  it("lists only folders that hold a readable log", async () => {
+    const root = mkdtempSync(join(tmpdir(), "harness-store-"));
+    const store = new JsonlEventStore(root);
+    const runId = await newRun(store);
+    mkdirSync(join(root, "not-a-run"));
+    writeFileSync(join(root, "stray.txt"), "hello");
+    expect(await store.listRuns()).toEqual([{ runId, lastSeq: 1, status: "created" }]);
+    expect(await new JsonlEventStore(join(root, "missing")).listRuns()).toEqual([]);
   });
 });

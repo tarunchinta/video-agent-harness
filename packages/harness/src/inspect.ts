@@ -28,8 +28,15 @@ export type RunSummary = {
   tokensOut: number;
   costMicroUsd: number;
   activeMs: number;
+  /** When the provider's price table was last checked, if it said. */
+  pricesCheckedOn?: string;
+  /** Set when that was long enough before the run that its cost figures may be off. */
+  pricesStale?: boolean;
   rows: SpanRow[];
 };
+
+/** A price table this much older than the run it priced is worth checking again. */
+export const PRICES_STALE_DAYS = 90;
 
 /** What a run did and what it cost, read from its log alone. */
 export function summarizeRun(events: readonly HarnessEvent[]): RunSummary {
@@ -79,6 +86,15 @@ export function summarizeRun(events: readonly HarnessEvent[]): RunSummary {
     tokensOut: state.tokensOut,
     costMicroUsd: state.costMicroUsd,
     activeMs: state.activeMs,
+    ...pricing(events),
     rows,
   };
+}
+
+function pricing(events: readonly HarnessEvent[]): Pick<RunSummary, "pricesCheckedOn" | "pricesStale"> {
+  const started = events.find((e) => e.type === "agent.started");
+  const checked = (started?.payload as { prices_checked_on?: unknown } | undefined)?.prices_checked_on;
+  if (typeof checked !== "string" || Number.isNaN(Date.parse(checked))) return {};
+  const ageDays = (Date.parse(started!.occurredAt) - Date.parse(checked)) / 86_400_000;
+  return { pricesCheckedOn: checked, ...(ageDays > PRICES_STALE_DAYS ? { pricesStale: true } : {}) };
 }

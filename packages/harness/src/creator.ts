@@ -25,6 +25,14 @@ export type CreateRunInput = {
   pipeline?: string;
   /** Gives the run a sandbox, with this much network. */
   sandboxNetwork?: "none" | "public";
+  /** A critic reviews each cut before it can be handed in. Recorded so a later worker applies the same rule. */
+  critic?: boolean;
+  /** The loop may make the conversation smaller as it fills the window. Recorded so a later worker applies the same rule. */
+  compaction?: boolean;
+  /** Words the creator wrote and recorded themselves. A pipeline that knows about it keeps them exactly. Recorded so a later worker applies the same rule. */
+  narration?: string;
+  /** The creator's project folder the run belongs to, by its name under `projects/`. */
+  project?: string;
 };
 
 export async function createRun(store: EventStore, input: CreateRunInput, deps: Deps = {}): Promise<string> {
@@ -40,7 +48,7 @@ export async function createRun(store: EventStore, input: CreateRunInput, deps: 
       spanId: ids.uuid(),
       payload: {
         title: input.title ?? input.task.slice(0, 80),
-        brief: { task: input.task },
+        brief: { task: input.task, ...(input.project ? { project: input.project } : {}) },
         config: {
           model: input.model,
           system: input.system,
@@ -48,6 +56,9 @@ export async function createRun(store: EventStore, input: CreateRunInput, deps: 
           ...(input.effort ? { effort: input.effort } : {}),
           ...(input.pipeline ? { pipeline: input.pipeline } : {}),
           ...(input.sandboxNetwork ? { sandbox_network: input.sandboxNetwork } : {}),
+          ...(input.critic ? { critic: true } : {}),
+          ...(input.compaction ? { compaction: true } : {}),
+          ...(input.narration ? { narration: input.narration } : {}),
         },
         limits: limitsSchema.parse(input.limits ?? {}),
         harness_version: HARNESS_VERSION,
@@ -62,14 +73,14 @@ async function write(
   store: EventStore,
   runId: string,
   deps: Deps,
-  build: (state: RunState, events: HarnessEvent[]) => EventDraft[],
+  build: (state: RunState, events: HarnessEvent[]) => EventDraft[] | Promise<EventDraft[]>,
 ): Promise<RunState> {
   const clock = deps.clock ?? systemClock;
   const ids = deps.ids ?? randomIds;
   for (let attempt = 0; ; attempt += 1) {
     const events = await store.read(runId);
     const state = foldRun(events);
-    const drafts = build(state, events);
+    const drafts = await build(state, events);
     if (!drafts.length) return state;
     const batch = drafts.map((d) => ({ eventId: ids.uuid(), occurredAt: clock.now().toISOString(), ...d }));
     try {
@@ -129,6 +140,11 @@ export function decideGate(store: EventStore, runId: string, input: GateInput, d
   });
 }
 
+/** A plugin event (`x.<plugin>.…`) from the creator, for things the reducer never needs. */
+export function recordCreatorEvent(store: EventStore, runId: string, type: `x.${string}`, payload: Record<string, unknown>, deps: Deps = {}): Promise<RunState> {
+  return write(store, runId, deps, (state) => [{ type, actor: "creator", spanId: state.runSpanId, payload }]);
+}
+
 /** Raises or changes limits. A run paused on a budget also needs `requestResume`. */
 export function updateBudget(store: EventStore, runId: string, limits: Limits, deps: Deps = {}): Promise<RunState> {
   return write(store, runId, deps, (state) => [
@@ -153,14 +169,17 @@ export function requestPause(store: EventStore, runId: string, note?: string, de
 }
 
 /**
- * Ends a run for good. A run that a worker is driving stops at its next step; one that is waiting, paused or
- * not yet started is closed here, in the same batch as the request.
+ * Ends a run for good. A run that a worker is driving stops at its next step. One that is waiting, paused, not
+ * yet started, or whose worker is gone (it says `running` but nobody holds its lease) is closed here, in the
+ * same batch as the request. If a worker takes the run between the check and the write, the write finds the
+ * log has moved, and the next attempt sees the live lease and only asks.
  */
 export function requestCancel(store: EventStore, runId: string, note?: string, deps: Deps = {}): Promise<RunState> {
-  return write(store, runId, deps, (state, events) => {
-    if (isTerminal(state.status) || state.cancelRequested) return [];
+  return write(store, runId, deps, async (state, events) => {
+    if (isTerminal(state.status)) return [];
     const request: EventDraft = { type: "run.cancel_requested", actor: "creator", spanId: state.runSpanId, payload: note ? { note } : {} };
-    if (state.status === "running") return [request];
-    return [request, ...closeAll(events, "cancelled", "The run was cancelled.")];
+    const driven = state.status === "running" && (await store.leaseHeld(runId));
+    if (driven) return state.cancelRequested ? [] : [request];
+    return [...(state.cancelRequested ? [] : [request]), ...closeAll(events, "cancelled", "The run was cancelled.")];
   });
 }

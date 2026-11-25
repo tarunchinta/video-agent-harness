@@ -21,6 +21,12 @@ const limits = z.object({
   pids: z.number().int().min(64).default(2048),
   /** Shared memory. Chromium crashes on large pages with Docker's 64 MB default. */
   shmMb: z.number().int().min(64).default(1024),
+  /**
+   * Most the run's working folder may hold. A bind mount cannot be given a size, so this is enforced in two
+   * ways: no single file can grow past it (a file-size limit on every process), and after each command the
+   * folder is measured and the result says when it is over, so the agent is told to make room.
+   */
+  workDiskMb: z.number().int().min(64).default(10_240),
 });
 
 export const sandboxOptionsSchema = z.object({

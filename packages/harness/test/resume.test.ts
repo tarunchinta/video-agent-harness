@@ -45,6 +45,7 @@ class CountingStore implements EventStore {
   acquireLease = (runId: string, worker: string) => this.inner.acquireLease(runId, worker);
   renewLease = (runId: string, worker: string, epoch: number) => this.inner.renewLease(runId, worker, epoch);
   releaseLease = (runId: string, worker: string, epoch: number) => this.inner.releaseLease(runId, worker, epoch);
+  leaseHeld = (runId: string) => this.inner.leaseHeld(runId);
 }
 
 describe("resume after a crash", () => {

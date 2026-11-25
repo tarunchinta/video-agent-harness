@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRun, Engine, MemoryEventStore, ModelError, type ModelRequest, type ModelResponse } from "@harness/harness";
+import { testModelProvider } from "@harness/contract/conformance";
 import { ClaudeProvider, readSse, type ClaudeProviderOptions } from "../src/index.ts";
 
 /**
@@ -366,4 +367,17 @@ describe("readSse", () => {
     for await (const e of readSse(body(": keep-alive\r\nevent: a\r\ndata: one\r\ndata: two\r\n\r\ndata: three\n\n", 3))) events.push(e);
     expect(events).toEqual([{ event: "a", data: "one\ntwo" }, { event: "message", data: "three" }]);
   });
+});
+
+const ERROR_TYPES: Record<number, string> = { 400: "invalid_request_error", 401: "authentication_error", 429: "rate_limit_error", 500: "api_error", 503: "overloaded_error" };
+
+testModelProvider("Claude", (fetch) => new ClaudeProvider({ apiKey: "test-key", fetch }), {
+  model: "claude-opus-5-5",
+  text: () => ok(sse([start(), ...textBlock(0, ["Hel", "lo"]), ...end("end_turn")])),
+  expectText: "Hello",
+  toolCall: () => ok(sse([start(), ...toolBlock(0, "toolu_demo_1", "lookup", ['{"q":', '"x"}']), ...end("tool_use")])),
+  maxOutput: () => ok(sse([start(), ...textBlock(0, ["Hel"]), ...end("max_tokens")])),
+  // The stream stops in the middle of a block, with no message_stop.
+  truncated: () => ok(sse([start(), { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }, { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "Hel" } }])),
+  status: (code, retryAfter) => fail(code, { type: ERROR_TYPES[code] ?? "api_error", message: "Recorded error." }, retryAfter === undefined ? {} : { "retry-after": String(retryAfter) }),
 });

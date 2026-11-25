@@ -4,8 +4,9 @@ The sandbox named in `VISION.md` ("Local Docker container per run: code executio
 ffmpeg, renderer") and the `sandbox` seam in `PLUGIN_CONTRACT.md`. Research, demo capture and rendering all
 run inside it.
 
-Status: built and tested on Docker Desktop for Windows. Not yet wired into a run, because the kernel and the
-plugin contract package do not exist yet. See [What exists today](#what-exists-today).
+Status: built and tested on Docker Desktop for Windows, and wired into runs: the agent loop starts it the first
+time a tool asks and removes it whenever the run stops (see section 10 of [agent-loop.md](agent-loop.md)). The
+plugin wrapper is `dockerSandboxPlugin` in `src/plugin.ts`. See [What exists today](#what-exists-today).
 
 ## Decisions in brief
 
@@ -36,7 +37,8 @@ harness process                           network harness-net-<run> (internal, p
 
 - **Image** (`packages/sandbox-docker/image`): Node 24, Python 3.12 with a pinned baseline (numpy, pandas,
   matplotlib, duckdb, httpx), uv, static ffmpeg and ffprobe, Playwright with Chromium and its headless
-  shell, Xvfb, fonts. Built from its own folder so nothing else in the repo can enter the image. The build
+  shell, Xvfb, fonts, and faster-whisper with one speech model (`small.en` unless the build says otherwise)
+  for timing a voiceover's words. Built from its own folder so nothing else in the repo can enter the image. The build
   ends with `sandbox-selfcheck`, which encodes a clip, draws a chart and records a browser session, so a
   broken image fails at build time and not during a run.
 - **Driver** (`packages/sandbox-docker/src`): starts, uses and removes the container. It has no dependency
@@ -138,16 +140,17 @@ A network per run means two runs cannot reach each other's local servers. Docker
 allow roughly 30 such networks at once.
 
 Anything that fetches a URL the agent chose should do it from inside the sandbox, so it gets this
-protection without extra code.
+protection without extra code. The reel pipeline's `web_fetch` is the exception: it fetches from the host
+process, behind its own check that the address is public.
 
 ## Lifecycle and the event log
 
 | Moment | What happens | Event |
 |---|---|---|
-| Worker takes the run | Remove leftovers with this run id, create network and proxy if needed, start the container | `sandbox.started` with image, image id and container id |
+| A tool first asks for the sandbox | Remove leftovers with this run id, create network and proxy if needed, start the container | `sandbox.started` with the image and the container id |
 | Gate, pause, end, failure | Remove container, proxy and network | `sandbox.completed` with the reason |
-| Crash | Nothing; the next start removes what was left | `run.resumed` covers it |
-| Resume | Fresh container; the kernel restores `work/` from the last checkpoint manifest | `sandbox.started` |
+| Crash | Nothing at the time. The next start removes what was left | The next worker writes `sandbox.completed` with `interrupted` for the one left open |
+| Resume | Fresh container, when a tool next asks. `work/` is still on the host. Restoring it from a checkpoint manifest is planned and not built | `sandbox.started` |
 
 Consequence: packages installed outside `/work` disappear at a gate. Python extras go to
 `/work/.packages` (already on `PYTHONPATH`) and Node projects keep `node_modules` under `/work`. An opt-in
@@ -158,11 +161,11 @@ cache is something one run can leave behind for the next.
 
 | Consumer | Uses |
 |---|---|
-| Research | `exec` for Python and Node experiments, DuckDB over public datasets, charts with matplotlib; network `public` |
+| Research | `exec` for Python and Node experiments, DuckDB over public datasets, charts with matplotlib. Downloads from inside the sandbox need network `public`; the reel pipeline runs with `none` unless asked |
 | Demo capture | Playwright scripts through `exec` today. The `BrowserHandle` in the plugin contract (navigate, act, record) is milestone 5 and gets its own plan |
-| Rendering | Node, Chromium and ffmpeg for Remotion and caption burns; fonts in the image; network only to install the project's packages |
+| Rendering | The film kit (`packages/reel/kit`): headless Chromium draws each frame of an HTML page and ffmpeg encodes it, with fonts from the image and no network. faster-whisper times the voiceover's words |
 
-Remotion itself is not in the image. Its version belongs to the render plugin's project.
+Remotion is not in the image and is not used. The film kit needs nothing the image does not already have.
 
 ## What exists today
 
@@ -208,11 +211,16 @@ The second variable adds the tests that reach `example.com` and PyPI. Together t
 - `uv pip install --target /work/.packages` works and the package is importable.
 - The egress log lists the hosts that were allowed and refused.
 
+Two live reel runs on 16 November 2026 also used it, with network `none`: they ran the agent's commands,
+drew stills and rendered three cuts between them.
+
 ### Not done
 
-- The `sandbox-docker` plugin wrapper, the `sandbox` seam's conformance kit and the `sandbox.started` /
-  `sandbox.completed` events. They wait on the `contract` package and the kernel.
-- `run_command` and the other tools that call the driver.
+- The `sandbox` seam's conformance kit (`testSandbox` in `@harness/contract/conformance`) exists but is not yet
+  wired into this package's integration tests.
+- The speech model has only been checked on English, with the one recording in `projects/`. Its words came
+  back within a few hundredths of a second of the hand-made subtitle file, in about a third of the
+  recording's length on four CPUs.
 - `browser()`, as described above.
 - Nothing has been run on a Linux or macOS host.
 
@@ -222,10 +230,18 @@ The second variable adds the tests that reach `example.com` and PyPI. Together t
   would protect the run's files from a malicious page, not the host.
 - **Linux hosts.** A service on the host bound to `0.0.0.0` may be reachable from an internal network
   through the bridge address. Only Docker Desktop has been tested. Bind local services to `127.0.0.1`.
-- **Disk.** Memory, CPU and process count are limited; the size of `work/` is not.
+- **Disk.** A bind mount cannot be given a size, so `limits.workDiskMb` (10 GB unless set) is held two ways: a
+  file-size limit on every process (`--ulimit fsize`), so no single file outgrows it, and a measurement of
+  `/work` after each command (`du -skx`). When the folder is over, the command's result carries `diskFull` and
+  the agent is told to delete files first. Many files written by one command can still pass the limit before it
+  is measured.
 - **Screen capture.** The static ffmpeg has no `x11grab`, so recording a headed browser under Xvfb needs
   another ffmpeg build. Playwright's own recording works. The demo capture plan decides.
-- **Image size.** Chromium and its headless shell are about 1 GB, static ffmpeg 270 MB.
+- **Image size.** Chromium and its headless shell are about 1 GB, static ffmpeg 270 MB, and the speech
+  library with its model about 1.5 GB. The image is 4.6 GB in all.
+- **The speech library and its audio decoder disagree.** The pinned faster-whisper cannot open a file through
+  the pinned PyAV. The self-check and the harness therefore decode with ffmpeg and hand over samples, which
+  avoids PyAV altogether. If a later pair agrees again, nothing needs to change.
 - **Where the plugin wrapper lives.** The driver is in `packages/sandbox-docker`. `PLUGIN_CONTRACT.md` puts
   plugins in `plugins/<name>`; the wrapper can live there and import the driver, or sit next to it.
 - **Default network.** The driver defaults to `none`. Research and demo capture need `public`, so the run

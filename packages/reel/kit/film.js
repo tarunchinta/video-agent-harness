@@ -2,8 +2,7 @@
 //
 // A film is one HTML page that can draw any moment of itself: Film.define({ duration, draw(t) }) and nothing
 // else. The renderer calls draw for every frame, so the same page gives a preview, stills and the final video.
-(function () {
-  "use strict";
+(() => {
 
   const WORDS = Array.isArray(window.WORDS) ? window.WORDS : [];
   const norm = (w) => String(w).toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]/gu, "");
@@ -32,10 +31,10 @@
   const lerp = (a, b, p) => a + (b - a) * p;
   const E = {
     lin: (x) => x,
-    out: (x) => 1 - Math.pow(1 - x, 3),
+    out: (x) => 1 - (1 - x) ** 3,
     in: (x) => x * x * x,
-    inOut: (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
-    back: (x) => { const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); },
+    inOut: (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2),
+    back: (x) => { const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; },
   };
   /** Progress from 0 to 1 of something that starts at `start` and takes `dur` seconds, eased. */
   const P = (t, start, dur = 0.5, ease = E.out) => ease(clamp((t - start) / dur));

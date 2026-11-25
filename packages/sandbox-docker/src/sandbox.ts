@@ -7,7 +7,7 @@ import { pipeline } from "node:stream/promises";
 import {
   LABEL_API, LABEL_KIND, LABEL_RUN, SANDBOX_API, containerName, execArgs, killArgs, networkCreateArgs,
   networkName, proxyConnectArgs, proxyName, proxyRunArgs, proxyWaitArgs, readFileArgs, sandboxRunArgs,
-  writeFileArgs,
+  workUsageArgs, writeFileArgs,
   type HostFacts,
 } from "./args.ts";
 import { createDockerCli, type DockerCli, type DockerResult } from "./docker.ts";
@@ -45,6 +45,8 @@ export type ExecResult = {
   /** True when the command was stopped for running past `timeoutMs`. */
   timedOut: boolean;
   durationMs: number;
+  /** Set when the working folder holds more than its limit after the command. Nothing else runs well until room is made. */
+  diskFull?: { usedBytes: number; limitBytes: number };
 };
 
 export type FileInfo = { bytes: number; sha256: string };
@@ -150,6 +152,7 @@ export class DockerSandbox {
   private constructor(
     readonly info: SandboxInfo,
     private readonly docker: DockerCli,
+    private readonly limits: SandboxOptions["limits"],
   ) {}
 
   static async start(input: SandboxOptionsInput, deps: SandboxDeps = {}): Promise<DockerSandbox> {
@@ -191,6 +194,7 @@ export class DockerSandbox {
           network: options.network,
         },
         docker,
+        options.limits,
       );
     } catch (error) {
       await removeSandbox(options.runId, docker).catch(() => undefined);
@@ -202,6 +206,27 @@ export class DockerSandbox {
    * Runs a command (an argument array, no shell) and waits for it. A command that runs past its timeout is
    * stopped with everything it started, and the result says so. A cancelled command throws `aborted`.
    */
+  /**
+   * Measures the working folder and says whether it is over the limit. A measurement that fails or takes too
+   * long is not a reason to fail the command that ran, so it counts as not over.
+   */
+  private async workOverLimit(): Promise<{ usedBytes: number; limitBytes: number } | undefined> {
+    const limitBytes = this.limits.workDiskMb * 1024 * 1024;
+    const measure = new AbortController();
+    const timer = setTimeout(() => measure.abort(), 30_000);
+    try {
+      const result = await this.docker.run(workUsageArgs(this.info.runId), { captureLimit: 4096, signal: measure.signal });
+      const kb = Number.parseInt(result.stdout.trim().split(/\s+/)[0] ?? "", 10);
+      if (result.code !== 0 || !Number.isFinite(kb)) return undefined;
+      const usedBytes = kb * 1024;
+      return usedBytes > limitBytes ? { usedBytes, limitBytes } : undefined;
+    } catch {
+      return undefined;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async exec(command: readonly string[], input: ExecOptionsInput = {}): Promise<ExecResult> {
     this.assertUsable();
     const { signal, ...rest } = input;
@@ -240,6 +265,7 @@ export class DockerSandbox {
       });
       if (aborted) throw new SandboxError("aborted", "the command was cancelled");
       if (!timedOut && result.code !== 0 && saysContainerGone(result.stderr)) await this.throwIfGone(result.stderr);
+      const diskFull = await this.workOverLimit();
       return {
         exitCode: result.code,
         stdout: result.stdout,
@@ -249,6 +275,7 @@ export class DockerSandbox {
         truncated: result.truncated,
         timedOut,
         durationMs: Math.round(performance.now() - started),
+        ...(diskFull ? { diskFull } : {}),
       };
     } finally {
       clearTimeout(timer);

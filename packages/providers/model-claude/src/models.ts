@@ -17,6 +17,9 @@ export type ModelInfo = ModelCapabilities & {
 
 const current = { contextWindow: 1_000_000, maxOutputTokens: 128_000, adaptiveThinking: true };
 
+/** When the table below was last checked against the published prices. Update it whenever a price changes. */
+export const PRICES_CHECKED_ON = "2026-11-16";
+
 /**
  * The models this provider knows. A price list goes stale: check it against the published prices before
  * trusting a budget, and pass `models` to the provider to add or correct an entry.

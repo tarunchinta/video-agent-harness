@@ -1,5 +1,5 @@
 import { ModelError, type ModelCapabilities, type ModelProvider, type ModelRequest, type ModelStreamEvent, type Usage } from "@harness/harness";
-import { MODELS, priceMicroUsd, type ModelInfo } from "./models.ts";
+import { MODELS, PRICES_CHECKED_ON, priceMicroUsd, type ModelInfo } from "./models.ts";
 import { readSse } from "./sse.ts";
 import { errorFromType, MessageAssembler, PROVIDER_ID, toWireRequest } from "./wire.ts";
 
@@ -10,6 +10,8 @@ export type ClaudeProviderOptions = {
   apiVersion?: string;
   /** Replaces the global `fetch`, for tests and proxies. */
   fetch?: typeof fetch;
+  /** When the prices passed in `models` were checked, as YYYY-MM-DD. */
+  pricesCheckedOn?: string;
   /** Extra or corrected models, merged over the built-in table. */
   models?: Record<string, ModelInfo>;
   /** `summarized` returns a readable account of the model's reasoning, at no extra charge. */
@@ -34,12 +36,14 @@ const DEFAULT_API_VERSION = "2026-10-21";
  */
 export class ClaudeProvider implements ModelProvider {
   readonly id = PROVIDER_ID;
+  readonly pricesCheckedOn: string;
   private readonly models: Record<string, ModelInfo>;
   private readonly fetch: typeof fetch;
 
   constructor(private readonly options: ClaudeProviderOptions) {
     if (!options.apiKey) throw new Error("The Claude provider needs an API key.");
     this.models = { ...MODELS, ...options.models };
+    this.pricesCheckedOn = options.pricesCheckedOn ?? PRICES_CHECKED_ON;
     this.fetch = options.fetch ?? globalThis.fetch;
   }
 

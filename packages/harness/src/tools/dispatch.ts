@@ -34,12 +34,23 @@ export type DispatchHost = {
   budgetExceeded(): string | undefined;
   /** Records the gate as open, closing the open stage in the same batch when asked. */
   openGate(gate: string, callId: string, payload: Record<string, unknown>, completeStage: boolean): Promise<void>;
-  extract: (parentSpanId: string, request: { instructions: string; untrusted: string; schema: z.ZodType }, signal: AbortSignal) => Promise<unknown>;
+  /** A model call with no tools. `extract` reads text written by strangers; `judge` reviews the run's own work. */
+  toolless: (parentSpanId: string, request: ToollessRequest, signal: AbortSignal) => Promise<unknown>;
   /** Records a turn-ending tool's result together with the end of the agent and the run. */
   conclude(completed: EventDraft, result: unknown): Promise<void>;
   policy: Readonly<Record<string, "allow" | "deny">>;
   maxInlineChars: number;
   maxParallel: number;
+};
+
+export type ToollessRequest = {
+  /** `compact` is the loop's own: it summarises the agent's conversation when it fills the window. */
+  kind: "extract" | "judge" | "compact";
+  instructions: string;
+  text: string;
+  schema: z.ZodType;
+  /** Absolute paths of pictures to show, for `judge`. */
+  images?: string[];
 };
 
 export type BatchOutcome = {
@@ -199,7 +210,20 @@ async function runOne(
       await host.openGate(name, call.id, payload, Boolean(options.completeStage));
       throw new GateSuspend(name);
     },
-    extract: (request) => host.extract(spanId, request, controller.signal) as Promise<never>,
+    extract: (request) =>
+      host.toolless(spanId, { kind: "extract", instructions: request.instructions, text: request.untrusted, schema: request.schema }, controller.signal) as Promise<never>,
+    judge: (request) =>
+      host.toolless(
+        spanId,
+        {
+          kind: "judge",
+          instructions: request.instructions,
+          text: request.material,
+          schema: request.schema,
+          images: (request.images ?? []).map((path) => resolveInside(host.workDir, path)),
+        },
+        controller.signal,
+      ) as Promise<never>,
     sandbox: () => host.sandbox(),
     run: () => host.view(),
     enterStage: async (stage, options = {}) => {
@@ -295,6 +319,18 @@ async function attach(host: DispatchHost, def: ToolDefinition, input: unknown, v
   return { images, notes };
 }
 
+/** Saves a tool result's full text in the working directory. Returns its path there, or nothing if it could not be written. */
+export async function saveResult(text: string, workDir: string, callId: string): Promise<string | undefined> {
+  const relative = `${RESULTS_DIR}/${callId.replace(/[^A-Za-z0-9_-]/g, "_")}.txt`;
+  try {
+    await mkdir(join(workDir, RESULTS_DIR), { recursive: true });
+    await writeFile(join(workDir, relative), text, "utf8");
+    return relative;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Keeps a large result out of the conversation: the full text goes to a file in the working directory and the
  * model gets the start, the end and where to find the rest. Best effort: if the file cannot be written the
@@ -307,13 +343,8 @@ export async function offload(
   maxInlineChars: number,
 ): Promise<{ output: string; truncated: boolean; output_path?: string }> {
   if (text.length <= maxInlineChars) return { output: text, truncated: false };
-  const relative = `${RESULTS_DIR}/${callId.replace(/[^A-Za-z0-9_-]/g, "_")}.txt`;
-  try {
-    await mkdir(join(workDir, RESULTS_DIR), { recursive: true });
-    await writeFile(join(workDir, relative), text, "utf8");
-  } catch {
-    return { output: text.slice(0, HARD_CAP_CHARS), truncated: text.length > HARD_CAP_CHARS };
-  }
+  const relative = await saveResult(text, workDir, callId);
+  if (!relative) return { output: text.slice(0, HARD_CAP_CHARS), truncated: text.length > HARD_CAP_CHARS };
   const half = Math.max(0, Math.floor(maxInlineChars / 2));
   const omitted = text.length - half * 2;
   const notice = `\n\n(Left out ${omitted.toLocaleString("en-US")} characters from the middle. The full result is at ${relative}. Use read_file with offset and limit to read it.)\n\n`;

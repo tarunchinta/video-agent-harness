@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { firstDifference, narrationWords, normWord, standInWords, wordsSchema } from "../src/index.ts";
+import { applyCorrections, differences, narrationWords, normWord, standInWords, wordsSchema } from "../src/index.ts";
 
 describe("word timings", () => {
   it("compares words the way the film page does: letters and digits only", () => {
-    expect(normWord("Cornyn's")).toBe("cornyns");
+    expect(normWord("Marlow's")).toBe("marlows");
     expect(normWord("400,000")).toBe("400000");
     expect(normWord("—")).toBe("");
-    expect(narrationWords("Texas might turn blue — in November,\nbecause 400,000 left.")).toEqual(["Texas", "might", "turn", "blue", "in", "November,", "because", "400,000", "left."]);
+    expect(narrationWords("The branch might close — in November,\nbecause 400,000 left.")).toEqual(["The", "branch", "might", "close", "in", "November,", "because", "400,000", "left."]);
   });
 
   it("makes stand-in timing that never overlaps and breathes at punctuation", () => {
@@ -21,14 +21,39 @@ describe("word timings", () => {
     expect(gap(3)).toBeGreaterThan(gap(1));
   });
 
-  it("finds where a recording leaves the narration, and says nothing when it does not", () => {
+  it("finds every place a recording leaves the narration, and says nothing when it does not", () => {
     const said = (text: string) => standInWords(text);
-    expect(firstDifference(said("He stays home. Paxton wins."), "He stays home.\nPaxton wins.")).toBeUndefined();
-    expect(firstDifference(said("midterms draw fewer votes so"), "midterms draw fewer voters so")).toEqual({
-      at: 3,
-      written: "draw fewer voters so",
-      said: "draw fewer votes so",
-    });
-    expect(firstDifference(said("one two"), "one two three")).toMatchObject({ at: 2, written: "one two three", said: "one two" });
+    expect(differences(said("She stays home. Marlow wins."), "She stays home.\nMarlow wins.")).toEqual([]);
+    expect(differences(said("weekends draw fewer visits so"), "weekends draw fewer visitors so")).toEqual([{ written: "fewer visitors so", said: "fewer visits so" }]);
+    // A number read aloud, a misheard name and a dropped last word, each reported with a word of context.
+    expect(differences(said("because 400,000 readers left. Can Marlow wins"), "because four hundred thousand readers left. Ken Marlow wins big")).toEqual([
+      { written: "because four hundred thousand readers", said: "because 400,000 readers" },
+      { written: "left. Ken Marlow", said: "left. Can Marlow" },
+      { written: "wins big", said: "wins" },
+    ]);
+  });
+
+  it("puts a mis-hearing right everywhere it occurs, keeping the time the words took", () => {
+    const heard = [
+      { w: "Can", s: 1, e: 1.3 },
+      { w: "Marlow", s: 1.3, e: 1.9 },
+      { w: "wins.", s: 2, e: 2.4 },
+      { w: "four", s: 3, e: 3.2 },
+      { w: "hundred", s: 3.2, e: 3.6 },
+      { w: "Can", s: 4, e: 4.2 },
+      { w: "Marlow.", s: 4.2, e: 4.8 },
+    ];
+    const { words, unused } = applyCorrections(heard, [
+      { heard: "can marlow", write: "Ken Marlow" },
+      { heard: "four hundred", write: "400" },
+      { heard: "Marlo", write: "Marlow" },
+    ]);
+    expect(words.map((w) => w.w)).toEqual(["Ken", "Marlow", "wins.", "400", "Ken", "Marlow"]);
+    expect(words[0]).toEqual({ w: "Ken", s: 1, e: 1.3 });
+    expect(words[1]).toEqual({ w: "Marlow", s: 1.3, e: 1.9 });
+    // Two words became one: it takes the whole of their time.
+    expect(words[3]).toEqual({ w: "400", s: 3, e: 3.6 });
+    expect(unused).toEqual([{ heard: "Marlo", write: "Marlow" }]);
+    expect(wordsSchema.safeParse(words).success).toBe(true);
   });
 });

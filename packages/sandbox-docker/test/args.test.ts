@@ -11,7 +11,7 @@ function runArgs(overrides: Partial<SandboxOptionsInput> = {}, facts: HostFacts 
 }
 
 /** The value that follows a flag, for flags that appear once. */
-function valueOf(args: string[], flag: string): string | undefined {
+function flagValue(args: string[], flag: string): string | undefined {
   const index = args.indexOf(flag);
   return index === -1 ? undefined : args[index + 1];
 }
@@ -19,8 +19,8 @@ function valueOf(args: string[], flag: string): string | undefined {
 describe("sandboxRunArgs", () => {
   it("drops every capability and blocks privilege gain", () => {
     const args = runArgs();
-    expect(valueOf(args, "--cap-drop")).toBe("ALL");
-    expect(valueOf(args, "--security-opt")).toBe("no-new-privileges");
+    expect(flagValue(args, "--cap-drop")).toBe("ALL");
+    expect(flagValue(args, "--security-opt")).toBe("no-new-privileges");
     expect(args).toContain("--init");
   });
 
@@ -29,41 +29,43 @@ describe("sandboxRunArgs", () => {
       const forbidden = ["--privileged", "--pid", "--ipc", "--cap-add", "--device", "--publish", "-p", "--publish-all", "-P", "--volume", "-v"];
       expect(args.filter((arg) => forbidden.includes(arg))).toEqual([]);
       expect(args.filter((arg) => arg.includes("docker.sock"))).toEqual([]);
-      expect(valueOf(args, "--network")).not.toBe("host");
+      expect(flagValue(args, "--network")).not.toBe("host");
     }
   });
 
   it("has no network and no proxy settings by default", () => {
     const args = runArgs();
-    expect(valueOf(args, "--network")).toBe("none");
+    expect(flagValue(args, "--network")).toBe("none");
     expect(args.join(" ")).not.toContain("PROXY");
   });
 
   it("joins the run's own network and points at the proxy when public", () => {
     const args = runArgs({ network: "public" });
-    expect(valueOf(args, "--network")).toBe("harness-net-run-1");
+    expect(flagValue(args, "--network")).toBe("harness-net-run-1");
     expect(args).toContain("HTTPS_PROXY=http://egress:3128");
     expect(args).toContain("NO_PROXY=localhost,127.0.0.1,::1");
   });
 
   it("limits memory, CPU and processes, with no swap on top", () => {
     const args = runArgs();
-    expect(valueOf(args, "--memory")).toBe("4096m");
-    expect(valueOf(args, "--memory-swap")).toBe("4096m");
-    expect(valueOf(args, "--cpus")).toBe("4");
-    expect(valueOf(args, "--pids-limit")).toBe("2048");
+    expect(flagValue(args, "--memory")).toBe("4096m");
+    expect(flagValue(args, "--memory-swap")).toBe("4096m");
+    expect(flagValue(args, "--cpus")).toBe("4");
+    expect(flagValue(args, "--pids-limit")).toBe("2048");
+    // No single file may outgrow the whole working folder's limit, 10 GB unless set.
+    expect(args).toContain(`fsize=${10 * 1024 ** 3}`);
   });
 
   it("clamps limits to what the Docker host has", () => {
     const args = runArgs({}, { cpus: 2, memoryMb: 512 });
-    expect(valueOf(args, "--cpus")).toBe("2");
-    expect(valueOf(args, "--memory")).toBe("512m");
-    expect(valueOf(args, "--shm-size")).toBe("512m");
+    expect(flagValue(args, "--cpus")).toBe("2");
+    expect(flagValue(args, "--memory")).toBe("512m");
+    expect(flagValue(args, "--shm-size")).toBe("512m");
   });
 
   it("runs as the host user only when one is given", () => {
     expect(runArgs()).not.toContain("--user");
-    expect(valueOf(runArgs({}, { ...host, user: "1001:1001" }), "--user")).toBe("1001:1001");
+    expect(flagValue(runArgs({}, { ...host, user: "1001:1001" }), "--user")).toBe("1001:1001");
   });
 
   it("mounts the working directory read-write and artifacts read-only", () => {
@@ -94,8 +96,8 @@ describe("proxyRunArgs", () => {
   it("is locked down and carries the allow list", () => {
     const args = proxyRunArgs(sandboxOptionsSchema.parse({ runId: "run-1", workDir, network: "public", allowHosts: [".example.com", "data.example"] }));
     expect(args).toContain("--read-only");
-    expect(valueOf(args, "--cap-drop")).toBe("ALL");
-    expect(valueOf(args, "--network")).toBe("bridge");
+    expect(flagValue(args, "--cap-drop")).toBe("ALL");
+    expect(flagValue(args, "--network")).toBe("bridge");
     expect(args).toContain("EGRESS_ALLOW_HOSTS=.example.com,data.example");
     expect(args.join(" ")).not.toContain(workDir);
   });

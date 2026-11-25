@@ -30,6 +30,9 @@ function toWireBlock(block: ContentBlock): Json | undefined {
         : block.content;
       return { type: "tool_result", tool_use_id: block.toolCallId, content, ...(block.isError ? { is_error: true } : {}) };
     }
+    case "image":
+      // A picture at the top of a user message, sent only by tool-less calls such as the critic.
+      return block.data === undefined ? undefined : { type: "image", source: { type: "base64", media_type: block.mediaType, data: block.data } };
     case "opaque":
       // Thinking blocks and the like go back exactly as they arrived. Another provider's are not ours to send.
       return block.provider === PROVIDER_ID ? (block.data as Json) : undefined;

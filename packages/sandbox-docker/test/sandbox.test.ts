@@ -103,9 +103,24 @@ describe("exec", () => {
     const { docker, sandbox } = start((args) => (isExec(args, "sandbox-exec") ? { code: 3, stdout: "out", stderr: "err", stdoutBytes: 3, stderrBytes: 3 } : undefined));
     const result = await (await sandbox).exec(["python", "x.py"], { maxOutputBytes: 2048, input: "data" });
     expect(result).toMatchObject({ exitCode: 3, stdout: "out", stderr: "err", timedOut: false, truncated: false });
-    const call = docker.calls.at(-1)!;
+    const call = docker.calls.findLast((c) => isExec(c.args, "sandbox-exec"))!;
     expect(call.args.slice(-2)).toEqual(["python", "x.py"]);
     expect(call.options).toMatchObject({ captureLimit: 2048, input: "data" });
+    expect(result.diskFull).toBeUndefined();
+  });
+
+  it("says when the working folder is over its limit after a command", async () => {
+    const { sandbox } = start((args) => (isExec(args, "du") ? { stdout: `${11 * 1024 * 1024}	/work
+` } : undefined));
+    const result = await (await sandbox).exec(["python", "x.py"]);
+    expect(result.diskFull).toEqual({ usedBytes: 11 * 1024 ** 3, limitBytes: 10 * 1024 ** 3 });
+  });
+
+  it("does not fail a command because the folder could not be measured", async () => {
+    const { sandbox } = start((args) => (isExec(args, "du") ? { code: 1, stderr: "du: cannot read" } : undefined));
+    const result = await (await sandbox).exec(["python", "x.py"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.diskFull).toBeUndefined();
   });
 
   it("stops the command's process tree on timeout and reports it as a result", async () => {

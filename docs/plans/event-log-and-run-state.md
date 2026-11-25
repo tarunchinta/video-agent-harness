@@ -1,6 +1,10 @@
 # Event log and run state: schema
 
-Status: schema applied; the writer and reducer code are not built yet. Source of
+Status: schema applied and in use. The event schemas, the reducer and two
+local stores are in `packages/harness/src/events`; the Postgres store is in
+`packages/store-postgres` and is tested against a real Postgres 18. The CLI
+uses it when `HARNESS_STORE=postgres`.
+[Built so far](#built-so-far) says where the code differs. Source of
 requirements: `VISION.md` only.
 Database: Azure Database for PostgreSQL flexible server, PostgreSQL 18.
 
@@ -332,7 +336,7 @@ payload is validated by the type registry.
 | `run.started` | engine | `worker`, `epoch`. Opens the run span. |
 | `run.resumed` | engine | `worker`, `epoch`, `reason` (`crash`, `gate`, `unpaused`), `interrupted_spans` |
 | `run.pause_requested` | creator | `note` |
-| `run.paused` | engine | `reason` (`creator`, `budget:<dimension>`) |
+| `run.paused` | engine | `reason` (`creator`, `budget:<dimension>`, `error:<kind>`), `detail` (optional, with an error) |
 | `run.resume_requested` | creator | `note`. Takes a paused run back to `running` so a worker can pick it up. |
 | `run.cancel_requested` | creator | `note` |
 | `run.completed` | engine | `final_artifact_id` |
@@ -346,6 +350,14 @@ span always closes. If a worker holds the lease, it writes that event at its
 next step. If no worker is attached (the run is paused or waiting at a gate),
 whoever writes the cancel request or the gate rejection adds it to the same
 batch.
+
+A run also pauses with `error:<kind>` when the trouble is not its own and may
+pass: the model cannot be reached after retries, or the sandbox cannot be
+started (`error:sandbox`). It can then be resumed instead of failing.
+
+The `error.kind` values the loop writes on `run.failed` are `cancelled`,
+`refusal`, `round_limit`, `stuck`, `max_output`, `context_exhausted`, and the
+model error kinds `auth` and `invalid_request`.
 
 ### Stages and gates
 
@@ -365,7 +377,7 @@ batch.
 | `agent.completed` | agent | `result`, `output_artifact_ids` |
 | `agent.failed` | engine | `error` |
 | `context.message` | engine or creator | `origin`, `content`. A message injected into an agent's context. |
-| `context.compacted` | engine | `from_seq`, `to_seq`, `summary`, `tokens_before`, `tokens_after` |
+| `context.compacted` | engine | `mode`. `trim`: `cleared[]` (`tool_call_id`, `path`), `tokens_before`, `tokens_after`. `summary`: `from_seq`, `to_seq`, `summary`, `tokens_before`, `tokens_after` |
 
 ### Model calls
 
@@ -600,9 +612,12 @@ projection columns.
 3. Find spans with a `.started` and no closing event. Close each with a
    `.failed` event whose `error.kind` is `interrupted`.
    - Model calls are simply issued again as a new span.
-   - Tool calls marked `idempotent` are run again as a new span.
-   - Other tool calls are not repeated. The agent sees the failure and decides
-     what to do, because the side effect may or may not have happened.
+   - Tool calls are never run again by the resume itself, whether or not they
+     are marked `idempotent`. The agent sees the failure and decides what to
+     do. The failure says the outcome is unknown, and whether the tool is safe
+     to call again (`idempotent`) or may already have had an effect. A tool
+     therefore only ever runs because a model asked for it in a response that
+     is in the log.
 4. Rebuild the working directory from the manifest named by the latest
    `checkpoint.created`. The manifest maps paths to content hashes; the files
    themselves are artifacts.
@@ -683,6 +698,46 @@ are shared across runs and forks.
   converts old payloads on read.
 - New columns on `events` must be nullable or have a default.
 - A reducer change bumps `projection_version` and triggers a rebuild.
+
+## Built so far
+
+What exists in `packages/harness/src/events`, as of 17 November 2026. The detail
+is in [agent-loop.md](agent-loop.md).
+
+| Part of this plan | State |
+|---|---|
+| Envelope and payload schemas (`envelope.ts`) | Built for the run, budget, stage, gate, sandbox, agent, `context.message`, model-call and tool-call types. Plugin types under `x.` are accepted and ignored |
+| Reducer (`reducer.ts`) | Built, as a fold over the log |
+| Writer rules: gapless `seq`, appends that name the head they expect, a 60-second lease with an epoch, one event per span end | Built behind an `EventStore` interface, with three stores: in memory, one JSON-lines file per run (with a lock file around every check-then-write, so a second process cannot take the same `seq`), and Postgres |
+| The Postgres writer and the `runs` row | Built in `packages/store-postgres`: `harness.events` and the `runs` projection change in one transaction, the lease is the SQL in [Worker lease](#worker-lease), and it runs as `harness_app`. `migrate()` applies `db/` in order |
+| `artifacts` rows | Not written, because `artifact.created` is not either |
+| `context.compacted` | Written by the loop for runs created with `config.compaction`, in both modes ([agent-loop.md](agent-loop.md), "When the context fills up") |
+| `artifact.created`, `checkpoint.created`, `tool.call.progress`, `run.forked`, `critique.completed` and the three Learn types | Not written, and not in the code's catalogue yet |
+| Step 4 of [Resume](#resume), restoring the working directory from a manifest | Not built. The working directory stays on the disk of the machine that ran the run |
+| Scrubbing known key patterns from payloads before append | Not built |
+| `NOTIFY`, forks, the `spans` view | Database only. Nothing uses them yet |
+
+Where the code differs from the text above:
+
+- **Two more limits.** Runs also carry `max_steps` and `max_rounds`. The
+  `runs` table has columns for four limits; the other two live only in the
+  log, which is where the loop reads limits from anyway.
+- **The append is two statements, not one.** The store locks the run's row
+  with `SELECT … FOR UPDATE`, checks the head and the epoch, inserts the batch
+  (as one JSON text cast to `jsonb`, per the driver note) and updates the
+  projection, all in one transaction. The ordering guarantee is the same as
+  the single statement in [Writing events](#writing-events): writers wait on
+  the row lock, then find the head has moved.
+- **More payload fields.** The loop adds fields that readers here can ignore,
+  such as the full system prompt and tool schemas on `agent.started`. They are
+  listed in section 1 of [agent-loop.md](agent-loop.md).
+- **The re-edit limit.** Over the limit, the loop does not open the final gate
+  itself. It refuses another revision the agent starts on its own judgement
+  and tells it to hand the cut in. Revisions the creator asks for do not
+  count.
+- **Sandbox spans.** `sandbox.started` opens when a tool first asks for the
+  sandbox, not when a worker takes the run. A sandbox left open by a crash is
+  closed with `sandbox.completed` and `exit_reason: interrupted`.
 
 ## Prior art and what was taken from it
 

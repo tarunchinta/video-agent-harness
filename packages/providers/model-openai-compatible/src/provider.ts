@@ -1,5 +1,5 @@
 import { ModelError, type ModelCapabilities, type ModelProvider, type ModelRequest, type ModelStreamEvent, type Usage } from "@harness/harness";
-import { MODELS, priceMicroUsd, type ModelInfo } from "./models.ts";
+import { MODELS, PRICES_CHECKED_ON, priceMicroUsd, type ModelInfo } from "./models.ts";
 import { readSse } from "./sse.ts";
 import { ChunkAssembler, errorFromCode, PROVIDER_ID, toWireRequest } from "./wire.ts";
 
@@ -9,6 +9,8 @@ export type OpenAICompatibleProviderOptions = {
   baseUrl: string;
   /** Replaces the global `fetch`, for tests and proxies. */
   fetch?: typeof fetch;
+  /** When the prices passed in `models` were checked, as YYYY-MM-DD. */
+  pricesCheckedOn?: string;
   /** Extra or corrected models, merged over the built-in table. */
   models?: Record<string, ModelInfo>;
   /** Send the model's reasoning back on later turns. Off by default. */
@@ -24,6 +26,7 @@ export type OpenAICompatibleProviderOptions = {
  */
 export class OpenAICompatibleProvider implements ModelProvider {
   readonly id = PROVIDER_ID;
+  readonly pricesCheckedOn: string;
   private readonly models: Record<string, ModelInfo>;
   private readonly fetch: typeof fetch;
   private readonly baseUrl: string;
@@ -32,6 +35,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     if (!options.apiKey) throw new Error("The model provider needs an API key.");
     if (!options.baseUrl) throw new Error("The model provider needs the API's base URL.");
     this.models = { ...MODELS, ...options.models };
+    this.pricesCheckedOn = options.pricesCheckedOn ?? PRICES_CHECKED_ON;
     this.fetch = options.fetch ?? globalThis.fetch;
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
   }

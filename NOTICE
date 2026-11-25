@@ -23,7 +23,9 @@ Files kept from AttentionOS:
 | `packages/runner/src/budget.ts` | Unchanged |
 | `packages/runner/src/events.ts` | Unchanged |
 | `packages/runner/src/llm.ts` | Unchanged |
-| `tsconfig.base.json`, `turbo.json`, `.editorconfig`, `.nvmrc`, `.gitignore`, `pnpm-lock.yaml` | Unchanged |
+| `tsconfig.base.json`, `turbo.json`, `.editorconfig`, `.nvmrc` | Unchanged |
+| `.gitignore` | Entries added |
+| `pnpm-lock.yaml` | Regenerated for the packages in this repository |
 | `.gitleaks.toml`, `.github/workflows/gitleaks.yml` | Unchanged |
 | `package.json`, `pnpm-workspace.yaml`, `vitest.config.ts`, `.gitattributes` | Trimmed |
 | `CLAUDE.md` | Rewritten; some rules carried over |

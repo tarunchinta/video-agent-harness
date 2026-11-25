@@ -1,0 +1,18 @@
+{
+  "name": "@harness/store-postgres",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The event log in Postgres: the store the event-log plan describes, behind the loop's EventStore interface.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/harness": "workspace:*",
+    "postgres": "^3.4.7"
+  }
+}

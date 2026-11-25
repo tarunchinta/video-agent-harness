@@ -1,4 +1,4 @@
-import { describeBudget, payloadOf, type BudgetDimension, type HarnessEvent, type RunOutcome, type RunSummary } from "@harness/harness";
+import { describeBudget, payloadOf, PRICES_STALE_DAYS, type BudgetDimension, type HarnessEvent, type RunOutcome, type RunSummary } from "@harness/harness";
 import type { OutcomeDetail } from "./pipeline.ts";
 
 const usd = (micro: number) => `$${(micro / 1_000_000).toFixed(micro < 10_000 ? 4 : 2)}`;
@@ -62,6 +62,16 @@ export class Renderer {
       case "context.message": {
         const p = payloadOf(e, "context.message");
         if (p.origin === "engine") this.write(`Told the model: ${firstLine(p.content, 160)}`);
+        break;
+      }
+      case "context.compacted": {
+        const p = payloadOf(e, "context.compacted");
+        const size = `about ${p.tokens_before.toLocaleString("en-US")} to ${p.tokens_after.toLocaleString("en-US")} tokens`;
+        this.write(
+          p.mode === "summary"
+            ? `Summarised the conversation to save space (${size}).`
+            : `Cleared ${p.cleared.length} old tool ${p.cleared.length === 1 ? "result" : "results"} to save space (${size}).`,
+        );
         break;
       }
       case "stage.started": {
@@ -154,6 +164,9 @@ export function describeSummary(s: RunSummary): string[] {
     `${s.title}`,
     `Run ${s.runId}: ${s.status.replace("_", " ")}${s.reason ? ` (${s.reason})` : ""}${s.failure ? `, ${s.failure.message}` : ""}`,
     `${s.modelCalls} model calls, ${s.toolCalls} tool calls, ${(s.tokensIn + s.tokensOut).toLocaleString("en-US")} tokens, ${usd(s.costMicroUsd)}, ${Math.round(s.activeMs / 1000)} s of work`,
+    ...(s.pricesStale
+      ? [`Costs use prices last checked on ${s.pricesCheckedOn}, more than ${PRICES_STALE_DAYS} days before this run. Check them against the published prices, and set HARNESS_PRICES to correct them.`]
+      : []),
     "",
   ];
   for (const row of s.rows) {

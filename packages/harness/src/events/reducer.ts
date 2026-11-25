@@ -13,7 +13,7 @@ export type RunState = {
   pendingGate?: string;
   lastSeq: number;
   title: string;
-  config: { model: string; system: string; max_output_tokens: number; effort?: string; pipeline?: string; sandbox_network?: "none" | "public" };
+  config: { model: string; system: string; max_output_tokens: number; effort?: string; pipeline?: string; sandbox_network?: "none" | "public"; critic?: boolean; compaction?: boolean; narration?: string };
   task: string;
   limits: Limits;
   tokensIn: number;

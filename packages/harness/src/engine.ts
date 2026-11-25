@@ -1,18 +1,18 @@
 import { dirname, join } from "node:path";
 import { z } from "zod";
-import { loadImage } from "./artifacts.ts";
+import { loadImage, storeImage } from "./artifacts.ts";
 import { describeBudget, evaluateBudget, type BudgetCheck, type BudgetUsage } from "./budget.ts";
-import { buildRequest, deriveContext, requestHash, type AgentContext } from "./context.ts";
+import { buildRequest, clearedResult, ContextBuilder, estimateRequestChars, IMAGE_CHARS, requestHash, transcriptText, type AgentContext } from "./context.ts";
 import { closeAll, MAIN_AGENT } from "./creator.ts";
 import { MAX_PAYLOAD_BYTES, payloadOf, type HarnessEvent, type NewEvent } from "./events/envelope.ts";
 import { activeMsAt, isTerminal, reduce, type RunState, type RunStatus } from "./events/reducer.ts";
 import { HeadMovedError, LEASE_MS, type EventStore } from "./events/store.ts";
-import { extractPrompt, parseJsonFromText, TOOLLESS_SYSTEM } from "./extract.ts";
-import { ModelError, promptTokens, type ContentBlock, type ModelProvider, type ModelRequest, type ModelResponse, type ToolCallBlock, type ToolSpec } from "./model/types.ts";
+import { COMPACT_SYSTEM, extractPrompt, JUDGE_SYSTEM, parseJsonFromText, TOOLLESS_SYSTEM } from "./extract.ts";
+import { ModelError, promptTokens, type ContentBlock, type ImageBlock, type ModelProvider, type ModelRequest, type ModelResponse, type ToolCallBlock, type ToolSpec } from "./model/types.ts";
 import type { SandboxFactory, SandboxSession } from "./sandbox.ts";
 import { defaultFinishSchema, fileTools, finishTool } from "./tools/builtins.ts";
 import { ToolError, type Precondition, type RunView, type StageTrigger, type ToolDefinition } from "./tools/define.ts";
-import { dispatchBatch, failedDraft, NOT_STARTED, startedDraft, type DispatchHost, type EventDraft } from "./tools/dispatch.ts";
+import { dispatchBatch, failedDraft, NOT_STARTED, saveResult, startedDraft, type DispatchHost, type EventDraft, type ToollessRequest } from "./tools/dispatch.ts";
 import { canonicalJson, errorMessage, estimateTokens, randomIds, realSleep, sha256, systemClock, type Clock, type IdSource, type Sleep } from "./util.ts";
 
 export type RetryPolicy = { maxRetries: number; initialDelayMs: number; maxDelayMs: number; jitterRatio: number };
@@ -72,9 +72,29 @@ export type RunOutcome = {
   result?: unknown;
 };
 
+/** Cut-off responses a run may have before it fails. */
+const MAX_OUTPUT_STOPS = 3;
+
+/** Compaction clears old results until the projection is about this share of the usable window. */
+const COMPACT_TARGET = 0.6;
+/** Model responses at the end of the conversation whose tool results are never cleared. */
+const KEEP_RECENT_STEPS = 4;
+/** Tool results shorter than this are not worth clearing, unless they carry pictures. */
+const MIN_TRIM_CHARS = 2_000;
+/** Longest summary kept, before the harness's own facts are added. */
+const MAX_SUMMARY_CHARS = 24_000;
+
 class Session {
   readonly events: HarnessEvent[] = [];
   private current: RunState | undefined;
+  /** The main agent's conversation, kept up to date as events are loaded. */
+  readonly context = new ContextBuilder(MAIN_AGENT);
+  /** Counts the loop checks on every step, kept as events load so no check rescans the log. */
+  steps = 0;
+  maxOutputStops = 0;
+  readonly notes = new Map<string, number>();
+  /** The main agent's latest tool call, and how many times in a row it was made with the same input. */
+  streak = { key: "", tool: "", count: 0 };
   chain: Promise<unknown> = Promise.resolve();
   /** The sandbox this worker started, and the span that records it. */
   sandbox?: { session: SandboxSession; spanId: string };
@@ -97,7 +117,30 @@ class Session {
     for (const e of events) {
       this.current = reduce(this.current, e);
       this.events.push(e);
+      this.context.add(e);
+      this.count(e);
     }
+  }
+
+  private count(e: HarnessEvent): void {
+    if (e.type === "context.message") {
+      const kind = payloadOf(e, "context.message").kind;
+      if (kind) this.notes.set(kind, (this.notes.get(kind) ?? 0) + 1);
+      return;
+    }
+    if (e.agentId !== MAIN_AGENT) return;
+    if (e.type === "model.call.completed") {
+      this.steps += 1;
+      if (payloadOf(e, "model.call.completed").stop_reason === "max_output") this.maxOutputStops += 1;
+    } else if (e.type === "tool.call.started") {
+      const p = payloadOf(e, "tool.call.started");
+      const key = `${p.tool}:${canonicalJson(p.input)}`;
+      this.streak = key === this.streak.key ? { ...this.streak, count: this.streak.count + 1 } : { key, tool: p.tool, count: 1 };
+    }
+  }
+
+  noteCount(kind: string): number {
+    return this.notes.get(kind) ?? 0;
   }
 }
 
@@ -194,7 +237,7 @@ export class Engine {
 
     for (;;) {
       if (s.state.status !== "running") return this.outcome(s);
-      const ctx = deriveContext(s.events, MAIN_AGENT);
+      const ctx = s.context.snapshot();
 
       if (s.state.cancelRequested) return this.fail(s, "cancelled", "The run was cancelled.");
       if (signal.aborted || s.state.pauseRequested) return this.pause(s, "creator");
@@ -215,20 +258,26 @@ export class Engine {
         return this.outcome(s);
       }
 
+      if (await this.compact(s, ctx, signal)) continue;
       const noted = await this.notes(s, ctx, budget);
       if (noted === "continue") continue;
       if (noted) return noted;
 
       const result = await this.callModel(s, ctx, signal);
       if (result.kind === "aborted" || result.kind === "noted") continue;
-      if (result.kind === "error") return this.modelFailure(s, result.error);
+      if (result.kind === "error") {
+        // A request the provider found too long gets one summary, and is then tried again.
+        if (result.error.kind === "context_overflow" && (await this.compact(s, s.context.snapshot(), signal, true))) continue;
+        return this.modelFailure(s, result.error);
+      }
 
       const { response } = result;
       const calls = response.content.filter((b): b is ToolCallBlock => b.type === "tool_call");
       if (response.stopReason === "refusal") return this.refused(s, response);
       if (!calls.length) continue;
       if (response.stopReason === "max_output") {
-        // A cut-off response can hold a half-written call. None of its calls run.
+        // A cut-off response can hold a half-written call. None of its calls run, and it counts toward the
+        // limit on cut-off responses like any other.
         await this.append(
           s,
           calls.flatMap((call) => {
@@ -237,6 +286,7 @@ export class Engine {
             return [startedDraft(owner, this.registry.get(call.name), call, spanId), failedDraft(owner, call, spanId, "truncated", TRUNCATED)];
           }),
         );
+        if (s.maxOutputStops >= MAX_OUTPUT_STOPS) return this.fail(s, "max_output", "The model's responses kept reaching the output limit.");
         continue;
       }
 
@@ -265,6 +315,7 @@ export class Engine {
           tools: this.specs.map((t) => t.name),
           system_prompt_sha256: sha256(config.system),
           system_prompt: config.system,
+          ...(this.opts.provider.pricesCheckedOn ? { prices_checked_on: this.opts.provider.pricesCheckedOn } : {}),
           tool_specs: this.specs.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
           task,
         },
@@ -277,7 +328,7 @@ export class Engine {
    * that says so; nothing is run again here. A tool runs a second time only if the model asks for it again.
    */
   private async repair(s: Session): Promise<void> {
-    const ctx = deriveContext(s.events, MAIN_AGENT);
+    const ctx = s.context.snapshot();
     const drafts: EventDraft[] = [];
     const interrupted: string[] = [];
 
@@ -357,7 +408,7 @@ export class Engine {
   private async afterTurn(s: Session, ctx: AgentContext): Promise<RunOutcome | undefined> {
     if (ctx.lastStop === "refusal") return this.fail(s, "refusal", "The model declined to continue.");
     if (ctx.lastStop === "max_output") {
-      if (this.countNotes(s, "max_output") >= 3) return this.fail(s, "max_output", "The model's responses kept reaching the output limit.");
+      if (s.maxOutputStops >= MAX_OUTPUT_STOPS) return this.fail(s, "max_output", "The model's responses kept reaching the output limit.");
       await this.note(s, ctx, "max_output", "Your last response was cut off at the output limit. Continue from where it stopped, and keep each response shorter.");
       return undefined;
     }
@@ -391,13 +442,7 @@ export class Engine {
       added = true;
     }
 
-    const { contextWindow } = this.opts.provider.capabilities(ctx.model);
-    const stopAt = contextWindow - s.state.config.max_output_tokens;
-    const headroom = this.opts.contextHeadroomTokens ?? 16_384;
-    const warnAt = Math.min(contextWindow * 0.8, stopAt - headroom) > 0 ? Math.min(contextWindow * 0.8, stopAt - headroom) : stopAt * 0.8;
-    const projected = ctx.lastUsage
-      ? promptTokens(ctx.lastUsage) + ctx.lastUsage.outputTokens + estimateTokens(ctx.charsSinceUsage)
-      : estimateTokens(JSON.stringify(ctx.messages).length + ctx.system.length + JSON.stringify(ctx.toolSpecs).length);
+    const { projected, warnAt, stopAt } = this.project(s, ctx);
     if (projected >= stopAt) {
       return this.fail(s, "context_exhausted", "The conversation no longer fits in the model's context window.");
     }
@@ -414,22 +459,159 @@ export class Engine {
     return added ? "continue" : undefined;
   }
 
+  /**
+   * The size of the next request, and the sizes at which the loop acts. The projection starts from the prompt
+   * size the provider reported for the last request and adds an estimate for what was appended since.
+   */
+  private project(s: Session, ctx: AgentContext): { projected: number; warnAt: number; stopAt: number } {
+    const { contextWindow, maxOutputTokens } = this.opts.provider.capabilities(ctx.model);
+    // Room is kept for the longest answer the model can give: the run's setting, or the model's own cap when that is lower.
+    const stopAt = contextWindow - Math.min(s.state.config.max_output_tokens, maxOutputTokens);
+    const headroom = this.opts.contextHeadroomTokens ?? 16_384;
+    const warnAt = Math.min(contextWindow * 0.8, stopAt - headroom) > 0 ? Math.min(contextWindow * 0.8, stopAt - headroom) : stopAt * 0.8;
+    const projected = ctx.lastUsage
+      ? promptTokens(ctx.lastUsage) + ctx.lastUsage.outputTokens + estimateTokens(ctx.charsSinceUsage)
+      : estimateTokens(estimateRequestChars(ctx));
+    return { projected, warnAt, stopAt };
+  }
+
+  /**
+   * Makes the conversation smaller once it passes the warning line, for runs created with compaction. First,
+   * and at no model cost, old large tool results are cleared, each pointing at its full text on disk. If that is
+   * not enough, a tool-less call summarises the conversation, and facts kept by code (stages, reviews and the
+   * creator's notes word for word) are added to the summary. At most one of each happens between two model
+   * responses, and never while a tool call is waiting for its result. `force` skips straight to a summary, for
+   * a request the provider has already rejected as too long. Returns whether anything was written.
+   */
+  private async compact(s: Session, ctx: AgentContext, signal: AbortSignal, force = false): Promise<boolean> {
+    if (!s.state.config.compaction || ctx.unanswered.length || ctx.openToolCalls.size || ctx.lastStop === "paused") return false;
+    if (ctx.compactedSinceStep === "summary" || ctx.messages.length < 2) return false;
+    const { projected, warnAt, stopAt } = this.project(s, ctx);
+    if (!force && projected < warnAt) return false;
+
+    if (!force && !ctx.compactedSinceStep) {
+      const cleared = await this.trimPlan(s, ctx, projected - Math.floor(stopAt * COMPACT_TARGET));
+      if (cleared.length) {
+        const saved = cleared.reduce((n, c) => n + c.saving, 0);
+        await this.append(s, [
+          {
+            type: "context.compacted",
+            actor: "engine",
+            agentId: MAIN_AGENT,
+            spanId: ctx.spanId!,
+            parentSpanId: s.state.runSpanId,
+            payload: {
+              mode: "trim",
+              cleared: cleared.map((c) => ({ tool_call_id: c.id, path: c.path })),
+              tokens_before: Math.round(projected),
+              tokens_after: Math.max(0, Math.round(projected - saved)),
+            },
+          },
+        ]);
+        return true;
+      }
+    }
+
+    const budgetChars = Math.max(20_000, Math.floor((stopAt - 12_000) * 3));
+    let summary: string;
+    try {
+      const value = (await this.toolless(
+        s,
+        ctx.spanId!,
+        {
+          kind: "compact",
+          instructions:
+            "Summarise this conversation for the agent that wrote it, so it can carry on without it. Write it as notes to yourself, under these headings: " +
+            "Task, Done so far, Decisions, Files, Feedback from the reviewer, Open problems, Next step.",
+          text: transcriptText(ctx.messages, budgetChars),
+          schema: z.object({ summary: z.string().min(1) }),
+        },
+        signal,
+      )) as { summary: string };
+      summary = value.summary.slice(0, MAX_SUMMARY_CHARS);
+    } catch {
+      // Nothing is lost: the loop falls back to warning the model and, at the limit, failing the run.
+      return false;
+    }
+    const text = `${summary}\n\n${this.facts(s)}`;
+    const after = estimateTokens(text.length + ctx.system.length + JSON.stringify(ctx.toolSpecs).length + s.state.task.length);
+    await this.append(s, [
+      {
+        type: "context.compacted",
+        actor: "engine",
+        agentId: MAIN_AGENT,
+        spanId: ctx.spanId!,
+        parentSpanId: s.state.runSpanId,
+        payload: { mode: "summary", summary: text, from_seq: 1, to_seq: ctx.throughSeq, tokens_before: Math.round(projected), tokens_after: after },
+      },
+    ]);
+    return true;
+  }
+
+  /** Old large tool results to clear, oldest first, until about `needed` tokens are saved. Each is saved to disk first. */
+  private async trimPlan(s: Session, ctx: AgentContext, needed: number): Promise<{ id: string; path: string; saving: number }[]> {
+    // The newest steps stay as they are: the model is most likely to need what it has just seen.
+    let protectFrom = ctx.messages.length;
+    for (let i = ctx.messages.length - 1, seen = 0; i >= 0 && seen < KEEP_RECENT_STEPS; i -= 1) {
+      if (ctx.messages[i]!.role === "assistant") {
+        seen += 1;
+        protectFrom = i;
+      }
+    }
+    const completed = new Map<string, HarnessEvent>();
+    for (const e of s.events) if (e.agentId === MAIN_AGENT && e.type === "tool.call.completed") completed.set(payloadOf(e, "tool.call.completed").tool_call_id, e);
+
+    const plan: { id: string; path: string; saving: number }[] = [];
+    let saved = 0;
+    for (let i = 0; i < protectFrom && saved < needed; i += 1) {
+      const message = ctx.messages[i]!;
+      if (message.role !== "user") continue;
+      for (const block of message.content) {
+        if (saved >= needed) break;
+        if (block.type !== "tool_result" || block.isError || ctx.cleared.has(block.toolCallId)) continue;
+        const images = block.images?.length ?? 0;
+        if (block.content.length < MIN_TRIM_CHARS && !images) continue;
+        const event = completed.get(block.toolCallId);
+        if (!event) continue;
+        // A result already cut to a preview has its full text on disk. Any other is saved now, and kept if that fails.
+        const p = payloadOf(event, "tool.call.completed");
+        const path = p.output_path ?? (await saveResult(p.output, this.opts.workDir(s.runId), block.toolCallId));
+        if (!path) continue;
+        const saving = estimateTokens(Math.max(0, block.content.length - clearedResult(block.content, path).length) + images * IMAGE_CHARS);
+        plan.push({ id: block.toolCallId, path, saving });
+        saved += saving;
+      }
+    }
+    return plan;
+  }
+
+  /** What a summary must never lose, read from the log by code rather than remembered by a model. */
+  private facts(s: Session): string {
+    const { stage, reEdits, limits, gates } = s.state;
+    const lines = ["Facts kept by the harness (these are exact):"];
+    if (stage) lines.push(`- Current stage: ${stage.name}, revision ${stage.revision}.`);
+    if (limits.max_re_edits !== undefined) lines.push(`- Revisions of the cut on your own judgement: ${reEdits} of ${limits.max_re_edits}.`);
+    for (const [gate, decision] of Object.entries(gates)) lines.push(`- Review "${gate}": ${decision.replace("_", " ")}.`);
+    for (const e of s.events) {
+      if (e.type !== "gate.decided") continue;
+      const p = payloadOf(e, "gate.decided");
+      for (const note of p.notes) lines.push(`- The creator's note on "${p.gate}" (${p.decision.replace("_", " ")}): ${JSON.stringify(note.text)}`);
+    }
+    const opened = s.events.findLast((e) => e.type === "gate.opened");
+    const files = opened ? (payloadOf(opened, "gate.opened") as { files?: unknown }).files : undefined;
+    if (Array.isArray(files) && files.length) lines.push(`- Last handed in for review: ${files.filter((f) => typeof f === "string").join(", ")}.`);
+    lines.push("- Full text of cleared tool results is under tool-results/ in the working directory.");
+    return lines.join("\n");
+  }
+
   /** Stops a model that keeps making the same call. */
   private async guard(s: Session, agentSpanId: string): Promise<RunOutcome | undefined> {
-    const starts = s.events.filter((e) => e.type === "tool.call.started" && e.agentId === MAIN_AGENT);
-    if (!starts.length) return undefined;
-    const key = (e: HarnessEvent) => {
-      const p = payloadOf(e, "tool.call.started");
-      return `${p.tool}:${canonicalJson(p.input)}`;
-    };
-    const last = key(starts[starts.length - 1]!);
-    let streak = 0;
-    for (let i = starts.length - 1; i >= 0 && key(starts[i]!) === last; i -= 1) streak += 1;
-    const tool = payloadOf(starts[starts.length - 1]!, "tool.call.started").tool;
+    const { count: streak, tool } = s.streak;
+    if (!streak) return undefined;
     if (streak >= (this.opts.repeatStopAt ?? 6)) {
       return this.fail(s, "stuck", `The model made the same ${tool} call ${streak} times in a row.`);
     }
-    if (streak >= (this.opts.repeatWarnAt ?? 3) && this.countNotes(s, "repeat_warning") === 0) {
+    if (streak >= (this.opts.repeatWarnAt ?? 3) && s.noteCount("repeat_warning") === 0) {
       await this.append(s, [
         this.noteDraft(
           s,
@@ -496,7 +678,7 @@ export class Engine {
               payload: { error: { kind: "response_too_large", message: "The response was too large to record.", retryable: false }, attempt },
             },
           ]);
-          if (this.countNotes(s, "response_too_large") >= 3) {
+          if (s.noteCount("response_too_large") >= 3) {
             return { kind: "error", error: new ModelError("invalid_request", "The model's responses kept being too large to record.") };
           }
           await this.note(s, ctx, "response_too_large", "Your last response was too large to record, so it was dropped. Send large content in smaller parts, for example one file at a time.");
@@ -619,27 +801,39 @@ export class Engine {
   }
 
   /**
-   * One model call with no tools, for text written by strangers. Its answer must parse as JSON and match the
-   * schema, and only that value goes back to the tool. Logged under its own agent id, so nothing from it can
-   * enter the main agent's conversation except through the tool's validated result.
+   * One model call with no tools. `extract` is for text written by strangers: its answer must parse as JSON and
+   * match the schema, and only that value goes back to the tool. `judge` is a critic looking at the run's own
+   * work, with pictures. Each is logged under its own agent id, so nothing from it can enter the main agent's
+   * conversation except through the tool's validated result. Outages are retried with the same backoff as the
+   * agent's own calls; an answer in the wrong shape is asked for once more.
    */
-  private async extract(
-    s: Session,
-    parentSpanId: string,
-    request: { instructions: string; untrusted: string; schema: z.ZodType },
-    signal: AbortSignal,
-  ): Promise<unknown> {
+  private async toolless(s: Session, parentSpanId: string, request: ToollessRequest, signal: AbortSignal): Promise<unknown> {
     const config = s.state.config;
+    const judge = request.kind === "judge";
+    const images: ImageBlock[] = [];
+    for (const path of request.images ?? []) {
+      try {
+        const stored = await storeImage(this.artifactsDir(s.runId), path);
+        images.push({ type: "image", mediaType: stored.media_type, sha256: stored.sha256 });
+      } catch (err) {
+        throw new ToolError(`A picture for the review could not be read: ${errorMessage(err)}.`);
+      }
+    }
+    const compact = request.kind === "compact";
+    const prompt = extractPrompt(request.instructions, z.toJSONSchema(request.schema), request.text, request.kind === "extract" ? "untrusted" : "material");
     const modelRequest: ModelRequest = {
       model: config.model,
-      system: TOOLLESS_SYSTEM,
+      system: judge ? JUDGE_SYSTEM : compact ? COMPACT_SYSTEM : TOOLLESS_SYSTEM,
       tools: [],
-      messages: [{ role: "user", content: [{ type: "text", text: extractPrompt(request.instructions, z.toJSONSchema(request.schema), request.untrusted) }] }],
+      messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...images] }],
       maxOutputTokens: Math.min(config.max_output_tokens, 8_000),
     };
     const hash = requestHash(modelRequest);
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      const base = { agentId: `${MAIN_AGENT}/extract`, spanId: this.ids.uuid(), parentSpanId };
+    const outgoing = images.length ? await this.withImages(s, modelRequest) : modelRequest;
+    const agentId = `${MAIN_AGENT}/${judge ? "critic" : compact ? "compactor" : "extract"}`;
+    let shapeAttempts = 0;
+    for (let attempt = 1; ; attempt += 1) {
+      const base = { agentId, spanId: this.ids.uuid(), parentSpanId };
       await this.append(s, [
         {
           ...base,
@@ -649,32 +843,55 @@ export class Engine {
             provider: this.opts.provider.id,
             model: modelRequest.model,
             params: { max_output_tokens: modelRequest.maxOutputTokens },
-            purpose: "extract",
+            purpose: judge ? "critique" : compact ? "compact" : "extract",
             tools_enabled: false,
             context_through_seq: 0,
             request_sha256: hash,
             attempt,
+            ...(images.length ? { images: images.map((i) => ({ sha256: i.sha256, media_type: i.mediaType })) } : {}),
           },
         },
       ]);
-      const streamed = await this.stream(modelRequest, signal, false);
+      const streamed = await this.stream(outgoing, signal, false);
       if ("error" in streamed) {
+        const { error } = streamed;
+        const willRetry = !signal.aborted && error.retryable && attempt <= this.retry.maxRetries;
+        const delay = willRetry ? this.backoff(attempt, error.retryAfterMs) : undefined;
         await this.append(s, [
           {
             ...base,
             type: "model.call.failed",
             actor: "engine",
-            payload: { error: { kind: streamed.error.kind, message: streamed.error.message, retryable: streamed.error.retryable }, attempt },
+            payload: {
+              error: { kind: signal.aborted ? "cancelled" : error.kind, message: error.message, retryable: error.retryable },
+              attempt,
+              ...(delay !== undefined ? { retry_in_ms: delay } : {}),
+            },
           },
         ]);
-        throw new ToolError("The content could not be read right now.", "Try again in a moment, or use another source.");
+        if (signal.aborted) throw new ToolError("The call was stopped.");
+        if (!willRetry) {
+          throw new ToolError(judge ? "The review could not be done right now." : "The content could not be read right now.", "Try again in a moment, or use another source.");
+        }
+        try {
+          await this.sleep(delay!, signal);
+        } catch {
+          throw new ToolError("The call was stopped.");
+        }
+        continue;
       }
-      await this.append(s, [this.completedDraft(base, modelRequest.model, streamed, true)]);
+      // Only text written by strangers is marked untrusted. A critique or a summary is of the run's own work.
+      await this.append(s, [this.completedDraft(base, modelRequest.model, streamed, request.kind === "extract")]);
       const text = streamed.response.content.map((b) => (b.type === "text" ? b.text : "")).join("");
       const checked = request.schema.safeParse(parseJsonFromText(text));
       if (checked.success) return checked.data;
+      shapeAttempts += 1;
+      if (shapeAttempts >= 2) break;
     }
-    throw new ToolError("The content could not be turned into the expected shape.", "Use another source.");
+    throw new ToolError(
+      judge ? "The review came back in a shape that cannot be used." : "The content could not be turned into the expected shape.",
+      judge ? "Try the review again." : "Use another source.",
+    );
   }
 
   // ---------------------------------------------------------------------------------------------------------
@@ -693,7 +910,7 @@ export class Engine {
       newId: () => this.ids.uuid(),
       now: () => this.clock.now(),
       view: () => this.view(s),
-      imagesLeft: () => (this.opts.maxImages ?? 60) - deriveContext(s.events, MAIN_AGENT).images,
+      imagesLeft: () => (this.opts.maxImages ?? 60) - s.context.peek().images,
       sandbox: () => this.sandboxFor(s),
       enterStage: (stage, reviewGate) => this.enterStage(s, stage, reviewGate),
       completeStage: async () => {
@@ -712,7 +929,7 @@ export class Engine {
           { type: "gate.opened", actor: "engine", agentId: MAIN_AGENT, spanId: agentSpanId, parentSpanId: runSpanId, payload: { ...payload, gate, tool_call_id: callId } },
         ]);
       },
-      extract: (parentSpanId, request, signal) => this.extract(s, parentSpanId, request, signal),
+      toolless: (parentSpanId, request, signal) => this.toolless(s, parentSpanId, request, signal),
       conclude: async (completed, result) => {
         // One batch: a crash cannot leave the result recorded and the run still open.
         await this.append(s, [
@@ -733,12 +950,8 @@ export class Engine {
       tokens: s.state.tokensIn + s.state.tokensOut,
       costMicroUsd: s.state.costMicroUsd,
       activeMs: activeMsAt(s.state, this.clock.now()),
-      steps: s.events.filter((e) => e.type === "model.call.completed" && e.agentId === MAIN_AGENT).length,
+      steps: s.steps,
     };
-  }
-
-  private countNotes(s: Session, kind: string): number {
-    return s.events.filter((e) => e.type === "context.message" && payloadOf(e, "context.message").kind === kind).length;
   }
 
   private noteDraft(s: Session, agentSpanId: string, kind: string, content: string): EventDraft {
@@ -848,19 +1061,27 @@ export class Engine {
 
   /** The request as the provider needs it: every picture with its bytes. One that can no longer be read is said so, in words. */
   private async withImages(s: Session, request: ModelRequest): Promise<ModelRequest> {
-    const has = (b: ContentBlock) => b.type === "tool_result" && Boolean(b.images?.length);
+    const has = (b: ContentBlock) => b.type === "image" || (b.type === "tool_result" && Boolean(b.images?.length));
     if (!request.messages.some((m) => m.content.some(has))) return request;
     const dir = this.artifactsDir(s.runId);
+    const read = async (sha256: string, mediaType: string): Promise<string | undefined> => {
+      let data = s.imageData.get(sha256);
+      if (data === undefined) {
+        data = await loadImage(dir, sha256, mediaType);
+        if (data !== undefined) s.imageData.set(sha256, data);
+      }
+      return data;
+    };
     const fill = async (block: ContentBlock): Promise<ContentBlock> => {
+      if (block.type === "image") {
+        const data = await read(block.sha256, block.mediaType);
+        return data === undefined ? { type: "text", text: "(A picture that was meant to be here can no longer be read.)" } : { ...block, data };
+      }
       if (block.type !== "tool_result" || !block.images?.length) return block;
       const images = [];
       let missing = 0;
       for (const image of block.images) {
-        let data = s.imageData.get(image.sha256);
-        if (data === undefined) {
-          data = await loadImage(dir, image.sha256, image.mediaType);
-          if (data !== undefined) s.imageData.set(image.sha256, data);
-        }
+        const data = await read(image.sha256, image.mediaType);
         if (data === undefined) missing += 1;
         else images.push({ ...image, data });
       }

@@ -1,13 +1,27 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { defineTool, inStage, resolveInside, ToolError } from "@harness/harness";
-import { narrationWords } from "../words.ts";
+import { differences, narrationWords, normWord } from "../words.ts";
 
 /** Reading pace used to guess a film's length from its narration, in words per second. */
 export const WORDS_PER_SECOND = 2.6;
-const MIN_WORDS = 25;
-const MAX_WORDS = 520;
-const MAX_LINE_WORDS = 14;
+export const MIN_WORDS = 25;
+export const MAX_WORDS = 520;
+export const MAX_LINE_WORDS = 14;
+
+/**
+ * Where a narration leaves the creator's own words, as a sentence for the agent, or nothing when every word is
+ * kept. Line breaks, punctuation and capitals do not count.
+ */
+export function departureFrom(creator: string, narration: string): string | undefined {
+  const theirs = narrationWords(creator).map(normWord);
+  const ours = narrationWords(narration).map(normWord);
+  if (theirs.length === ours.length && theirs.every((word, i) => word === ours[i])) return undefined;
+  const found = differences(narrationWords(narration).map((w) => ({ w, s: 0, e: 0 })), creator);
+  const first = found[0];
+  const more = found.length > 1 ? ` (and ${found.length - 1} more ${found.length === 2 ? "place" : "places"})` : "";
+  return first ? `The creator wrote "${first.written}" where the narration has "${first.said}"${more}.` : "The narration does not match the creator's words.";
+}
 
 async function readText(workDir: string, path: string, what: string): Promise<string> {
   try {
@@ -22,7 +36,7 @@ async function readText(workDir: string, path: string, what: string): Promise<st
  * Gate 1. Hands the script to the creator and stops the run until they answer. The answer comes back as this
  * call's result: approved, changes requested (with their notes), or the run ends if they reject it.
  */
-export const submitScriptTool = defineTool({
+export const submitScriptToolWith = (opts: { narration?: string } = {}) => defineTool({
   name: "submit_script",
   description:
     "Hand the script to the creator for review. The run stops until they answer, and their answer is this call's result: approved, or changes requested with their notes. " +
@@ -36,6 +50,15 @@ export const submitScriptTool = defineTool({
     const script = await readText(exec.workDir, input.script_path, "script");
     const narration = await readText(exec.workDir, input.narration_path, "narration");
     if (script.trim().length < 200) throw new ToolError("The script is too short to review.", "Write the hook, every beat and its sources.");
+    if (opts.narration !== undefined) {
+      const departure = departureFrom(opts.narration, narration);
+      if (departure) {
+        throw new ToolError(
+          `The narration has to be the creator's own words, exactly: they read them in their recording. ${departure}`,
+          "Put their words back. You may break them into different lines; note anything your research does not support in the script instead.",
+        );
+      }
+    }
     const words = narrationWords(narration).length;
     if (words < MIN_WORDS) throw new ToolError(`The narration has ${words} words. A reel needs at least ${MIN_WORDS}.`);
     if (words > MAX_WORDS) throw new ToolError(`The narration has ${words} words, which is over three minutes of speech.`, `Cut it to ${MAX_WORDS} words or fewer.`);
@@ -53,3 +76,6 @@ export const submitScriptTool = defineTool({
     );
   },
 });
+
+/** `submit_script` for a run whose narration the agent writes. */
+export const submitScriptTool = submitScriptToolWith();

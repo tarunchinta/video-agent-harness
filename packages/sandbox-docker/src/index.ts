@@ -9,3 +9,4 @@ export {
   DockerSandbox, listSandboxes, removeSandbox,
   type ExecResult, type FileInfo, type SandboxDeps, type SandboxInfo, type SandboxListing,
 } from "./sandbox.ts";
+export { dockerSandboxPlugin } from "./plugin.ts";

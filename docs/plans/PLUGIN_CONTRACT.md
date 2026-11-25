@@ -5,7 +5,14 @@ Design for the single contract that every extension registers through
 the open question in `VISION.md`: how much of the plugin lifecycle to take from
 the DeepSeek harness.
 
-Status: proposal. Nothing here is implemented yet.
+Status: the milestone 1 cut (section 11) is built in `packages/contract`, as
+of 17 November 2026: `definePlugin`, a loader with `inject` ordering and
+all-or-nothing boot, process and run scopes with reversible effects, four seams
+(`models`, `sandbox`, `search`, `tools`), and conformance kits. Seams are typed
+registries rather than `defineSeam` schema tables, and there is no seam proxy
+or plugin hook in the tool pipeline yet. The tool contract, the sandbox seam
+and the model provider interface were built ahead of it.
+[Section 13](#13-what-already-exists) lists them.
 
 ## 1. What the DeepSeek harness does
 
@@ -364,9 +371,10 @@ ctx.tools.register(defineTool({
 - `execute` returns the canonical value only. `render` produces what the model
   reads. Evals and the UI use the value.
 - `exec` carries `callId`, `agent`, `run`, `signal` and a scoped `ctx`.
-- `idempotent` tells resume whether an interrupted call can run again. A
-  non-idempotent call that was interrupted stops the run for attention rather
-  than repeating a side effect.
+- `idempotent` decides what an interrupted call tells the model. Resume never
+  runs a tool again by itself. It records an error result that says the
+  outcome is unknown, and whether the tool is safe to call again or may
+  already have had an effect. The model decides what to do next.
 - Results over a size limit are written to the working directory and replaced
   in context by a path and a summary.
 
@@ -489,5 +497,33 @@ loop (4), `sandbox.browser` (5), `ui` panels (6).
 3. **No hot reload.** Recommended until the web UI milestone, then revisit.
 4. **Research and demo capture as tool packs, not seams.** Recommended; promote
    one to a seam only when a second implementation appears.
-5. **Zod for config and seam schemas**, on the assumption the core is
-   TypeScript (still listed as open in `VISION.md`).
+5. **Zod for config and seam schemas.** The core is TypeScript and already
+   uses Zod v4 at every boundary.
+
+## 13. What already exists
+
+Built in `packages/harness` before this contract, as of 17 November 2026.
+[agent-loop.md](agent-loop.md) describes each. Where the two differ, either
+the contract package adapts what is built or this design changes.
+
+| In this design | What is built | Difference |
+|---|---|---|
+| `defineTool` (section 7) | `packages/harness/src/tools/define.ts` | `render` returns a string, with pictures listed separately by `images`. There are more flags: `readOnly`, `parallelSafe`, `untrusted`, `requires`, `timeoutMs`. `exec` carries the run id, the call id, the signal and the working directory, and offers `gate`, `extract`, `sandbox` and stages. There is no `exec.ctx` |
+| The tool pipeline (section 7) | `packages/harness/src/tools/dispatch.ts` | Record, look up, validate, guards, run, check and shape the result, record. There are no plugin hooks at steps 4, 6 and 9 |
+| `SandboxSession` (section 5) | `packages/harness/src/sandbox.ts` | `exec` and `stop` only, with no `Metered` wrapper. The Docker driver also has `read` and `write`. `browser` is not built |
+| `ModelProvider` (section 5) | `packages/harness/src/model/types.ts`, with two providers | `id`, `capabilities(model)`, `stream(request, signal)` and `priceMicroUsd(model, usage)`. There is no `models` list |
+| `ctx.models.extract` and the trust rule (section 6) | `exec.extract` in the loop | A tool marked `untrusted` must declare an output schema and gets the text through a tool-less call. Artifacts carry no `origin`, so nothing is tainted by its inputs |
+| Gates (section 8) | `exec.gate` and `decideGate` | The CLI writes the decision to the log. There is no `ctx.gates.answerer` |
+| Event names (sections 5, 7 and 8) | The catalogue in [event-log-and-run-state.md](event-log-and-run-state.md) | That plan was decided after this one and it wins. Events are named `tool.call.started`, `gate.opened` and so on, not `tool/call` or `gate/opened`. Plugin types start with `x.<plugin_id>.` and can never change run state, which replaces both `plugin.<name>/…` and the rule that an unknown type stops a replay |
+
+### Built in `packages/contract`
+
+| In this design | What is built | Difference |
+|---|---|---|
+| `definePlugin` (section 3) | `src/plugin.ts` | `inject.required` and `inject.optional` name seams the plugin reads; `provides` names seams it fills. A plugin's `ctx` has only the seams it declared, and reaching for another throws. Secrets are read with `ctx.secret(name)` and never sit in config |
+| Lifecycle and scopes (section 4) | `boot()` in `src/kernel.ts` | Configs parse first; plugins apply in dependency order; a bad config, a failing `apply`, a required seam nobody provides, or one left empty stops the boot and unwinds what started. Effects unwind newest first, and a disposer that throws is reported without stopping the rest. `onRun` and `openRun` give the run scope. There is no agent scope yet, and `plugin/active` is a report (`harness plugins`), not an event |
+| Seams (section 5) | `models`, `sandbox`, `search`, `tools` | Typed registries, not `defineSeam` tables, so there is no proxy that validates, meters and replays every call. `models` routes model names to providers built on first use; `sandbox` has one provider, which makes a factory per network setting; `search` is new, for `web_search` |
+| Conformance (section 10) | `@harness/contract/conformance`: `testModelProvider`, `testSearchProvider`, `testSandbox` | Both model providers and both search providers pass their kit against recorded answers. `testSandbox` runs against Docker only when asked |
+| Composition (section 9) | `use()` and a profile list. The CLI's profile is `apps/harness-cli/src/plugins.ts` | A profile is code, not `harness.config.ts` with named profiles |
+| Plugins | `model-claude`, `model-openai-compatible`, `search-brave`, `search-searxng`, `sandbox-docker` | Each lives in its own package, next to what it wraps |
+

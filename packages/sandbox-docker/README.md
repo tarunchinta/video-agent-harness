@@ -10,7 +10,9 @@ docker build -t harness-sandbox:local packages/sandbox-docker/image
 ```
 
 Rebuild after changing anything under `image/`. To change the Python baseline, edit `image/requirements.in`
-and run `pnpm --filter @harness/sandbox-docker image:lock`.
+and run `pnpm --filter @harness/sandbox-docker image:lock`. The packages that time a voiceover's words are in
+`image/requirements-voice.in`, locked against the baseline with `image:lock:voice`. The speech model is fixed
+at build time; `--build-arg WHISPER_MODEL=base.en` picks a smaller one.
 
 ## Use it
 
