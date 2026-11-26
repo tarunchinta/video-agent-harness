@@ -1,0 +1,5 @@
+frame 0 of 1778 (0 s)
+frame 450 of 1778 (31 s)
+frame 900 of 1778 (57 s)
+frame 1350 of 1778 (84 s)
+{"ok":true,"mode":"film","film":"out/film.mp4","sheet":"out/review/sheet.jpg","duration":59.27,"width":1080,"height":1920,"fps":30,"frames":1778,"bytes":7934717,"voice":true,"sound_effects":26,"missing_sound_effects":[],"render_seconds":126}

@@ -1,0 +1,5 @@
+frame 0 of 1542 (0 s)
+frame 450 of 1542 (20 s)
+frame 900 of 1542 (42 s)
+frame 1350 of 1542 (66 s)
+{"ok":true,"mode":"film","film":"out/film.mp4","sheet":"out/review/sheet.jpg","duration":51.4,"width":1080,"height":1920,"fps":30,"frames":1542,"bytes":7086673,"voice":true,"sound_effects":24,"missing_sound_effects":[],"render_seconds":86}
