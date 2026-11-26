@@ -1,6 +1,6 @@
 # Letter embeddings: idea
 
-Status: exploring. This file records our back-and-forth. No script, no film and no project code yet.
+Status: script draft. This file records our back-and-forth. No film and no project code yet.
 
 ## What we want to show
 
@@ -70,7 +70,17 @@ Proposed restatement: **letters that keep the same company end up together, and 
 
 Possible object to follow: **Q**. Its journey to the edge shows the mechanism in one letter. Y is the alternative, since it lands between the two groups.
 
+## Script draft (2026-11-25, Tarun)
+
+> Can you train an AI from scratch to predict the word Yaoi? Start with the entire Japanese dictionary as training data for an embedding model. Each of the 26 letters plus a start and end character is initialized with two random coordinates X and Y. The embedding model uses the last three letters to predict the next one. It gives every letter a probability, and the most likely one is its guess. After each guess, it updates the coordinates so that its predictions are more aligned with training data. Its guesses suck in the beginning but get better after thousands of data points. By the end of training, the letters show a pattern. Vowels in one cluster and consonants in the other. Now let's give the final test and pass in letters yao. It predicted i, just like we hoped. If we pass it aoi, it gave the special end character, meaning it predicted the word, even though it never saw it in its training data.
+
+166 words. At the taxi reel's pace (about 195 wpm; its final voiceover was 189 words in 58 seconds), this runs about 51 seconds.
+
+Not yet tested: the English results above don't carry over to this setup. Before filming, check that "yaoi" isn't in the training list, that the vowels still separate, and that the trained model really picks "i" after "yao" and the end character after "aoi".
+
 ## Open questions
+
+Some of these are settled by the script draft and Decisions below (takeaway, word list, game, length). The rest are still open.
 
 1. **The turn.** Do we use the failed rarity guess as the surprise, or keep the video to vowels vs consonants only?
 2. **The takeaway.** Is this mainly "how machines store meaning as positions" or "how to train an embedding model yourself"? The first makes a stronger short. The second needs more code on screen.
@@ -82,9 +92,44 @@ Possible object to follow: **Q**. Its journey to the edge shows the mechanism in
 
 ## Decisions
 
-None yet.
+- **Hook:** "Can you train an AI from scratch to predict the word Yaoi?", with the ending calling back to it.
+- **Data:** a Japanese dictionary in English letters, replacing the English list. Tarun will remove "yaoi" from the training data.
+- **Model:** each letter plus a start and an end character gets 2 coordinates. The model reads the last three letters (padded with the start character) and gives a probability for every next letter. A small hidden layer sits between the coordinates and the scores.
+- **Framing:** the model learns how letters behave in spelling, not what words mean. The script doesn't claim meaning.
+
+## Context length to test
+
+The script says "the last three letters," but the window is one number in the code. Going from 3 to 10 grows the hidden layer's input from 6 to 20 numbers, which is still tiny, and the map stays the same.
+
+Plan: train at **3, 5 and 8** letters. Compare the loss on words held out of training and pick the length where it stops improving. Then rerun the "yao" → "i" → end test at that length.
+
+- A longer window tells the model where it is in the word, since the start padding shows how many letters came before. That should help it predict the end after "aoi."
+- Romanized Japanese syllables can be up to 3 letters ("shi," "tsu," "kya"), so 6 covers two full syllables.
+- Past the length of a typical word, most slots are padding and add little.
+- More context makes it easier to memorize training words instead of learning patterns. That matters here, because the payoff is a word the model never saw.
+
+Best guess: 5 or 6. If it changes, the script's "last three letters" changes with it.
+
+## Follow-up video: how to train an embedding model
+
+A second hook, for viewers who already know embeddings are vectors: **how do you train an embedding model from scratch?** It reuses this video's training and footage, and opens by referring back to it ("Last time we watched letters learn where to sit. Here's the code that did it.").
+
+Possible beats:
+
+1. **Hook:** "You can train an embedding model in about 20 lines with a free word list."
+2. **Data:** download the word list and turn the words into training examples: a few letters in, the next letter out.
+3. **The model:** show the table of coordinates. "This table is the embedding. Each row is a letter's position." Then the hidden layer and one score per possible next letter.
+4. **Loss:** cross-entropy, explained as "how surprised was the model by the right answer?"
+5. **Signature shot:** one training step, split screen. A letter's row in the table changes, and its dot moves on the map. The code and the picture are the same thing.
+6. **Watch it learn:** the loss falls and the vowels separate.
+7. **The turn:** the model never wanted a map. It only wanted to guess better, and the map is a side effect. Two numbers per letter also limit how well it can guess, which is why real models use hundreds of dimensions.
+8. **Scale up:** word2vec is this with words in sentences. An LLM's first layer is this same kind of table, trained along with everything else.
+
+Step 5 needs the training to update in small batches or word by word, not on all the data at once, so a single step can be filmed honestly.
 
 ## Conversation log
 
 - **2026-11-25, Tarun:** original idea and hypothesis, above.
 - **2026-11-25, Claude:** checked it. Vowels separate. Rarity is a weak explanation for the outskirts, oddness a better one. Suggested making that the turn of the video.
+- **2026-11-25, Tarun and Claude:** weighed two hooks (how AI learns meaning vs. how to train an embedding model). Agreed that dictionary words only teach spelling patterns, not meaning. Tarun switched to the Japanese dictionary and a three-letter context, and wrote the script draft above.
+- **2026-11-26, Tarun and Claude:** planned to test context lengths of 3, 5 and 8. Kept "how to train an embedding model" as a follow-up video.
